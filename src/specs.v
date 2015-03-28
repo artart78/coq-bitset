@@ -3,7 +3,7 @@ From Ssreflect
 From Bits
      Require Import bits.
 
-Definition admitted {X}: X. admit. Qed.
+Definition admitted {X}: X. admit. Admitted.
 
 (* TODO: Generalize #1 to any single-bit digit *)
 Lemma andB_mask1:
