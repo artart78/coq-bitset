@@ -3,8 +3,6 @@ From Ssreflect
 From Bits
      Require Import bits.
 
-(* TODO: write INSTALL *)
-
 (* This file must be read from the end. Scroll down. *)
 
 (** 4) World domination. *)
