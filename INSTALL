@@ -35,7 +35,8 @@ $ opam pin add coq:bits .
 
 To make this package available to others in your system, pin it:
 
-$ opam pin add coq:bitset .
+$ cd coq-bitset
+$ opam pin add .
 
 After a modification, we simply upgrade the package:
 
