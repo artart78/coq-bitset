@@ -3,8 +3,8 @@ name: "coq:bitset"
 version: "0.1"
 maintainer: "Pierre-Évariste Dagand <pierre-evariste.dagand@lip6.fr>"
 authors: "Pierre-Évariste Dagand <pierre-evariste.dagand@lip6.fr>"
-homepage: ""
-bug-reports: ""
+homepage: "https://gforge.inria.fr/projects/coq-bitset/"
+bug-reports: "https://gforge.inria.fr/projects/coq-bitset/"
 license: ""
 build: [
 ["coq_makefile" "-f" "_CoqProject" "-o" "Makefile"]
