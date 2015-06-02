@@ -2,6 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
 From Bits
      Require Import bits.
+Require Import Arith.
 Require Import specs props.
 
 Definition set {n}(bs: BITS n) k (b: bool): BITS n
@@ -67,26 +68,81 @@ Proof.
   apply le_k.
 Qed.
 
-Lemma getBit_shlBn_1:
-  forall n k, k < n -> getBit (n:=n) (shlBn #1 k) k = true.
+Lemma setBit_0:
+  forall n, setBit (n := n) #0 0 true = #1.
+Proof.
+  move=> n.
+  elim: n.
+  + (* n ~ 0 *)
+    by rewrite //.
+  + (* n ~ n + 1 *)
+    move=> n.
+    by rewrite {2}/setBit /setBitAux //= tuple.beheadCons //.
+Qed.
+
+(*Lemma dropmsb_joinlsb:
+  forall n *)
+
+Check joinmsb.
+
+Lemma setBit_true:
+  forall n k, k < n -> setBit (n := n.+1) #0 k true = joinmsb (false, setBit (n := n) #0 k true).
+Proof.
+  admit.
+Admitted.
+
+Lemma getBit_shlBn:
+  forall n k, k < n -> shlBn (n := n) #1 k = setBit #0 k true.
 Proof.
   move=> n k le_k.
   elim: k le_k.
   + (* k ~ 0 *)
-    rewrite //=.
-    admit.
+    by rewrite /= setBit_0 //.
   + (* k ~ k + 1 *)
-    move=> k H le_k.
-    rewrite /shlBn iterS.
-    rewrite -[iter _ _ _]/(shlBn _ _).
+    move=> k IHk le_k.
+    rewrite /shlBn iterS -[iter _ _ _]/(shlBn _ _).
+    rewrite IHk.
+    rewrite /shlB.
+    rewrite /shlBaux.
     admit.
+    auto with arith.
 Admitted.
+
+Lemma getBit_shlBn_1:
+  forall n k, k < n -> getBit (n := n) (shlBn #1 k) k = true.
+Proof.
+  move=> n k le_k.
+  rewrite getBit_shlBn.
+  apply setBitThenGetSame.
+  apply le_k.
+  apply le_k.
+Qed.
+
+Search setBit.
+
+Lemma getBit_zero:
+  forall n k, k < n -> getBit (n := n) #0 k = false.
+Proof.
+  move=> n k le_k.
+  rewrite fromNat0.
+  rewrite /zero.
+  rewrite /copy /getBit.
+  rewrite nth_nseq.
+  rewrite le_k //.
+Qed.
 
 Lemma getBit_shlBn_0:
   forall n k k', k < n -> k' < n -> k <> k' -> getBit (n := n) (shlBn #1 k) k' = false.
 Proof.
-  admit.
-Admitted.
+  move=> n k k' le_k le_k'.
+  rewrite getBit_shlBn.
+  have ->: false = getBit (n := n) #0 k'.
+  rewrite getBit_zero //.
+  apply setBitThenGetDistinct.
+  apply le_k.
+  apply le_k'.
+  apply le_k.
+Qed.
 
 Lemma getBit_settrue:
   forall n (bs: BITS n) k x, k < n -> x < n ->
