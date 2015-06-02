@@ -11,5 +11,6 @@ Lemma compl_repr:
   forall n (bs: BITS n) k, k < n ->
     getBit (compl bs) k = ~~ (getBit bs k).
 Proof.
-  admit.
-Admitted.
+  move=> n bs k le_k.
+  rewrite getBit_inv //.
+Qed.

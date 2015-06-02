@@ -8,21 +8,21 @@ Parameter wordsize: nat.
 Definition Word := BITS wordsize.
 Definition SET := Word.
 
-Require get.
+Require get set inter union compl.
 Definition get (S: SET)(k: 'I_wordsize): SET 
   := get.get S k.
 
-Definition set (S: SET)(k: 'I_wordsize)(b: bool): SET.
-Admitted.
+Definition set (S: SET)(k: 'I_wordsize)(b: bool): SET
+  := set.set S k b.
 
-Definition inter (S1 S2: SET): SET.
-Admitted.
+Definition inter (S1 S2: SET): SET
+  := inter.inter S1 S2.
 
-Definition union (S1 S2: SET): SET.
-Admitted.
+Definition union (S1 S2: SET): SET
+  := union.union S1 S2.
 
-Definition compl (S: SET): SET.
-Admitted.
+Definition compl (S: SET): SET
+  := compl.compl S.
 
 Definition diag (S1 S2: SET): SET.
 Admitted.
