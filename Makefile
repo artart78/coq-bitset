@@ -19,7 +19,6 @@
 
 .DEFAULT_GOAL := all
 
-# 
 # This Makefile may take arguments passed as environment variables:
 # COQBIN to specify the directory where Coq binaries resides;
 # TIMECMD set a command to log .v compilation time;
@@ -39,6 +38,10 @@ TIMED=
 TIMECMD=
 STDTIME?=/usr/bin/time -f "$* (user: %U mem: %M ko)"
 TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
+
+vo_to_obj = $(addsuffix .o,\
+  $(filter-out Warning: Error:,\
+  $(shell $(COQBIN)coqtop -q -noinit -batch -quiet -print-mod-uid $(1))))
 
 ##########################
 #                        #
@@ -91,12 +94,24 @@ endif
 #                    #
 ######################
 
-VFILES:=src/props.v\
-  src/specs.v\
+VFILES:=src/compl.v\
+  src/union.v\
+  src/inter.v\
+  src/set.v\
   src/get.v\
+  src/create.v\
+  src/props.v\
+  src/specs.v\
   src/bitset.v
 
+ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
 -include $(addsuffix .d,$(VFILES))
+else
+ifeq ($(MAKECMDGOALS),)
+-include $(addsuffix .d,$(VFILES))
+endif
+endif
+
 .SECONDARY: $(addsuffix .d,$(VFILES))
 
 VO=vo
@@ -106,6 +121,10 @@ GLOBFILES:=$(VFILES:.v=.glob)
 GFILES:=$(VFILES:.v=.g)
 HTMLFILES:=$(VFILES:.v=.html)
 GHTMLFILES:=$(VFILES:.v=.g.html)
+OBJFILES=$(call vo_to_obj,$(VOFILES))
+ALLNATIVEFILES=$(OBJFILES:.o=.cmi) $(OBJFILES:.o=.cmo) $(OBJFILES:.o=.cmx) $(OBJFILES:.o=.cmxs)
+NATIVEFILES=$(foreach f, $(ALLNATIVEFILES), $(wildcard $f))
+NATIVEFILES1=$(patsubst src/%,%,$(filter src/%,$(NATIVEFILES)))
 ifeq '$(HASNATDYNLINK)' 'true'
 HASNATDYNLINK_OR_EMPTY := yes
 else
@@ -156,7 +175,7 @@ beautify: $(VFILES:=.beautified)
 	@echo 'Do not do "make clean" until you are sure that everything went well!'
 	@echo 'If there were a problem, execute "for file in $$(find . -name \*.v.old -print); do mv $${file} $${file%.old}; done" in your shell/'
 
-.PHONY: all opt byte archclean clean install uninstall_me.sh uninstall userinstall depend html validate
+.PHONY: all archclean beautify byte clean cleanall gallina gallinahtml html install install-doc install-natdynlink install-toploop opt printenv quick uninstall userinstall validate vio2vo
 
 ####################
 #                  #
@@ -174,7 +193,7 @@ userinstall:
 	+$(MAKE) USERINSTALL=true install
 
 install:
-	cd "src" && for i in $(VOFILES1); do \
+	cd "src" && for i in $(NATIVEFILES1) $(GLOBFILES1) $(VFILES1) $(VOFILES1); do \
 	 install -d "`dirname "$(DSTROOT)"$(COQLIBINSTALL)/Bitset/$$i`"; \
 	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Bitset/$$i; \
 	done
@@ -185,9 +204,9 @@ install-doc:
 	 install -m 0644 $$i "$(DSTROOT)"$(COQDOCINSTALL)/Bitset/$$i;\
 	done
 
-uninstall_me.sh:
-	echo '#!/bin/sh' > $@ 
-	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Bitset && rm -f $(VOFILES1) && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Bitset" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
+uninstall_me.sh: Makefile
+	echo '#!/bin/sh' > $@
+	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Bitset && rm -f $(NATIVEFILES1) $(GLOBFILES1) $(VFILES1) $(VOFILES1) && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Bitset" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
 	printf 'cd "$${DSTROOT}"$(COQDOCINSTALL)/Bitset \\\n' >> "$@"
 	printf '&& rm -f $(shell find "html" -maxdepth 1 -and -type f -print)\n' >> "$@"
 	printf 'cd "$${DSTROOT}"$(COQDOCINSTALL) && find Bitset/html -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
@@ -196,12 +215,17 @@ uninstall_me.sh:
 uninstall: uninstall_me.sh
 	sh $<
 
-clean:
+clean::
+	rm -f $(OBJFILES) $(OBJFILES:.o=.native) $(NATIVEFILES)
+	find . -name .coq-native -type d -empty -delete
 	rm -f $(VOFILES) $(VOFILES:.vo=.vio) $(GFILES) $(VFILES:.v=.v.d) $(VFILES:=.beautified) $(VFILES:=.old)
 	rm -f all.ps all-gal.ps all.pdf all-gal.pdf all.glob $(VFILES:.v=.glob) $(VFILES:.v=.tex) $(VFILES:.v=.g.tex) all-mli.tex
 	- rm -rf html mlihtml uninstall_me.sh
 
-archclean:
+cleanall:: clean
+	rm -f $(patsubst %.v,.%.aux,$(VFILES))
+
+archclean::
 	rm -f *.cmx *.o
 
 printenv:
