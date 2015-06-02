@@ -5,11 +5,19 @@ From Bits
 Require Import specs props.
 
 Definition create {n} (b: bool): BITS n
-  := if b then (subB (shlBn #1 n) #1) else #0.
+  := if b then dropmsb (subB (shlBn (n := n.+1) #1 n) #1) else #0.
+
+Lemma makeOnes:
+  forall n,
+    ones n = dropmsb (subB (shlBn (n := n.+1) #1 n) #1).
+Proof.
+  admit.
+Admitted.
 
 Lemma create_repr:
   forall n (b: bool),
     create b = if b then ones n else zero n.
 Proof.
-  admit.
-Admitted.
+  move=> n b.
+  rewrite makeOnes /create fromNat0 //.
+Qed.
