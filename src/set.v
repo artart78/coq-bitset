@@ -22,28 +22,14 @@ Proof.
   apply le_x.
 Qed.
 
-Lemma getBit_orB_left:
-  forall n (bs: BITS n)(bs': BITS n) k, k < n ->
-    (getBit bs k = true -> getBit (orB bs bs') k = true).
-Proof.
-  admit.
-Admitted.
-
-Lemma getBit_orB_right:
+Lemma getBit_orB:
   forall n (bs: BITS n)(bs': BITS n) k, k < n ->
     (getBit bs k = true -> getBit (orB bs' bs) k = true).
 Proof.
   admit.
 Admitted.
 
-Lemma getBit_orB_neg_left:
-  forall n (bs: BITS n)(bs': BITS n) k, k < n ->
-    (getBit bs k = false -> getBit (orB bs bs') k = getBit bs' k).
-Proof.
-  admit.
-Admitted.
-
-Lemma getBit_orB_neg_right:
+Lemma getBit_orB_neg:
   forall n (bs: BITS n)(bs': BITS n) k, k < n ->
     (getBit bs' k = false -> getBit (orB bs bs') k = getBit bs k).
 Proof.
@@ -79,14 +65,14 @@ Proof.
   case H: (x == k).
   - (* Case: x == k *)
     move/eqP: H=>H.
-    apply getBit_orB_right.
+    apply getBit_orB.
     apply le_x.
     rewrite H.
     apply getBit_shlBn_1.
     apply le_k.
   - (* Case: x <> k *)
     move/eqP: H=>H.
-    apply getBit_orB_neg_right.
+    apply getBit_orB_neg.
     apply le_x.
     apply getBit_shlBn_0.
     apply le_k.
@@ -95,35 +81,22 @@ Proof.
     apply H.
 Qed.
 
-Lemma getBit_andB_left:
-  forall n (bs: BITS n)(bs': BITS n) k, k < n ->
-    (getBit bs k = true -> getBit (andB bs bs') k = getBit bs' k).
-Proof.
-  admit.
-Admitted.
-
-Lemma getBit_andB_right:
+Lemma getBit_andB:
   forall n (bs: BITS n)(bs': BITS n) k, k < n ->
     (getBit bs' k = true -> getBit (andB bs bs') k = getBit bs k).
 Proof.
   admit.
 Admitted.
 
-Lemma getBit_andB_neg_right:
+Lemma getBit_andB_neg:
   forall n (bs: BITS n) (bs': BITS n) k, k < n ->
     getBit bs' k = false -> getBit (andB bs bs') k = false.
 Proof.
   admit.
 Admitted.
 
-Lemma getBit_inv_shlBn_0:
-  forall n k, k < n -> getBit (n := n) (invB (shlBn #1 k)) k = false.
-Proof.
-  admit.
-Admitted.
-
-Lemma getBit_inv_shlBn_1:
-  forall n k k', k < n -> k' < n -> k <> k' -> getBit (n := n) (invB (shlBn #1 k)) k' = true.
+Lemma getBit_inv:
+  forall n (bs: BITS n) k, k < n -> getBit (invB bs) k = negb (getBit bs k).
 Proof.
   admit.
 Admitted.
@@ -136,15 +109,19 @@ Proof.
   case H: (x == k).
   - (* Case: x == k *)
     move/eqP: H=>H.
-    apply getBit_andB_neg_right.
+    apply getBit_andB_neg.
     apply le_x.
-    by rewrite H getBit_inv_shlBn_0 //.
+    rewrite H getBit_inv.
+    rewrite getBit_shlBn_1 //.
+    by apply le_k.
   - (* Case: x <> k *)
     move/eqP: H=>H.
-    apply getBit_andB_right.
+    apply getBit_andB.
     apply le_x.
-    rewrite getBit_inv_shlBn_1 //.
-    by apply not_eq_sym; apply H.
+    rewrite getBit_inv.
+    rewrite getBit_shlBn_0 //.
+    apply not_eq_sym; apply H.
+    by apply le_x.
 Qed.
 
 Lemma set_repr:
