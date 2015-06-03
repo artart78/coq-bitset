@@ -92,10 +92,34 @@ Lemma getBit_thead:
   forall n (bs: BITS n) b,
     getBit [tuple of b :: bs] 0 = b.
 Proof.
-  by compute.
+    by compute.
 Qed.
 
-Lemma getBit_orB_orb:
+Lemma getBit_andB:
+  forall n (bs: BITS n)(bs': BITS n) k, k < n ->
+    getBit (andB bs bs') k = andb (getBit bs k) (getBit bs' k).
+Proof.
+  move=> n bs bs' k le_k.
+  elim: n k bs bs' le_k=> // n /= IHn k /tupleP[b bs] /tupleP[b' bs'] le_k.
+  elim: k le_k.
+  + (* k ~ 0 *)
+    move=> le_n.
+    rewrite !getBit_thead.
+    have ->: getBit (andB [tuple of b :: bs] [tuple of b' :: bs']) 0 = andb b b'
+      by compute.
+    by rewrite //.
+  + (* k ~ k + 1 *)
+    move=> k IHk le_k.
+    rewrite !getBit_behead.
+    have ->: getBit (andB [tuple of b :: bs] [tuple of b' :: bs']) k.+1 = getBit (andB bs bs') k
+      by compute.
+    apply IHn.
+    apply le_k.
+    apply le_k.
+    apply le_k.
+Qed.
+
+Lemma getBit_orB:
   forall n (bs: BITS n)(bs': BITS n) k, k < n ->
     getBit (orB bs bs') k = orb (getBit bs k) (getBit bs' k).
 Proof.
@@ -119,12 +143,55 @@ Proof.
     apply le_k.
 Qed.
 
+Lemma getBit_xorB:
+  forall n (bs: BITS n)(bs': BITS n) k, k < n ->
+    getBit (xorB bs bs') k = xorb (getBit bs k) (getBit bs' k).
+Proof.
+  move=> n bs bs' k le_k.
+  elim: n k bs bs' le_k=> // n /= IHn k /tupleP[b bs] /tupleP[b' bs'] le_k.
+  elim: k le_k.
+  + (* k ~ 0 *)
+    move=> le_n.
+    rewrite !getBit_thead.
+    have ->: getBit (xorB [tuple of b :: bs] [tuple of b' :: bs']) 0 = xorb b b'
+      by compute.
+    by rewrite //.
+  + (* k ~ k + 1 *)
+    move=> k IHk le_k.
+    rewrite !getBit_behead.
+    have ->: getBit (xorB [tuple of b :: bs] [tuple of b' :: bs']) k.+1 = getBit (xorB bs bs') k
+      by compute.
+    apply IHn.
+    apply le_k.
+    apply le_k.
+    apply le_k.
+Qed.
+
+Lemma getBit_invB:
+  forall n (bs: BITS n) k, k < n -> getBit (invB bs) k = negb (getBit bs k).
+Proof.
+  move=> n bs k le_k.
+  elim: n k bs le_k=> // n /= IHn k /tupleP[b bs] le_k.
+  elim: k le_k.
+  + (* k ~ 0 *)
+    by rewrite //.
+  + (* k ~ k + 1 *)
+    move=> k IHk le_k.
+    rewrite /invB liftUnOpCons -/invB.
+    have ->: getBit [tuple of b :: bs] k.+1 = getBit bs k
+      by compute.
+    have ->: getBit (consB (~~ b) (invB bs)) k.+1 = getBit (invB bs) k
+      by compute.
+    apply IHn.
+    apply le_k.
+Qed.
+
 Lemma getBit_orB_true:
   forall n (bs: BITS n)(bs': BITS n) k, k < n ->
     (getBit bs k = true -> getBit (orB bs' bs) k = true).
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_orB_orb.
+  rewrite getBit_orB.
   move ->.
   apply Bool.orb_true_r.
   apply le_k.
@@ -135,7 +202,7 @@ Lemma getBit_orB_neg:
     (getBit bs' k = false -> getBit (orB bs bs') k = getBit bs k).
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_orB_orb.
+  rewrite getBit_orB.
   move ->.
   apply Bool.orb_false_r.
   apply le_k.
@@ -170,9 +237,19 @@ Proof.
     move=> k IHk le_k.
     rewrite /shlBn iterS -[iter _ _ _]/(shlBn _ _).
     rewrite IHk.
-    rewrite /shlB.
-    rewrite /shlBaux.
+    case: n IHk le_k => // n IHk le_k.
     admit.
+    (*
+    rewrite {2}setBit_true; last by assumption.
+    rewrite /shlB /shlBaux.
+rewrite {2}/setBit /setBitAux.
+Print shlBn.
+
+rewrite setBit_true.
+    Search setBit.
+    
+    admit.
+    *)
     auto with arith.
 Admitted.
 
@@ -234,36 +311,12 @@ Proof.
     apply H.
 Qed.
 
-Lemma getBit_andB_andb:
-  forall n (bs: BITS n)(bs': BITS n) k, k < n ->
-    getBit (andB bs bs') k = andb (getBit bs k) (getBit bs' k).
-Proof.
-  move=> n bs bs' k le_k.
-  elim: n k bs bs' le_k=> // n /= IHn k /tupleP[b bs] /tupleP[b' bs'] le_k.
-  elim: k le_k.
-  + (* k ~ 0 *)
-    move=> le_n.
-    rewrite !getBit_thead.
-    have ->: getBit (andB [tuple of b :: bs] [tuple of b' :: bs']) 0 = andb b b'
-      by compute.
-    by rewrite //.
-  + (* k ~ k + 1 *)
-    move=> k IHk le_k.
-    rewrite !getBit_behead.
-    have ->: getBit (andB [tuple of b :: bs] [tuple of b' :: bs']) k.+1 = getBit (andB bs bs') k
-      by compute.
-    apply IHn.
-    apply le_k.
-    apply le_k.
-    apply le_k.
-Qed.
-
 Lemma getBit_andB_true:
   forall n (bs: BITS n)(bs': BITS n) k, k < n ->
     (getBit bs' k = true -> getBit (andB bs bs') k = getBit bs k).
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_andB_andb.
+  rewrite getBit_andB.
   move ->.
   apply Bool.andb_true_r.
   apply le_k.
@@ -274,29 +327,10 @@ Lemma getBit_andB_neg:
     getBit bs' k = false -> getBit (andB bs bs') k = false.
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_andB_andb.
+  rewrite getBit_andB.
   move ->.
   apply Bool.andb_false_r.
   apply le_k.
-Qed.
-
-Lemma getBit_inv:
-  forall n (bs: BITS n) k, k < n -> getBit (invB bs) k = negb (getBit bs k).
-Proof.
-  move=> n bs k le_k.
-  elim: n k bs le_k=> // n /= IHn k /tupleP[b bs] le_k.
-  elim: k le_k.
-  + (* k ~ 0 *)
-    by rewrite //.
-  + (* k ~ k + 1 *)
-    move=> k IHk le_k.
-    rewrite /invB liftUnOpCons -/invB.
-    have ->: getBit [tuple of b :: bs] k.+1 = getBit bs k
-      by compute.
-    have ->: getBit (consB (~~ b) (invB bs)) k.+1 = getBit (invB bs) k
-      by compute.
-    apply IHn.
-    apply le_k.
 Qed.
 
 Lemma getBit_setfalse:
@@ -309,16 +343,15 @@ Proof.
     move/eqP: H=>H.
     apply getBit_andB_neg.
     apply le_x.
-    rewrite H getBit_inv.
+    rewrite H getBit_invB.
     rewrite getBit_shlBn_1 //.
     by apply le_k.
   - (* Case: x <> k *)
     move/eqP: H=>H.
     apply getBit_andB_true.
     apply le_x.
-    rewrite getBit_inv.
+    rewrite getBit_invB.
     rewrite getBit_shlBn_0 //.
     apply not_eq_sym; apply H.
     by apply le_x.
 Qed.
-

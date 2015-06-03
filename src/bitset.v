@@ -8,7 +8,7 @@ Parameter wordsize: nat.
 Definition Word := BITS wordsize.
 Definition SET := Word.
 
-Require get set inter union compl.
+Require get set inter union symdiff compl.
 Definition get (S: SET)(k: 'I_wordsize): SET 
   := get.get S k.
 
@@ -21,11 +21,11 @@ Definition inter (S1 S2: SET): SET
 Definition union (S1 S2: SET): SET
   := union.union S1 S2.
 
+Definition symdiff (S1 S2: SET): SET
+  := symdiff.symdiff S1 S2.
+
 Definition compl (S: SET): SET
   := compl.compl S.
-
-Definition diag (S1 S2: SET): SET.
-Admitted.
 
 (* TODO: Refine typing of [i], [n] and [j] *)
 Definition blit (S1: SET)(i n: nat)(S2: SET)(j: nat): SET.

@@ -4,13 +4,13 @@ From Bits
      Require Import bits.
 Require Import specs props.
 
-Definition union {n} (bs: BITS n) (bs': BITS n): BITS n
-  := orB bs bs'.
+Definition symdiff {n} (bs: BITS n) (bs': BITS n): BITS n
+  := xorB bs bs'.
 
-Lemma union_repr:
+Lemma symdiff_repr:
   forall n (bs: BITS n) (bs': BITS n) k, k < n ->
-    getBit (union bs bs') k = (getBit bs k) || (getBit bs' k).
+    getBit (symdiff bs bs') k = xorb (getBit bs k) (getBit bs' k).
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_orB //.
+  rewrite getBit_xorB //.
 Qed.

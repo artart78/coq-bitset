@@ -7,4 +7,5 @@ src/get.v
 src/set.v
 src/inter.v
 src/union.v
+src/symdiff.v
 src/compl.v
