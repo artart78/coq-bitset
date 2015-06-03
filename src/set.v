@@ -16,7 +16,7 @@ Proof.
   case: b.
   - (* Case: b ~ true *)
     apply allBitsEq =>[i le_i].
-    rewrite /set getBit_settrue.
+    rewrite /set getBit_settrue; last by assumption.
     case H: (i == k).
     + (* Case: i == k *)
       move/eqP: H=>H.
@@ -24,13 +24,11 @@ Proof.
     + (* Case: i <> k *)
       move/eqP: H=>H.
       rewrite setBitThenGetDistinct //.
-      apply not_eq_sym.
-      apply H.
-      by apply le_k.
+      by apply not_eq_sym; apply H.
+    by apply le_k.
   - (* Case: b ~ false *)
-    apply le_i.
     apply allBitsEq =>[i le_i].
-    rewrite /set getBit_setfalse.
+    rewrite /set getBit_setfalse; last by assumption.
     case H: (i == k).
     + (* Case: i == k *)
       move/eqP: H=>H.
@@ -38,8 +36,6 @@ Proof.
     + (* Case: i <> k *)
       move/eqP: H=>H.
       rewrite setBitThenGetDistinct //.
-      apply not_eq_sym.
-      apply H.
-      apply le_k.
-      by apply le_i.
+      by apply not_eq_sym; apply H.
+    by apply le_k.
 Qed.

@@ -110,13 +110,11 @@ Proof.
     by rewrite //.
   + (* k ~ k + 1 *)
     move=> k IHk le_k.
-    rewrite !getBit_behead.
+    rewrite !getBit_behead; last by assumption.
     have ->: getBit (andB [tuple of b :: bs] [tuple of b' :: bs']) k.+1 = getBit (andB bs bs') k
       by compute.
-    apply IHn.
-    apply le_k.
-    apply le_k.
-    apply le_k.
+    apply IHn; last by assumption.
+    by apply le_k.
 Qed.
 
 Lemma getBit_orB:
@@ -134,13 +132,11 @@ Proof.
     by rewrite //.
   + (* k ~ k + 1 *)
     move=> k IHk le_k.
-    rewrite !getBit_behead.
+    rewrite !getBit_behead; last by assumption.
     have ->: getBit (orB [tuple of b :: bs] [tuple of b' :: bs']) k.+1 = getBit (orB bs bs') k
       by compute.
-    apply IHn.
-    apply le_k.
-    apply le_k.
-    apply le_k.
+    apply IHn; last by assumption.
+    by apply le_k.
 Qed.
 
 Lemma getBit_xorB:
@@ -158,12 +154,10 @@ Proof.
     by rewrite //.
   + (* k ~ k + 1 *)
     move=> k IHk le_k.
-    rewrite !getBit_behead.
+    rewrite !getBit_behead; last by assumption.
     have ->: getBit (xorB [tuple of b :: bs] [tuple of b' :: bs']) k.+1 = getBit (xorB bs bs') k
       by compute.
-    apply IHn.
-    apply le_k.
-    apply le_k.
+    apply IHn; last by assumption.
     apply le_k.
 Qed.
 
@@ -182,8 +176,7 @@ Proof.
       by compute.
     have ->: getBit (consB (~~ b) (invB bs)) k.+1 = getBit (invB bs) k
       by compute.
-    apply IHn.
-    apply le_k.
+    by apply IHn; apply le_k.
 Qed.
 
 Lemma getBit_orB_true:
@@ -191,10 +184,9 @@ Lemma getBit_orB_true:
     (getBit bs k = true -> getBit (orB bs' bs) k = true).
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_orB.
+  rewrite getBit_orB; last by assumption.
   move ->.
   apply Bool.orb_true_r.
-  apply le_k.
 Qed.
 
 Lemma getBit_orB_neg:
@@ -202,10 +194,9 @@ Lemma getBit_orB_neg:
     (getBit bs' k = false -> getBit (orB bs bs') k = getBit bs k).
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_orB.
+  rewrite getBit_orB; last by assumption.
   move ->.
   apply Bool.orb_false_r.
-  apply le_k.
 Qed.
 
 Lemma setBit_0:
@@ -257,34 +248,25 @@ Lemma getBit_shlBn_1:
   forall n k, k < n -> getBit (n := n) (shlBn #1 k) k = true.
 Proof.
   move=> n k le_k.
-  rewrite getBit_shlBn.
-  apply setBitThenGetSame.
-  apply le_k.
-  apply le_k.
+  rewrite getBit_shlBn; last by assumption.
+  apply setBitThenGetSame; last by assumption.
 Qed.
 
 Lemma getBit_zero:
   forall n k, k < n -> getBit (n := n) #0 k = false.
 Proof.
   move=> n k le_k.
-  rewrite fromNat0.
-  rewrite /zero.
-  rewrite /copy /getBit.
-  rewrite nth_nseq.
-  rewrite le_k //.
+  rewrite fromNat0 /zero /copy /getBit nth_nseq le_k //.
 Qed.
 
 Lemma getBit_shlBn_0:
   forall n k k', k < n -> k' < n -> k <> k' -> getBit (n := n) (shlBn #1 k) k' = false.
 Proof.
   move=> n k k' le_k le_k'.
-  rewrite getBit_shlBn.
+  rewrite getBit_shlBn; last by assumption.
   have ->: false = getBit (n := n) #0 k'.
   rewrite getBit_zero //.
-  apply setBitThenGetDistinct.
-  apply le_k.
-  apply le_k'.
-  apply le_k.
+  apply setBitThenGetDistinct; assumption; assumption.
 Qed.
 
 Lemma getBit_settrue:
@@ -295,20 +277,15 @@ Proof.
   case H: (x == k).
   - (* Case: x == k *)
     move/eqP: H=>H.
-    apply getBit_orB_true.
-    apply le_x.
+    apply getBit_orB_true; first by apply le_x.
     rewrite H.
-    apply getBit_shlBn_1.
-    apply le_k.
+    by apply getBit_shlBn_1; apply le_k.
   - (* Case: x <> k *)
     move/eqP: H=>H.
-    apply getBit_orB_neg.
+    apply getBit_orB_neg; first by apply le_x.
+    apply getBit_shlBn_0; first by apply le_k.
     apply le_x.
-    apply getBit_shlBn_0.
-    apply le_k.
-    apply le_x.
-    apply not_eq_sym.
-    apply H.
+    by apply not_eq_sym; apply H.
 Qed.
 
 Lemma getBit_andB_true:
@@ -316,10 +293,9 @@ Lemma getBit_andB_true:
     (getBit bs' k = true -> getBit (andB bs bs') k = getBit bs k).
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_andB.
+  rewrite getBit_andB; last by assumption.
   move ->.
   apply Bool.andb_true_r.
-  apply le_k.
 Qed.
 
 Lemma getBit_andB_neg:
@@ -327,10 +303,9 @@ Lemma getBit_andB_neg:
     getBit bs' k = false -> getBit (andB bs bs') k = false.
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_andB.
+  rewrite getBit_andB; last by assumption.
   move ->.
   apply Bool.andb_false_r.
-  apply le_k.
 Qed.
 
 Lemma getBit_setfalse:
@@ -341,17 +316,13 @@ Proof.
   case H: (x == k).
   - (* Case: x == k *)
     move/eqP: H=>H.
-    apply getBit_andB_neg.
-    apply le_x.
-    rewrite H getBit_invB.
-    rewrite getBit_shlBn_1 //.
-    by apply le_k.
+    apply getBit_andB_neg; first by apply le_x.
+    rewrite H getBit_invB; last by apply le_k.
+    by rewrite getBit_shlBn_1 //.
   - (* Case: x <> k *)
     move/eqP: H=>H.
-    apply getBit_andB_true.
-    apply le_x.
-    rewrite getBit_invB.
+    apply getBit_andB_true; first by apply le_x.
+    rewrite getBit_invB; last by apply le_x.
     rewrite getBit_shlBn_0 //.
-    apply not_eq_sym; apply H.
-    by apply le_x.
+    by apply not_eq_sym; apply H.
 Qed.
