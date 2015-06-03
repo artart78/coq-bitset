@@ -211,38 +211,106 @@ Proof.
     by rewrite {2}/setBit /setBitAux //= tuple.beheadCons //.
 Qed.
 
-Lemma setBit_true:
-  forall n k, k < n -> setBit (n := n.+1) #0 k true = joinmsb (false, setBit (n := n) #0 k true).
+Lemma dropmsb_joinlsb:
+  forall n (bs : BITS n.+1) b,
+    dropmsb (joinlsb (bs, b)) = joinlsb (dropmsb bs, b).
 Proof.
   admit.
 Admitted.
+
+Set Printing Implicit.
+
+Lemma splitlsb_0:
+  forall n, splitlsb (n := n) #0 = (#0, false).
+Proof.
+  move=> n.
+  rewrite /splitlsb.
+  rewrite /fromNat /=.
+  rewrite -/fromNat.
+  rewrite tuple.theadCons tuple.beheadCons //.
+Qed.
+
+Lemma splitmsb_0:
+  forall n, splitmsb (n := n) #0 = (false, #0).
+Proof.
+  move=> n.
+  elim: n=> [|n IHn].
+  + (* n ~ 0 *)
+    rewrite /splitmsb.
+    rewrite splitlsb_0 //.
+  + (* n ~ n + 1 *)
+    rewrite /splitmsb.
+    rewrite //=.
+    rewrite tuple.theadCons tuple.beheadCons /=.
+    rewrite -/splitmsb.
+    rewrite IHn //.
+Qed.
+
+Set Printing Implicit.
+
+Lemma dropmsb_setBit:
+  forall n k, k < n ->
+    (dropmsb (setBit (n := n.+1) #0 k true) = setBit (n := n) #0 k true).
+Proof.
+  move=> n k le_k.
+  elim: n k le_k=> // n IHn k le_k.
+  elim: k le_k=> [|k IHk le_k].
+  + (* k ~ 0 *)
+    rewrite /=.
+    rewrite !tuple.beheadCons /=.
+    rewrite dropmsb_joinlsb.
+    rewrite /dropmsb.
+    rewrite splitmsb_0 //=.
+  + (* k ~ k + 1 *)
+    rewrite {1}/setBit /setBitAux.
+    rewrite -/setBitAux.
+    rewrite splitlsb_0.
+    rewrite splitlsb_0.
+    have ->:
+        (match k with
+         | 0 => joinlsb (n := n) (# (0), true)
+         | i'.+1 => joinlsb (setBitAux i' true # (0), false)
+         end) = setBitAux k true #0.
+      rewrite {2}/setBitAux //=.
+      rewrite tuple.beheadCons tuple.theadCons /=.
+      by rewrite -/setBitAux //.
+    have ->: setBitAux k true #0 = setBit #0 k true. by trivial.
+    rewrite dropmsb_joinlsb.
+    rewrite IHn.
+    rewrite {2}/setBit /setBitAux.
+    rewrite splitlsb_0 //.
+    apply le_k.
+Qed.
 
 Lemma getBit_shlBn:
   forall n k, k < n -> shlBn (n := n) #1 k = setBit #0 k true.
 Proof.
   move=> n k le_k.
+  elim: n k le_k=> // n IHn k le_k.
   elim: k le_k.
   + (* k ~ 0 *)
-    by rewrite /= setBit_0 //.
+    by rewrite setBit_0 //.
   + (* k ~ k + 1 *)
     move=> k IHk le_k.
     rewrite /shlBn iterS -[iter _ _ _]/(shlBn _ _).
     rewrite IHk.
-    case: n IHk le_k => // n IHk le_k.
-    admit.
-    (*
-    rewrite {2}setBit_true; last by assumption.
+    rewrite {1}/setBit /setBitAux //=.
+    rewrite tuple.beheadCons tuple.theadCons /= -/setBitAux.
     rewrite /shlB /shlBaux.
-rewrite {2}/setBit /setBitAux.
-Print shlBn.
-
-rewrite setBit_true.
-    Search setBit.
-    
-    admit.
-    *)
+    rewrite -/setBitAux.
+    have ->:
+        (match k with
+         | 0 => joinlsb (n := n) (# (0), true)
+         | i'.+1 => joinlsb (setBitAux i' true # (0), false)
+         end) = setBitAux k true #0.
+      rewrite {2}/setBitAux //=.
+      rewrite tuple.beheadCons tuple.theadCons /=.
+      by rewrite -/setBitAux //.
+    rewrite -[setBitAux _ _ _]/(setBit _ _ _).
+    rewrite dropmsb_joinlsb.
+    rewrite dropmsb_setBit //.
     auto with arith.
-Admitted.
+Qed.
 
 Lemma getBit_shlBn_1:
   forall n k, k < n -> getBit (n := n) (shlBn #1 k) k = true.
