@@ -3,10 +3,9 @@ From Ssreflect
 From Bits
      Require Import bits.
 
-
 Lemma getBit_joinmsb :
   forall n (bs: BITS n) k,
-    k <= n -> 
+    k <= n ->
     getBit (joinmsb (false , bs)) k = getBit bs k.
 Proof.
   elim=> [|n IHn] bs k leq_k_n.
@@ -20,11 +19,10 @@ Proof.
     + (* Case: k ~ 0 *)
       by trivial.
     + (* Case: k ~ k.+1 *)
-      rewrite /joinmsb/splitlsb tuple.beheadCons 
+      rewrite /joinmsb/splitlsb tuple.beheadCons
               tuple.theadCons -/joinmsb /joinlsb //=.
       by apply: IHn; assumption.
 Qed.
-
 
 Lemma shrB_joinmsb0:
   forall n (bs: BITS n),
@@ -55,13 +53,12 @@ Proof.
     by rewrite -shrB_joinmsb0 IHk.
 Qed.
 
-
-Lemma shrBn_Sn : 
+Lemma shrBn_Sn :
   forall n b (bs: BITS n) k,
     shrBn [tuple of b :: bs] k.+1 = shrBn (joinmsb0 bs) k.
 Proof.
   move=> n b S k.
-  by rewrite {1}/shrBn iterSr //= /droplsb //= tuple.beheadCons. 
+  by rewrite {1}/shrBn iterSr //= /droplsb //= tuple.beheadCons.
 Qed.
 
 Lemma getBit_shrBn:
@@ -73,7 +70,7 @@ Proof.
   (* Case: n ~ n.+1 *)
   case: k le_k => [|k] le_k //.
   (* Case: k ~ k.+1 *)
-  have ->: getBit [tuple of b :: bs] k.+1 = getBit bs k 
+  have ->: getBit [tuple of b :: bs] k.+1 = getBit bs k
     by compute.
   rewrite shrBn_Sn shrBn_joinmsb0 /joinmsb0 getBit_joinmsb;
     last by apply leq0n.
@@ -211,14 +208,59 @@ Proof.
     by rewrite {2}/setBit /setBitAux //= tuple.beheadCons //.
 Qed.
 
+Lemma getBit_joinlsb:
+  forall n (bs : BITS n) k b, k < n ->
+    getBit (joinlsb (bs, b)) k.+1 = getBit bs k.
+Proof.
+  rewrite //.
+Qed.
+
+Lemma getBit_dropmsb:
+  forall n (bs : BITS n.+1) k, k < n ->
+    getBit (dropmsb bs) k = getBit bs k.
+Proof.
+  move=> n bs k le_k.
+  elim: n k bs le_k=> // n /= IHn k /tupleP[b bs] le_k.
+  rewrite /dropmsb /splitmsb /=.
+  rewrite tuple.theadCons tuple.beheadCons /=.
+  rewrite -/splitmsb.
+  have ->: (let (c, r) := splitmsb bs in (c, joinlsb (r, b))).2
+    = joinlsb (dropmsb bs, b).
+    elim H: splitmsb.
+    rewrite /dropmsb //.
+    by rewrite H //.
+  case: k le_k.
+  + (* k ~ 0 *)
+    by rewrite //.
+  + (* k ~ k + 1 *)
+    move=> k le_k.
+    rewrite !getBit_joinlsb.
+    apply IHn.
+    apply le_k.
+    auto with arith.
+    apply le_k.
+Qed.
+
 Lemma dropmsb_joinlsb:
   forall n (bs : BITS n.+1) b,
     dropmsb (joinlsb (bs, b)) = joinlsb (dropmsb bs, b).
 Proof.
-  admit.
-Admitted.
-
-Set Printing Implicit.
+  move=> n bs b.
+  apply allBitsEq.
+  move=> k le_k.
+  case: k le_k.
+  + (* k ~ 0 *)
+    rewrite getBit_dropmsb.
+    rewrite /joinlsb {2}/getBit.
+    rewrite //.
+    trivial.
+  + (* k ~ k + 1 *)
+    move=> k le_k.
+    rewrite getBit_dropmsb; last by assumption.
+    rewrite getBit_joinlsb; last by auto with arith.
+    rewrite getBit_joinlsb; last by assumption.
+    rewrite getBit_dropmsb //.
+Qed.
 
 Lemma splitlsb_0:
   forall n, splitlsb (n := n) #0 = (#0, false).
@@ -245,8 +287,6 @@ Proof.
     rewrite -/splitmsb.
     rewrite IHn //.
 Qed.
-
-Set Printing Implicit.
 
 Lemma dropmsb_setBit:
   forall n k, k < n ->
