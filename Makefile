@@ -94,7 +94,8 @@ endif
 #                    #
 ######################
 
-VFILES:=src/compl.v\
+VFILES:=src/off_r.v\
+  src/compl.v\
   src/symdiff.v\
   src/union.v\
   src/inter.v\

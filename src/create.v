@@ -66,9 +66,10 @@ Proof.
 Admitted.
 
 Lemma create_repr:
-  forall n (b: bool),
+  forall n (b: bool), n > 0 ->
     create b = if b then ones n else zero n.
 Proof.
-  move=> n b.
-  rewrite makeOnes /create fromNat0 //.
+  move=> n b gtz_n.
+  rewrite makeOnes /create; last by assumption.
+  rewrite fromNat0 //.
 Qed.
