@@ -18,5 +18,5 @@ Lemma compl_repr:
     getBit (compl bs) k = ~~ (getBit bs k).
 Proof.
   move=> n bs k le_k.
-  by rewrite getBit_invB.
+  by rewrite getBit_liftUnOp.
 Qed.

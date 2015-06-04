@@ -12,5 +12,5 @@ Lemma union_repr:
     getBit (union bs bs') k = (getBit bs k) || (getBit bs' k).
 Proof.
   move=> n bs bs' k le_k.
-  by rewrite getBit_orB.
+  by rewrite getBit_liftBinOp.
 Qed.

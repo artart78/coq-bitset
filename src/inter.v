@@ -12,5 +12,5 @@ Lemma inter_repr:
     getBit (inter bs bs') k = (getBit bs k) && (getBit bs' k).
 Proof.
   move=> n bs bs' k le_k.
-  by rewrite getBit_andB.
+  by rewrite getBit_liftBinOp.
 Qed.
