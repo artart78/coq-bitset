@@ -32,30 +32,36 @@ Proof.
     admit. (* a = b %[mod n] -> a .*2 = b .*2 %[mod n] *)
 Admitted.
 
-Lemma makeOnes:
-  forall n,
-    ones n = dropmsb (subB (shlBn (n := n.+1) #1 n) #1).
+(* TODO: merge with the lemma below *)
+Lemma toNat_subB:
+  forall n, n > 0 ->
+    toNat (subB (shlBn (n := n.+1) #1 n) #1) = (2 ^ n) - 1.
 Proof.
   move=> n.
+  rewrite toNat_subB.
+  have ->: toNat (n := n.+1) #1 = 1.
+  rewrite toNat_fromNat.
+  admit. (* 1 %% 2 ^ n.+1 = 1 *)
+  have ->: toNat (shlBn (n := n.+1) #1 n) = 2 ^ n.
+    by admit. (* Uses toNat_shlBn + modn_small *)
+  trivial.
+  admit. (* leB #1 (shlBn #1 n) *)
+Admitted.
+
+Lemma makeOnes:
+  forall n, n > 0 ->
+    ones n = dropmsb (subB (shlBn (n := n.+1) #1 n) #1).
+Proof.
+  move=> n gtz_n.
   have: toNat (ones n) = toNat (dropmsb (subB (shlBn (n := n.+1) #1 n) #1)).
     rewrite toNat_ones.
     rewrite toNat_dropmsb.
-    rewrite subB1.
-    rewrite toNat_decB.
-    (*elim H: (shlBn #1 n == #0).*)
-    have H: ~(shlBn (n := n.+1) #1 n == #0).
-      by admit.
-    elim H': (shlBn #1 n == #0).
-      by exfalso; apply H; apply H'.
-    have ->:
-      (toNat (shlBn (n := n.+1) #1 n)).-1 %% 2 ^ n = (toNat (shlBn (n := n.+1) #1 n) %% 2 ^ n.+1).-1.
-      by admit. (* (a -.1) %% 2 ^ n = (a %% 2 ^ n.+1) -.1 since a <> 0 *)
-    rewrite toNat_shlBn.
-    rewrite toNat_fromNat //.
-    have ->: (2 ^ n).-1 = ((1 %% 2 ^ n.+1 * 2 ^ n) %% 2 ^ n.+1).-1.
-      by admit. (* modn_small? *)
+    rewrite toNat_subB.
+    rewrite modn_small.
+    rewrite subn1.
     trivial.
-    trivial.
+    admit. (* 2 ^ n - 1 < 2 ^ n *)
+    assumption.
     apply toNat_inj.
 Admitted.
 
