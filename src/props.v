@@ -377,7 +377,7 @@ Proof.
   apply setBitThenGetDistinct; assumption; assumption.
 Qed.
 
-Lemma getBit_settrue:
+Lemma getBit_set_true:
   forall n (bs: BITS n) k x, k < n -> x < n ->
     getBit (orB bs (shlBn #1 k)) x = (if x == k then true else getBit bs x).
 Proof.
@@ -416,7 +416,7 @@ Proof.
   apply Bool.andb_false_r.
 Qed.
 
-Lemma getBit_setfalse:
+Lemma getBit_set_false:
   forall n (bs: BITS n) k x, k < n -> x < n ->
     getBit (andB bs (invB (shlBn #1 k))) x = (if x == k then false else getBit bs x).
 Proof.
