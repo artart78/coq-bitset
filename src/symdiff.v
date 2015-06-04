@@ -12,5 +12,5 @@ Lemma symdiff_repr:
     getBit (symdiff bs bs') k = xorb (getBit bs k) (getBit bs' k).
 Proof.
   move=> n bs bs' k le_k.
-  rewrite getBit_xorB //.
+  by rewrite getBit_xorB.
 Qed.
