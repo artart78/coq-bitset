@@ -161,13 +161,9 @@ Qed.
 Lemma getBit_invB:
   forall n (bs: BITS n) k, k < n -> getBit (invB bs) k = negb (getBit bs k).
 Proof.
-  move=> n bs k le_k.
-  elim: n k bs le_k=> // n /= IHn k /tupleP[b bs] le_k.
-  elim: k le_k.
-  + (* k ~ 0 *)
-    by rewrite //.
+  elim=> // n IHn /tupleP[b bs];
+  case=> // k le_k.
   + (* k ~ k + 1 *)
-    move=> k IHk le_k.
     rewrite /invB liftUnOpCons -/invB.
     have ->: getBit [tuple of b :: bs] k.+1 = getBit bs k
       by compute.
