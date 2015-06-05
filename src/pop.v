@@ -82,10 +82,51 @@ Canonical pop_mask {n} (k: nat): BITS n
   := Tuple (pop_maskP k).
 
 Definition pop {n}(bs: BITS (2^n)): nat
-  := let fix count n k x :=
+  := let fix pop_count n k x :=
        match n with
        | 0 => x
        | n'.+1 => let x' := addB (andB x (pop_mask k)) (andB (shrBn x k) (pop_mask k)) in
-                  count n' k.*2 x'
+                  pop_count n' k.*2 x'
        end
-     in toNat(count n 1 bs).
+     in toNat(pop_count n 1 bs).
+
+Fixpoint sum_tuple_seq {n}(bs: BITS n)(k: nat): seq nat
+  := let fix aux n k x: seq nat :=
+       match n with
+       | 0 => map (fun b => (if b then 1 else 0)) bs
+       | n'.+1 => let t' := aux n' (k./2) x in
+                  mkseq (fun i => nth 0 t' (2 * i) + nth 0 t' (2 * i + 1)) (n %/ k)
+       end
+     in aux n k bs.
+
+Lemma sum_tupleP {n}(bs: BITS n)(k: nat):
+  size (sum_tuple_seq bs k) == n %/ k.
+Proof.
+  case: n bs=> [|n] bs.
+  + (* n ~ 0 *)
+    rewrite tuple0 div0n //.
+  + (* n ~ n.+1 *)
+    by rewrite size_mkseq //.
+Qed.
+
+Canonical sum_tuple {n}(bs: BITS n)(k: nat): (n %/ k).-tuple nat
+  := Tuple (sum_tupleP bs k).
+
+(* TODO:
+ * - show that sumn (sum_tuple (pop_count n k x) k) is invariant
+ * - show that sumn (sum_tuple (pop_count n k x) k) = count_mem true bs
+     -> sumn (sum_tuple (pop_count n 1 bs) 1) = count_mem true bs
+ *)
+
+(* IH: the sum of the numbers representing the groups of size k
+ * in (pop_count n k x) is count_mem true bs
+ *)
+
+(*
+Lemma pop_repr:
+  forall n (bs: BITS (2 ^ n)),
+    pop bs = count_mem true bs.
+Proof.
+  move=> n bs.
+  rewrite /pop.
+*)
