@@ -12,4 +12,4 @@ src/symdiff.v
 src/compl.v
 src/off_r.v
 src/pop.v
-src/lsb.v
+src/keep_min.v
