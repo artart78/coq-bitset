@@ -110,24 +110,6 @@ Proof.
     by apply IHn; apply le_k.
 Qed.
 
-Lemma getBit_orB_true:
-  forall n (bs: BITS n)(bs': BITS n) k, k < n ->
-    getBit bs k = true -> getBit (orB bs' bs) k = true.
-Proof.
-  move=> n bs bs' k ?.
-  rewrite getBit_liftBinOp; last by assumption.
-  move ->; apply orbT.
-Qed.
-
-Lemma getBit_orB_neg:
-  forall n (bs: BITS n)(bs': BITS n) k, k < n ->
-    getBit bs' k = false -> getBit (orB bs bs') k = getBit bs k.
-Proof.
-  move=> n bs bs' k ?.
-  rewrite getBit_liftBinOp; last by assumption.
-  move ->; apply orbF.
-Qed.
-
 Lemma setBit_0:
   forall n, setBit (n := n) #0 0 true = #1.
 Proof.
