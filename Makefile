@@ -100,6 +100,7 @@ VFILES:=src/lsb.v\
   src/compl.v\
   src/symdiff.v\
   src/union.v\
+  src/min.v\
   src/inter.v\
   src/set.v\
   src/get.v\
