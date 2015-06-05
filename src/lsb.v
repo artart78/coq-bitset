@@ -33,8 +33,13 @@ Lemma andB_invB:
   forall n (bs: BITS n),
     andB bs (invB bs) = zero n.
 Proof.
-  admit.
-Admitted.
+  move=> n bs.
+  apply allBitsEq.
+  move=> k le_k.
+  rewrite getBit_liftBinOp; last by assumption.
+  rewrite getBit_liftUnOp; last by assumption.
+  rewrite andbN -fromNat0 getBit_zero //.
+Qed.
 
 Lemma lsb_repr:
   forall n (bs: BITS n),
