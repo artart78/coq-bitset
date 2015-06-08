@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
 From Bits
      Require Import bits.
-Require Import specs props.
+Require Import specs props pop.
 
 (* Fill all the bits to 1 after the LSB *)
 
@@ -65,3 +65,38 @@ Proof.
       rewrite liftBinOpCons orbF.
       by rewrite -/orB IHn.
 Qed.
+
+(*
+Definition ntz {n}(bs: BITS n): nat := n - (pop (orB bs (negB bs))).
+*)
+
+Lemma ntz_repr:
+  forall n (bs: BITS n),
+    n - (count_mem true (fill_ntz bs)) = index true bs.
+Proof.
+  elim=> [bs|n IHn /tupleP[b bs]].
+  + (* n ~ 0 *)
+    by rewrite tuple0 [bs]tuple0.
+  + (* n ~ n.+1 *)
+    case: b.
+    - (* b ~ true *)
+      have ->: fill_ntz [tuple of true :: bs] = [tuple of true :: ones n].
+        apply val_inj.
+        by rewrite /= size_tuple //.
+      rewrite /=.
+      have ->: (count_mem true (nseq n true)) = n.
+        by admit.
+      by rewrite addnC addn1 subnn.
+    - (* b ~ false *)
+      have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
+        by apply val_inj.
+      rewrite /= -IHn.
+      rewrite add0n subSn //.
+      have H: n = size bs.
+      rewrite size_tuple //.
+      admit.
+      (* Error!?
+      rewrite H.
+      rewrite count_size.
+      *)
+Admitted.
