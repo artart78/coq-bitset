@@ -81,14 +81,17 @@ Qed.
 Canonical pop_mask {n} (k: nat): BITS n
   := Tuple (pop_maskP k).
 
+Definition pop_nextBits {n}(bs: BITS (2^n))(k: nat) : BITS (2^n) :=
+   addB (andB bs (pop_mask k)) (andB (shrBn bs k) (pop_mask k)).
+
+Fixpoint popAux {n}(i: nat)(k: nat)(x: BITS (2^n)): BITS (2^n)
+  := match i with
+     | 0 => x
+     | i'.+1 => popAux i' k.*2 (pop_nextBits x k)
+     end.
+
 Definition pop {n}(bs: BITS (2^n)): nat
-  := let fix pop_count n k x :=
-       match n with
-       | 0 => x
-       | n'.+1 => let x' := addB (andB x (pop_mask k)) (andB (shrBn x k) (pop_mask k)) in
-                  pop_count n' k.*2 x'
-       end
-     in toNat(pop_count n 1 bs).
+  := toNat(popAux n 1 bs).
 
 Fixpoint sum_tuple_seq {n}(bs: BITS n)(k: nat): seq nat
   := let fix aux n k x: seq nat :=
@@ -112,21 +115,42 @@ Qed.
 Canonical sum_tuple {n}(bs: BITS n)(k: nat): (n %/ k).-tuple nat
   := Tuple (sum_tupleP bs k).
 
-(* TODO:
- * - show that sumn (sum_tuple (pop_count n k x) k) is invariant
- * - show that sumn (sum_tuple (pop_count n k x) k) = count_mem true bs
-     -> sumn (sum_tuple (pop_count n 1 bs) 1) = count_mem true bs
- *)
-
-(* IH: the sum of the numbers representing the groups of size k
- * in (pop_count n k x) is count_mem true bs
- *)
-
 (*
+ * sumn (sum_tuple (addB (andB x (pop_mask k)) (andB (shrBn x k) (pop_mask k))) k.*2)
+ * (= sumn (sum_tuple f(x) k.*2))
+ * = sumn (sum_tuple x k)
+
+   sum_tuple x k [i.*2] + sum_tuple x k [i.*2 + 1]
+   = sum_tuple f(x) k.*2 [i]
+
+ * 1) Show that sum_tuple x k [i] = toNat (take k (shrB (k*i) x))
+ * 2) Show that:
+   toNat (take k (shrBn (k*i.*2) x)) + toNat (take k (shrBn (k*i.*2 + k) x)) (X)
+   = toNat (take k.*2 (shrBn (k*i.*2) f(x)))
+
+   Because (addB (take k bs) (take k bs')) = take k.*2 (addB bs bs'):
+   X = toNat (take k.*2 (addB (shrBn (k*i.*2) x) (shrBn (k*i.*2 + k) x)))
+
+   And:
+   take k.*2 (shrBn (k*i.*2) (addB (andB x (pop_mask k)) (andB (shrBn x k) (pop_mask k)))
+   = take k.*2 (addB (shrBn (k*i.*2) x) (shrBn (k*i.*2 + k) x))
+
+   => sumn (sum_tuple bs 1) = sumn (sum_tuple (popAux n 1 bs) (2^n))
+      = count_mem true bs     = pop bs
+*)
+
 Lemma pop_repr:
   forall n (bs: BITS (2 ^ n)),
     pop bs = count_mem true bs.
 Proof.
   move=> n bs.
-  rewrite /pop.
-*)
+  have ->: pop bs = sumn (sum_tuple (popAux n 1 bs) n)
+    by admit.
+  have ->: count_mem true bs = sumn (sum_tuple bs 1)
+    by admit.
+  have: forall x k, sumn (sum_tuple x k) = sumn (sum_tuple bs 1)
+    -> sumn (sum_tuple (pop_nextBits x k) k.*2) = sumn (sum_tuple bs 1).
+    admit.
+    rewrite /popAux.
+  admit.
+Admitted.
