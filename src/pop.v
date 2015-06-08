@@ -4,6 +4,9 @@ From Bits
      Require Import bits.
 Require Import specs props off_r.
 
+(** Recursive algorithm **)
+
+(*
 Lemma count_off_r:
   forall n (bs: BITS n), bs <> #0 ->
     count_mem true (andB bs (subB bs #1)) = (count_mem true bs) - 1.
@@ -33,7 +36,6 @@ Proof.
       rewrite bs_eqz //.
 Qed.
 
-(*
 Definition pop {n}(bs: BITS n): nat
   := let fix count n x :=
        if x == #0 then n
@@ -47,24 +49,10 @@ Proof.
   admit.
 Admitted.
 *)
+
+(** Algorithm using divide-and-conquer **)
+
 (*
-Definition pop_mask_seq {n}(k: nat): seq bool
-  := let fix aux n (k: 'I_k) b :=
-       match n with
-       | 0 => [::]
-       | n'.+1 =>
-         let b' := (if k == 0 then ~~ b else b) in
-         cons b' (aux n' k.+1 b')
-       end
-     in aux n 0 false.
-
-  match xs with
-    | [::] => [::]
-    | cons false xs => cons false (off_r_seq xs)
-    | cons true xs => cons false xs
-  end.
-*)
-
 Definition pop_mask_seq {n}(k: nat): seq bool
   := let fix aux n :=
        match n with
@@ -154,11 +142,35 @@ Proof.
   have H': 0 <= n by trivial.
   have ->: count_mem true bs = sumn (sum_tuple bs 0 H')
     by admit.
-  (*
   have: forall x k, sumn (sum_tuple x k) = sumn (sum_tuple bs 1)
     -> sumn (sum_tuple (pop_nextBits x k) k.*2) = sumn (sum_tuple bs 1).
     admit.
     rewrite /popAux.
-  *)
   admit.
 Admitted.
+*)
+
+Definition pop_table (n: nat) := mkseq (fun i => count_mem true (fromNat (n := 2^n) i)) (2^n).
+
+Definition getLsb_seq {n}(bs: BITS n)(k: nat)(le_k: k <= n): seq bool :=
+  take k bs.
+
+Lemma getLsbP {n}(bs: BITS n)(k: nat)(le_k: k <= n): size (getLsb_seq (n := n) bs k le_k) == k.
+Proof.
+  rewrite /getLsb_seq.
+  have {2}->: k = minn k n by admit.
+  apply take_tupleP.
+Admitted.
+
+Canonical getLsb {n}(bs: BITS n)(k: nat)(le_k: k <= n): BITS k
+  := Tuple (getLsbP bs k le_k).
+
+Fixpoint popAux (n: nat)(bs: BITS n)(k: nat)(i: nat)(le_k: (2^k) <= n): nat :=
+  match i with
+  | 0 => 0
+  | i'.+1 => let x := andB (getLsb (shrBn bs (i' * 2^k)) (2^k) le_k) (ones (2^k)) in
+             (nth 0 (pop_table (2^k)) (toNat x)) + (popAux n bs k i' le_k)
+  end.
+
+Definition pop (n: nat)(bs: BITS n)(k: nat)(le_k: (2^k) <= n): nat :=
+  popAux n bs k n le_k.
