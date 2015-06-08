@@ -93,27 +93,31 @@ Fixpoint popAux {n}(i: nat)(k: nat)(x: BITS (2^n)): BITS (2^n)
 Definition pop {n}(bs: BITS (2^n)): nat
   := toNat(popAux n 1 bs).
 
-Fixpoint sum_tuple_seq {n}(bs: BITS n)(k: nat): seq nat
-  := let fix aux n k x: seq nat :=
-       match n with
-       | 0 => map (fun b => (if b then 1 else 0)) bs
-       | n'.+1 => let t' := aux n' (k./2) x in
-                  mkseq (fun i => nth 0 t' (2 * i) + nth 0 t' (2 * i + 1)) (n %/ k)
-       end
-     in aux n k bs.
+Fixpoint sum_tuple_seqAux {n}(bs: BITS (2^n))(k: nat): seq nat
+  := match k with
+     | 0 => map (fun b => (if b then 1 else 0)) bs
+     | k'.+1 => let t' := sum_tuple_seqAux bs k' in
+                mkseq (fun i => nth 0 t' (2 * i) + nth 0 t' (2 * i + 1)) (2 ^ (n - k))
+     end.
+(*
+ * The i-th element of sum_tuple_seq bs k is the number of bits to 1
+ * from offset i * 2^k to offset (i + 1) * 2^k
+ *)
+Definition sum_tuple_seq {n}(bs: BITS (2^n))(k: nat)(le_k: k <= n): seq nat
+  := sum_tuple_seqAux bs k.
 
-Lemma sum_tupleP {n}(bs: BITS n)(k: nat):
-  size (sum_tuple_seq bs k) == n %/ k.
+Lemma sum_tupleP {n}(bs: BITS (2^n))(k: nat)(le_k: k <= n):
+  size (sum_tuple_seq bs k le_k) == 2^(n - k).
 Proof.
-  case: n bs=> [|n] bs.
-  + (* n ~ 0 *)
-    rewrite tuple0 div0n //.
-  + (* n ~ n.+1 *)
-    by rewrite size_mkseq //.
+  case: k le_k=> [|k] le_k.
+  + (* k ~ 0 *)
+    by rewrite size_map size_tuple subn0.
+  + (* k ~ k.+1 *)
+    by rewrite size_mkseq.
 Qed.
 
-Canonical sum_tuple {n}(bs: BITS n)(k: nat): (n %/ k).-tuple nat
-  := Tuple (sum_tupleP bs k).
+Canonical sum_tuple {n}(bs: BITS (2^n))(k: nat)(le_k: k <= n): (2^(n - k)).-tuple nat
+  := Tuple (sum_tupleP bs k le_k).
 
 (*
  * sumn (sum_tuple (addB (andB x (pop_mask k)) (andB (shrBn x k) (pop_mask k))) k.*2)
@@ -144,13 +148,17 @@ Lemma pop_repr:
     pop bs = count_mem true bs.
 Proof.
   move=> n bs.
-  have ->: pop bs = sumn (sum_tuple (popAux n 1 bs) n)
+  have H: n <= n by trivial.
+  have ->: pop bs = sumn (sum_tuple (popAux n 1 bs) n H)
     by admit.
-  have ->: count_mem true bs = sumn (sum_tuple bs 1)
+  have H': 0 <= n by trivial.
+  have ->: count_mem true bs = sumn (sum_tuple bs 0 H')
     by admit.
+  (*
   have: forall x k, sumn (sum_tuple x k) = sumn (sum_tuple bs 1)
     -> sumn (sum_tuple (pop_nextBits x k) k.*2) = sumn (sum_tuple bs 1).
     admit.
     rewrite /popAux.
+  *)
   admit.
 Admitted.
