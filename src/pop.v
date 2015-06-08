@@ -165,12 +165,58 @@ Admitted.
 Canonical getLsb {n}(bs: BITS n)(k: nat)(le_k: k <= n): BITS k
   := Tuple (getLsbP bs k le_k).
 
+Definition pop_elem (n: nat)(bs: BITS n)(k: nat)(i: nat)(le_k: (2^k) <= n): nat
+  := let x := andB (getLsb (shrBn bs (i * 2^k)) (2^k) le_k) (ones (2^k)) in
+     nth 0 (pop_table (2^k)) (toNat x).
+
 Fixpoint popAux (n: nat)(bs: BITS n)(k: nat)(i: nat)(le_k: (2^k) <= n): nat :=
   match i with
   | 0 => 0
-  | i'.+1 => let x := andB (getLsb (shrBn bs (i' * 2^k)) (2^k) le_k) (ones (2^k)) in
-             (nth 0 (pop_table (2^k)) (toNat x)) + (popAux n bs k i' le_k)
+  | i'.+1 => (pop_elem n bs k i' le_k) + (popAux n bs k i' le_k)
   end.
 
-Definition pop (n: nat)(bs: BITS n)(k: nat)(le_k: (2^k) <= n): nat :=
-  popAux n bs k n le_k.
+Definition pop {n}(bs: BITS n)(k: nat)(le_k: (2^k) <= n): nat
+  := popAux n bs k (n %/ 2^k) le_k.
+
+Lemma count_sep:
+  forall x s i i', i < i' ->
+  count_mem x (drop i (take i' s)) + count_mem x (take i s)
+  = count_mem true (take i' s).
+Proof.
+  admit.
+Admitted.
+
+Lemma pop_rec:
+  forall n (bs: BITS (2 ^ n)) k (le_k: 2^k <= 2^n) i,
+    popAux (2 ^ n) bs k i le_k = count_mem true (take (i * (2 ^ k)) bs).
+Proof.
+  move=> n bs k le_k.
+  elim=> [|i IHi].
+  + (* i ~ 0 *)
+    by rewrite mul0n take0.
+  + (* i ~ i.+1 *)
+    rewrite /popAux.
+    rewrite -/popAux.
+    rewrite IHi.
+    have ->: pop_elem (2 ^ n) bs k i le_k
+      = count_mem true (drop (i * (2 ^ k)) (take (i.+1 * (2 ^ k)) bs)).
+      by admit.
+    apply count_sep.
+    rewrite ltn_pmul2r.
+    rewrite ltnSn //.
+    by rewrite expn_gt0 //.
+Admitted.
+
+Lemma pop_repr:
+  forall n (bs: BITS (2 ^ n)) k (le_k: 2^k <= 2^n),
+    pop bs k le_k = count_mem true bs.
+Proof.
+  move=> n bs k le_k.
+  rewrite /pop pop_rec.
+  rewrite take_oversize //.
+  rewrite size_tuple divnK //.
+  rewrite dvdn_exp2l //.
+  rewrite leq_exp2l in le_k.
+  assumption.
+  by rewrite //.
+Qed.
