@@ -70,6 +70,13 @@ Qed.
 Definition ntz {n}(bs: BITS n): nat := n - (pop (orB bs (negB bs))).
 *)
 
+Lemma count_true:
+  forall n, (count_mem true (nseq n true)) = n.
+Proof.
+  elim=> //=.
+  auto with arith.
+Qed.
+
 Lemma ntz_repr:
   forall n (bs: BITS n),
     n - (count_mem true (fill_ntz bs)) = index true bs.
@@ -84,19 +91,16 @@ Proof.
         apply val_inj.
         by rewrite /= size_tuple //.
       rewrite /=.
-      have ->: (count_mem true (nseq n true)) = n.
-        by admit.
+      rewrite count_true.
       by rewrite addnC addn1 subnn.
     - (* b ~ false *)
       have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
       rewrite /= -IHn.
       rewrite add0n subSn //.
-      have H: n = size bs.
-      rewrite size_tuple //.
-      admit.
-      (* Error!?
-      rewrite H.
-      rewrite count_size.
-      *)
-Admitted.
+      have {2}->: n = size (fill_ntz_seq bs).
+        have H: size (fill_ntz_seq bs) == n by apply fill_ntzP.
+        move/eqP: H=>H.
+        by rewrite H //.
+      apply count_size.
+Qed.
