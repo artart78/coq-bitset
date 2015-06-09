@@ -1,6 +1,10 @@
 -R src Bitset
 src/bitset.v
-src/props.v
+src/props/bineqs.v
+src/props/getbit.v
+src/props/misc.v
+src/props/setbit.v
+src/props/tozp.v
 src/ops/cardinal.v
 src/ops/compl.v
 src/ops/create.v
