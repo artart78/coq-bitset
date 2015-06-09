@@ -29,17 +29,6 @@ Qed.
 Canonical fill_ntz {n} (t: BITS n): BITS n
   := Tuple (fill_ntzP t).
 
-Lemma orB_invB:
-  forall n (bs: BITS n),
-    orB bs (invB bs) = ones n.
-Proof.
-  move=> n bs.
-  apply allBitsEq=> k le_k.
-  rewrite getBit_liftBinOp; last by assumption.
-  rewrite getBit_liftUnOp; last by assumption.
-  rewrite orbN /getBit nth_nseq le_k //.
-Qed.
-  
 Lemma fill_ntz_repr:
   forall n (bs: BITS n),
     orB bs (negB bs) = fill_ntz bs.
@@ -67,13 +56,6 @@ Proof.
 Qed.
 
 Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
-
-Lemma count_true:
-  forall n, (count_mem true (nseq n true)) = n.
-Proof.
-  elim=> //=.
-  auto with arith.
-Qed.
 
 Lemma ntz_repr:
   forall n (bs: BITS n) k,

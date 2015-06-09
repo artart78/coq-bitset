@@ -1,7 +1,53 @@
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
+     Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple zmodp fintype div ssralg.
 From Bits
      Require Import bits.
+
+Lemma count_true:
+  forall n, (count_mem true (nseq n true)) = n.
+Proof.
+  elim=> //=.
+  auto with arith.
+Qed.
+
+Lemma toZp_shlBn:
+  forall n (p: BITS n) k, k < n ->
+    toZp (shlBn p k) = (toZp p * (2 ^ k)%:R)%R.
+Proof.
+  move=> n p k le_k.
+  elim: k le_k=> [|k IHk] le_k.
+  + (* Case: k ~ 0 *)
+    rewrite /shlBn /=.
+    by rewrite expn0 GRing.mulr_natr //.
+  + (* Case: k ~ k + 1 *)
+    rewrite /shlBn iterS -[iter k shlB p]/(shlBn _ _).
+    rewrite toZp_shlB.
+    rewrite IHk; last by auto with arith.
+    rewrite expnS.
+    rewrite mulnC.
+    rewrite !GRing.mulr_natr.
+    rewrite GRing.mulrnA //.
+Qed.
+
+Lemma makeOnes:
+  forall n,
+    joinmsb (false, ones n) = subB (shlBn (n := n.+1) #1 n) #1.
+Proof.
+  move=> n.
+  apply toZp_inj.
+  have ->: joinmsb (false, ones n) = fromNat (n:=n.+1) (toNat (joinmsb (false, ones n))) by rewrite toNatK.
+  rewrite toNat_joinmsb0 toNat_ones.
+  rewrite toZp_fromNat.
+  autorewrite with ZpHom.
+  rewrite toZp_shlBn.
+  autorewrite with ZpHom.
+  rewrite !GRing.mulr_natr.
+  rewrite -subn1.
+  rewrite GRing.natrB.
+  rewrite GRing.mulr1n //.
+  rewrite expn_gt0 //.
+  auto with arith.
+Qed.
 
 Lemma andB_mask1:
   forall n (bs: BITS n),
@@ -273,6 +319,29 @@ Proof.
   have ->: false = getBit (n := n) #0 k'
     by rewrite getBit_zero.
   apply setBitThenGetDistinct; assumption.
+Qed.
+
+Lemma orB_invB:
+  forall n (bs: BITS n),
+    orB bs (invB bs) = ones n.
+Proof.
+  move=> n bs.
+  apply allBitsEq=> k le_k.
+  rewrite getBit_liftBinOp; last by assumption.
+  rewrite getBit_liftUnOp; last by assumption.
+  rewrite orbN /getBit nth_nseq le_k //.
+Qed.
+
+Lemma andB_invB:
+  forall n (bs: BITS n),
+    andB bs (invB bs) = zero n.
+Proof.
+  move=> n bs.
+  apply allBitsEq.
+  move=> k le_k.
+  rewrite getBit_liftBinOp; last by assumption.
+  rewrite getBit_liftUnOp; last by assumption.
+  rewrite andbN -fromNat0 getBit_zero //.
 Qed.
 
 Lemma getBit_set_true:

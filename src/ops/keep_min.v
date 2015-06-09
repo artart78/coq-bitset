@@ -7,18 +7,6 @@ Require Import props.
 Definition keep_min {n} (bs: BITS n): BITS n
   := andB bs (negB bs).
 
-Lemma andB_invB:
-  forall n (bs: BITS n),
-    andB bs (invB bs) = zero n.
-Proof.
-  move=> n bs.
-  apply allBitsEq.
-  move=> k le_k.
-  rewrite getBit_liftBinOp; last by assumption.
-  rewrite getBit_liftUnOp; last by assumption.
-  rewrite andbN -fromNat0 getBit_zero //.
-Qed.
-
 Lemma keep_min_repr:
   forall n (bs: BITS n),
     andB bs (negB bs) = setBit #0 (index true bs) true.
