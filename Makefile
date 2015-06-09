@@ -94,16 +94,16 @@ endif
 #                    #
 ######################
 
-VFILES:=src/keep_min.v\
-  src/cardinal.v\
-  src/compl.v\
-  src/symdiff.v\
-  src/union.v\
-  src/min.v\
-  src/inter.v\
-  src/set.v\
-  src/get.v\
-  src/create.v\
+VFILES:=src/ops/union.v\
+  src/ops/symdiff.v\
+  src/ops/set.v\
+  src/ops/min.v\
+  src/ops/keep_min.v\
+  src/ops/inter.v\
+  src/ops/get.v\
+  src/ops/create.v\
+  src/ops/compl.v\
+  src/ops/cardinal.v\
   src/props.v\
   src/bitset.v
 

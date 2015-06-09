@@ -1,13 +1,13 @@
 -R src Bitset
 src/bitset.v
 src/props.v
-src/create.v
-src/get.v
-src/set.v
-src/inter.v
-src/min.v
-src/union.v
-src/symdiff.v
-src/compl.v
-src/cardinal.v
-src/keep_min.v
+src/ops/cardinal.v
+src/ops/compl.v
+src/ops/create.v
+src/ops/get.v
+src/ops/inter.v
+src/ops/keep_min.v
+src/ops/min.v
+src/ops/set.v
+src/ops/symdiff.v
+src/ops/union.v
