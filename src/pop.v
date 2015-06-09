@@ -2,11 +2,57 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div.
 From Bits
      Require Import bits.
-Require Import specs props off_r.
+Require Import specs props.
 
 (** Recursive algorithm **)
 
 (*
+
+(* Turns off the leftmost bit in a bitvector. *)
+Fixpoint off_r_seq (xs: seq bool): seq bool :=
+  match xs with
+    | [::] => [::]
+    | cons false xs => cons false (off_r_seq xs)
+    | cons true xs => cons false xs
+  end.
+
+Lemma off_rP {n}(t: BITS n): size (off_r_seq t) == n.
+Proof.
+  elim: n t=> [t|n IH /tupleP [b t]] //=.
+  - (* Case: n ~ 0 *)
+    by rewrite (tuple0 t).
+  - (* Case: n ~ n.+1 *)
+    case: b=> //=.
+    + (* Case: b ~ true *)
+      by rewrite size_tuple.
+    + (* Case: b ~ false *)
+      move/eqP: (IH t) => -> //=.
+Qed.
+
+Canonical off_r {n} (t: BITS n): BITS n
+  := Tuple (off_rP t).
+
+Lemma off_r_repr:
+  forall n (bs: BITS n),
+    andB bs (subB bs #1) = off_r bs.
+Proof.
+  elim=> [bs|n IHn /tupleP [b bs]].
+  - (* Case: x ~ [tuple] *)
+    by apply trivialBits.
+  - (* Case: x ~ [tuple b & bs] *)
+    case: b.
+    + (* Case: b ~ true *)
+      have ->: off_r [tuple of true :: bs] = [tuple of false :: bs]
+        by apply: val_inj.
+      by rewrite subB1 /= tuple.beheadCons
+                 /andB liftBinOpCons -/andB andBB.
+    + (* Case: b ~ false *)
+      have ->: off_r [tuple of false :: bs] = [tuple of false :: off_r bs]
+        by apply: val_inj.
+      by rewrite subB1 /= tuple.beheadCons -subB1
+                 /andB liftBinOpCons -/andB IHn.
+Qed.
+
 Lemma count_off_r:
   forall n (bs: BITS n), bs <> #0 ->
     count_mem true (andB bs (subB bs #1)) = (count_mem true bs) - 1.

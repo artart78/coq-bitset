@@ -10,6 +10,5 @@ src/min.v
 src/union.v
 src/symdiff.v
 src/compl.v
-src/off_r.v
 src/pop.v
 src/keep_min.v
