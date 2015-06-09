@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
 From Bits
      Require Import bits.
-Require Import specs props.
+Require Import props.
 
 Definition get {n}(bs: BITS n)(k: 'I_n): BITS n
   := andB (shrBn bs k) #1.

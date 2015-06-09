@@ -1,6 +1,5 @@
 -R src Bitset
 src/bitset.v
-src/specs.v
 src/props.v
 src/create.v
 src/get.v

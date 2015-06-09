@@ -105,7 +105,6 @@ VFILES:=src/keep_min.v\
   src/get.v\
   src/create.v\
   src/props.v\
-  src/specs.v\
   src/bitset.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)

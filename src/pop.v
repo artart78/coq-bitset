@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div.
 From Bits
      Require Import bits.
-Require Import specs props.
+Require Import props.
 
 (** Recursive algorithm **)
 

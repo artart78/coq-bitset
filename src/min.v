@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
 From Bits
      Require Import bits.
-Require Import specs props pop.
+Require Import props pop.
 
 (* Fill all the bits to 1 after the LSB *)
 

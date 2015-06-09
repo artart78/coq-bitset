@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
 From Bits
      Require Import bits.
-Require Import specs props.
+Require Import props.
 
 Definition compl {n} (bs: BITS n): BITS n
   := invB bs.
