@@ -1,5 +1,5 @@
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
+     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div.
 From Bits
      Require Import bits.
 Require Import props cardinal.
@@ -66,9 +66,7 @@ Proof.
       by rewrite -/orB IHn.
 Qed.
 
-(*
-Definition ntz {n}(bs: BITS n): nat := n - (pop (orB bs (negB bs))).
-*)
+Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
 
 Lemma count_true:
   forall n, (count_mem true (nseq n true)) = n.
@@ -78,10 +76,13 @@ Proof.
 Qed.
 
 Lemma ntz_repr:
-  forall n (bs: BITS n),
-    n - (count_mem true (fill_ntz bs)) = index true bs.
+  forall n (bs: BITS n) k,
+    ntz k bs = index true bs.
 Proof.
-  elim=> [bs|n IHn /tupleP[b bs]].
+  move=> n bs k.
+  rewrite /ntz cardinal_repr.
+  rewrite fill_ntz_repr.
+  elim: n bs=> [bs|n IHn /tupleP[b bs]].
   + (* n ~ 0 *)
     by rewrite tuple0 [bs]tuple0.
   + (* n ~ n.+1 *)
@@ -96,6 +97,7 @@ Proof.
     - (* b ~ false *)
       have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
+      rewrite /=.
       rewrite /= -IHn.
       rewrite add0n subSn //.
       have {2}->: n = size (fill_ntz_seq bs).
@@ -103,4 +105,5 @@ Proof.
         move/eqP: H=>H.
         by rewrite H //.
       apply count_size.
-Qed.
+      admit. (* TODO: only enable the case when 2 ^ k %| n *)
+Admitted.
