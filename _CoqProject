@@ -9,5 +9,5 @@ src/min.v
 src/union.v
 src/symdiff.v
 src/compl.v
-src/pop.v
+src/cardinal.v
 src/keep_min.v

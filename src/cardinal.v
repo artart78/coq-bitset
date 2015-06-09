@@ -208,7 +208,7 @@ Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): nat :=
   | i'.+1 => (pop_elem k bs i') + (popAux k bs i')
   end.
 
-Definition pop {n}(k: nat)(bs: BITS n): nat
+Definition cardinal {n}(k: nat)(bs: BITS n): nat
   := popAux k bs (n %/ 2^k).
 
 Lemma pop_elem_repr:
@@ -248,12 +248,12 @@ Proof.
     by rewrite //.
 Admitted.
 
-Lemma pop_repr:
+Lemma cardinal_repr:
   forall n k (bs: BITS n), 2 ^ k %| n ->
-    pop k bs = count_mem true bs.
+    cardinal k bs = count_mem true bs.
 Proof.
   move=> n k bs div_2k_n.
-  rewrite /pop pop_rec.
+  rewrite /cardinal pop_rec.
   rewrite divnK.
   rewrite subnKC //.
   assumption.

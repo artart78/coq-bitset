@@ -3,12 +3,13 @@ From Ssreflect
 From Bits
      Require Import bits.
 
+Parameter bytesize: nat.
 Parameter wordsize: nat.
 
 Definition Word := BITS wordsize.
 Definition SET := Word.
 
-Require get set inter union symdiff compl.
+Require get set inter union symdiff compl cardinal.
 Definition get (S: SET)(k: 'I_wordsize): SET 
   := get.get S k.
 
@@ -45,5 +46,5 @@ Definition iteri {A}(S: SET)(k: 'I_wordsize -> A -> A)(bc:
 A): A.
 Admitted.
 
-Definition cardinal (S: SET): Word.
-Admitted.
+Definition cardinal (S: SET): nat
+  := cardinal.cardinal bytesize S.

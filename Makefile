@@ -95,7 +95,7 @@ endif
 ######################
 
 VFILES:=src/keep_min.v\
-  src/pop.v\
+  src/cardinal.v\
   src/compl.v\
   src/symdiff.v\
   src/union.v\
