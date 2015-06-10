@@ -4,4 +4,4 @@ From Bits
      Require Import bits.
 
 Definition repr {n}(bs: BITS n) E :=
-  E = [ set x : 'I_n | getBit bs x == true ].
+  E = [ set x : 'I_n | getBit bs x ].

@@ -226,8 +226,6 @@ Proof.
   by rewrite /getBit nth_nseq le_k.
 Qed.
 
-Set Printing Implicit.
-
 Lemma pop_elem_repr:
   forall n k i (bs: BITS n)(q: n = i.+1 * 2 ^ k + (n - i.+1 * 2 ^ k))(q': i.+1 * 2 ^ k = i * 2 ^ k + 2 ^ k),
     pop_elem k bs i = count_mem true (high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))).
