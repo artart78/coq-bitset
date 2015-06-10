@@ -143,7 +143,7 @@ Proof.
   + (* k ~ 0 *)
     by rewrite getBit_dropmsb /joinlsb/getBit.
   + (* k ~ k + 1 *)
-    rewrite getBit_dropmsb; last by assumption.
+    rewrite getBit_dropmsb=> //.
     have H: forall bs', getBit (joinlsb (bs', b)) k.+1 = getBit bs' k by compute.
     by rewrite !H getBit_dropmsb.
 Qed.
@@ -237,8 +237,8 @@ Lemma getBit_shlBn_true:
   forall n k, k < n -> getBit (n := n) (shlBn #1 k) k = true.
 Proof.
   move=> n k le_k.
-  rewrite getBit_shlBn; last by assumption.
-  apply setBitThenGetSame; last by assumption.
+  rewrite getBit_shlBn =>//.
+  apply setBitThenGetSame =>//.
 Qed.
 
 Lemma getBit_shlBn_false:
@@ -246,10 +246,10 @@ Lemma getBit_shlBn_false:
                  getBit (n := n) (shlBn #1 k) k' = false.
 Proof.
   move=> n k k' ? ?.
-  rewrite getBit_shlBn; last by assumption.
+  rewrite getBit_shlBn=> //.
   have ->: false = getBit (n := n) #0 k'
     by rewrite getBit_zero.
-  apply setBitThenGetDistinct; assumption.
+  apply setBitThenGetDistinct=> //.
 Qed.
 
 Lemma getBit_set_true:
@@ -260,12 +260,12 @@ Proof.
   case H: (x == k).
   - (* Case: x == k *)
     move/eqP: H=> ->.
-    rewrite getBit_liftBinOp; last by assumption.
-    rewrite getBit_shlBn_true; last by assumption.
+    rewrite getBit_liftBinOp=> //.
+    rewrite getBit_shlBn_true=> //.
     by apply orbT.
   - (* Case: x <> k *)
-    rewrite getBit_liftBinOp; last by assumption.
-    rewrite getBit_shlBn_false; try assumption; last by move/eqP: H; apply: not_eq_sym.
+    rewrite getBit_liftBinOp=> //.
+    rewrite getBit_shlBn_false=> //; last by move/eqP: H; apply: not_eq_sym.
     by apply orbF.
 Qed.
 
@@ -277,13 +277,13 @@ Proof.
   case H: (x == k).
   - (* Case: x == k *)
     move/eqP: H=> ->.
-    rewrite getBit_liftBinOp; last by assumption.
-    rewrite getBit_liftUnOp; last by assumption.
-    rewrite getBit_shlBn_true; last by assumption.
+    rewrite getBit_liftBinOp=> //.
+    rewrite getBit_liftUnOp=> //.
+    rewrite getBit_shlBn_true=> //.
     by apply andbF.
   - (* Case: x <> k *)
-    rewrite getBit_liftBinOp; last by assumption.
-    rewrite getBit_liftUnOp; last by assumption.
-    rewrite getBit_shlBn_false; try assumption; last by move/eqP: H; apply not_eq_sym.
+    rewrite getBit_liftBinOp=> //.
+    rewrite getBit_liftUnOp=> //.
+    rewrite getBit_shlBn_false=> //; last by move/eqP: H; apply not_eq_sym.
     by apply andbT.
 Qed.

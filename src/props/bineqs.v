@@ -52,8 +52,8 @@ Lemma orB_invB:
 Proof.
   move=> n bs.
   apply allBitsEq=> k le_k.
-  rewrite getBit_liftBinOp; last by assumption.
-  rewrite getBit_liftUnOp; last by assumption.
+  rewrite getBit_liftBinOp =>//.
+  rewrite getBit_liftUnOp =>//.
   rewrite orbN /getBit nth_nseq le_k //.
 Qed.
 
@@ -64,8 +64,8 @@ Proof.
   move=> n bs.
   apply allBitsEq.
   move=> k le_k.
-  rewrite getBit_liftBinOp; last by assumption.
-  rewrite getBit_liftUnOp; last by assumption.
+  rewrite getBit_liftBinOp =>//.
+  rewrite getBit_liftUnOp =>//.
   rewrite andbN -fromNat0 getBit_zero //.
 Qed.
 
