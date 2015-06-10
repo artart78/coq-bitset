@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple zmodp fintype div ssralg.
 From Bits
      Require Import bits.
-Require Import props.
+Require Import props.bineqs.
 
 Definition create {n} (b: bool): BITS n
   := if b then dropmsb (subB (shlBn (n := n.+1) #1 n) #1) else #0.

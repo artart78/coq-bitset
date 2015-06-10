@@ -3,7 +3,7 @@ From Ssreflect
 From Bits
      Require Import bits.
 Require Import Arith.
-Require Import props.
+Require Import props.getbit.
 
 Definition set {n}(bs: BITS n) k (b: bool): BITS n
   := if b then orB bs (shlBn #1 k) else andB bs (invB (shlBn #1 k)).

@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div.
 From Bits
      Require Import bits.
-Require Import props cardinal.
+Require Import props.bineqs props.misc cardinal.
 
 (* Fill all the bits to 1 after the LSB *)
 

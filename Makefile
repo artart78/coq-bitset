@@ -105,7 +105,6 @@ VFILES:=src/ops/union.v\
   src/ops/compl.v\
   src/ops/cardinal.v\
   src/props/tozp.v\
-  src/props/setbit.v\
   src/props/misc.v\
   src/props/getbit.v\
   src/props/bineqs.v\

@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div.
 From Bits
      Require Import bits.
-Require Import props.
+Require Import props.getbit.
 
 (** Recursive algorithm **)
 
@@ -211,11 +211,71 @@ Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): nat :=
 Definition cardinal {n}(k: nat)(bs: BITS n): nat
   := popAux k bs (n %/ 2^k).
 
+Lemma getBit_tcast:
+  forall n m (bs: BITS n)(H: n = m), getBit (tcast H bs) = getBit bs.
+Proof.
+  move=> n m bs H.
+  case: m / H.
+  rewrite //.
+Qed.
+
+Lemma getBit_ones:
+  forall n k, k < n -> getBit (ones n) k = true.
+Proof.
+  move=> n k le_k.
+  by rewrite /getBit nth_nseq le_k.
+Qed.
+
+Set Printing Implicit.
+
 Lemma pop_elem_repr:
   forall n k i (bs: BITS n)(q: n = i.+1 * 2 ^ k + (n - i.+1 * 2 ^ k))(q': i.+1 * 2 ^ k = i * 2 ^ k + 2 ^ k),
     pop_elem k bs i = count_mem true (high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))).
 Proof.
-  admit.
+  move=> n k i bs q q'.
+  rewrite /pop_elem.
+  rewrite /pop_table.
+  rewrite nth_mkseq.
+  have H: n = 2 ^ k + (n - 2 ^ k) by admit.
+  have H': 2 ^ k + (n - 2 ^ k) = n by admit.
+  have ->: high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))
+  = low (2 ^ k) (tcast H (andB (shrBn bs (i * 2 ^ k)) (decB (shrBn #1 (2 ^ k))))).
+  have ->: decB (n := n) (shrBn #1 (2 ^ k)) = tcast H' (zero (n - 2 ^ k) ## ones (2 ^ k)).
+    by admit.
+  apply allBitsEq.
+  move=> i0 le_i0.
+  rewrite getBit_low.
+  rewrite le_i0.
+  rewrite getBit_high.
+  rewrite !getBit_tcast.
+  rewrite getBit_low.
+  have ->: i0 + i * 2 ^ k < i.+1 * 2 ^ k by admit.
+  rewrite getBit_tcast.
+  rewrite getBit_liftBinOp.
+  rewrite getBit_tcast.
+  rewrite getBit_catB.
+  rewrite le_i0.
+  rewrite getBit_ones.
+  rewrite andbT.
+  rewrite getBit_shrBn.
+  rewrite addnC //.
+  rewrite -maxnE in q.
+  admit. (* Simple inequation *)
+  (*
+  rewrite (ltn_trans (n := i * 2 ^ k + 2 ^ k)) //.
+  rewrite ltn_add2l le_i0 //.
+  have ->: i * 2 ^ k + 2 ^ k = i.+1 * 2 ^ k by auto with arith.
+  rewrite ltn_neqAle.
+  rewrite ltn_add2r.
+  *)
+  rewrite le_i0 //.
+  admit. (* Simple inequation *)
+  have ->: forall bs',
+      count_mem true (fromNat (n := 2 ^ 2 ^ k) (toNat (n := n) bs'))
+    = count_mem true (low (2 ^ k) (tcast H bs')).
+    by admit.
+  rewrite //.
+  admit. (* Number is < 2 ^ 2 ^ k *)
 Admitted.
 
 Lemma pop_rec:

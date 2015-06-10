@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
 From Bits
      Require Import bits.
-Require Import props.
+Require Import props.bineqs props.getbit.
 
 Definition get {n}(bs: BITS n)(k: 'I_n): BITS n
   := andB (shrBn bs k) #1.
@@ -12,5 +12,5 @@ Lemma get_repr:
     get bs k = (if getBit bs k then #1 else #0).
 Proof.
   move=> n k S.
-  by rewrite /get andB_mask1 getBit_shrBn.
+  by rewrite /get andB_mask1 getBit_shrBn addn0.
 Qed.
