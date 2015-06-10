@@ -108,6 +108,7 @@ VFILES:=src/ops/union.v\
   src/props/misc.v\
   src/props/getbit.v\
   src/props/bineqs.v\
+  src/spec.v\
   src/bitset.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
