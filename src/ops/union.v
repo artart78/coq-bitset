@@ -13,14 +13,6 @@ Lemma union_repr:
 Proof.
   move=> n bs bs' E E' HE HE'.
   rewrite /repr.
-  rewrite -setP.
-  rewrite /eq_mem=> x.
-  rewrite in_setU.
-  rewrite /union /orB.
-  rewrite HE HE'.
-  have H: forall (P: ordinal_finType n -> bool),
-      (x \in [ set x0 | P x0 ]) = (P x)
-      by admit.
-  rewrite !H.
-  rewrite getBit_liftBinOp //.
-Admitted.
+  rewrite -setP /eq_mem=> x.
+  rewrite in_setU /union /orB HE HE' !in_set getBit_liftBinOp //.
+Qed.
