@@ -10,6 +10,21 @@ Proof.
   rewrite fromNat0 /zero /copy /getBit nth_nseq le_k //.
 Qed.
 
+Lemma getBit_tcast:
+  forall n m (bs: BITS n)(H: n = m), getBit (tcast H bs) = getBit bs.
+Proof.
+  move=> n m bs H.
+  case: m / H.
+  rewrite //.
+Qed.
+
+Lemma getBit_ones:
+  forall n k, k < n -> getBit (ones n) k = true.
+Proof.
+  move=> n k le_k.
+  by rewrite /getBit nth_nseq le_k.
+Qed.
+
 Lemma getBit_joinmsb :
   forall n (bs: BITS n) k,
     k <= n ->

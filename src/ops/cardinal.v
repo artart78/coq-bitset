@@ -211,21 +211,6 @@ Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): nat :=
 Definition cardinal {n}(k: nat)(bs: BITS n): nat
   := popAux k bs (n %/ 2^k).
 
-Lemma getBit_tcast:
-  forall n m (bs: BITS n)(H: n = m), getBit (tcast H bs) = getBit bs.
-Proof.
-  move=> n m bs H.
-  case: m / H.
-  rewrite //.
-Qed.
-
-Lemma getBit_ones:
-  forall n k, k < n -> getBit (ones n) k = true.
-Proof.
-  move=> n k le_k.
-  by rewrite /getBit nth_nseq le_k.
-Qed.
-
 Lemma pop_elem_repr:
   forall n k i (bs: BITS n)(q: n = i.+1 * 2 ^ k + (n - i.+1 * 2 ^ k))(q': i.+1 * 2 ^ k = i * 2 ^ k + 2 ^ k),
     pop_elem k bs i = count_mem true (high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))).
