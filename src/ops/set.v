@@ -1,47 +1,32 @@
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
+     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
      Require Import bits.
-Require Import Arith.
-Require Import props.getbit.
+Require Import props.getbit spec.
 
 Definition set {n}(bs: BITS n) k (b: bool): BITS n
   := if b then orB bs (shlBn #1 k) else andB bs (invB (shlBn #1 k)).
 
-(* TODO(Maxime): should we use "'I_n" or "(k: nat), k < n"? *)
-(* TODO(Arthur): give a self-contained example demonstrating our problem with 'I_n. Turn the solution into tutorial. *)
-
 Lemma set_repr:
-  forall n (bs: BITS n) (k: nat) (b: bool), k < n ->
-    set bs k b = setBit bs k b.
+  forall n (bs: BITS n) (k: 'I_n) (b: bool) E, repr bs E ->
+    repr (set bs k b) (if b then (k |: E) else (E :\ k)).
 Proof.
-  move=> n bs k b le_k.
-  apply allBitsEq=> [i le_i].
-  case: b.
-  - (* Case: b ~ true *)
-    rewrite getBit_set_true //.
-    (* TODO: write some Ltac to automate this proof pattern. 
-
-       Calling allBitsEq introduce a [getBit] at some index [i]. If
-       the inner operation is a [setBit] at some index [k], we want to
-       use [setBitThenGetSame] and [setBitThenGetDistinct]. 
-
-       This should remove the proof duplication below.
-     *)
-    case H: (i == k).
-    + (* Case: i == k *)
+  move=> n bs k b E HE.
+  rewrite /repr.
+  rewrite -setP /eq_mem=> x.
+  rewrite in_set [getBit _]fun_if if_arg.
+  rewrite getBit_set_true=> //.
+  rewrite getBit_set_false=> //.
+  case H: (x == k).
+    + (* Case: x == k *)
       move/eqP: H=> ->.
-      by rewrite setBitThenGetSame //.
-    + (* Case: i <> k *)
-      rewrite setBitThenGetDistinct //.
-      by move/eqP: H; apply not_eq_sym.
-  - (* Case: b ~ false *)
-    rewrite getBit_set_false //.
-    case H: (i == k).
-    + (* Case: i == k *)
-      move/eqP: H=> ->.
-      by rewrite setBitThenGetSame //.
-    + (* Case: i <> k *)
-      rewrite setBitThenGetDistinct //.
-      by move/eqP: H; apply not_eq_sym.
+      rewrite !fun_if !if_arg.
+      rewrite ![if k == k then _ else _]ifT=> //.
+      rewrite setU11 setD11.
+      by case: b=> //.
+    + (* Case: x <> k *)
+      rewrite !fun_if !if_arg.
+      rewrite ![if x == k then _ else _]ifF=> //.
+      rewrite in_setU1 in_setD1 H HE in_set.
+      by case: b=> //.
 Qed.
