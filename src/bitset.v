@@ -10,7 +10,7 @@ Definition Word := BITS wordsize.
 Definition SET := Word.
 
 Require get set inter union symdiff compl cardinal.
-Definition get (S: SET)(k: 'I_wordsize): SET 
+Definition get (S: SET)(k: 'I_wordsize): bool
   := get.get S k.
 
 Definition set (S: SET)(k: 'I_wordsize)(b: bool): SET
@@ -41,7 +41,7 @@ Definition fill (S1: SET)(i n: nat)(b: bool): SET.
 Admitted.
 
 (* TODO: Is [k] consuming 'I_wordsize or a (less-precisely typed)
-[Word] *) 
+[Word] *)
 Definition iteri {A}(S: SET)(k: 'I_wordsize -> A -> A)(bc:
 A): A.
 Admitted.
