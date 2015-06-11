@@ -1,8 +1,8 @@
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div.
+     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div finset.
 From Bits
      Require Import bits.
-Require Import props.getbit.
+Require Import props.getbit spec.
 
 (** Recursive algorithm **)
 
@@ -291,20 +291,26 @@ Proof.
     by rewrite //.
 Admitted.
 
-Lemma cardinal_repr:
-  forall n k (bs: BITS n), 2 ^ k %| n ->
-    cardinal k bs = count_mem true bs.
+Lemma count_repr:
+  forall n (bs: BITS n) E, repr bs E ->
+    count_mem true bs = #|E|.
 Proof.
-  move=> n k bs div_2k_n.
+  admit.
+Admitted.
+
+Lemma cardinal_repr:
+  forall n k (bs: BITS n) E, 2 ^ k %| n -> repr bs E ->
+    cardinal k bs = #|E|.
+Proof.
+  move=> n k bs E div_2k_n HE.
   rewrite /cardinal pop_rec.
-  rewrite divnK.
+  rewrite divnK=> //.
   rewrite subnKC //.
-  assumption.
   move=> H0.
   have H1: n = n %/ 2 ^ k * 2 ^ k. by admit.
   have ->: low (n %/ 2 ^ k * 2 ^ k) (tcast H0 bs) = tcast H1 bs.
     by admit.
-  have ->: count_mem true bs = count_mem true (tcast H1 bs).
+  have ->: count_mem true (tcast H1 bs) = count_mem true bs.
     by admit.
-  rewrite //.
+  by apply count_repr.
 Admitted.
