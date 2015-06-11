@@ -1,8 +1,8 @@
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div.
+     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div finset.
 From Bits
      Require Import bits.
-Require Import props.bineqs props.misc cardinal.
+Require Import props.bineqs props.misc cardinal spec.
 
 (* Fill all the bits to 1 after the LSB *)
 
@@ -57,15 +57,27 @@ Qed.
 
 Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
 
+Set Printing Implicit.
+
 Lemma ntz_repr:
-  forall n (bs: BITS n) k,
-    ntz k bs = index true bs.
+  forall n (bs: BITS n) k x E, repr bs E -> x \in E ->
+    ntz k bs = [arg min_(k < x in E) k].
 Proof.
-  move=> n bs k.
-  rewrite /ntz cardinal_repr.
+  move=> n bs k x E HE Hx.
+  case: arg_minP.
+  apply Hx.
+  move=> i Hi Hj.
+  rewrite /ntz.
   rewrite fill_ntz_repr.
-  elim: n bs=> [bs|n IHn /tupleP[b bs]].
+  admit.
+  (* TODO!
+  have H: repr (orB bs (negB bs)) (
+  rewrite (cardinal_repr (E := E')) //.
+  rewrite fill_ntz_repr.
+  elim: n bs E HE=> [bs|n IHn /tupleP[b bs]] E HE.
   + (* n ~ 0 *)
+    elim: bs HE.
+    rewrite tuple0.
     by rewrite tuple0 [bs]tuple0.
   + (* n ~ n.+1 *)
     case: b.
@@ -88,4 +100,5 @@ Proof.
         by rewrite H //.
       apply count_size.
       admit. (* TODO: only enable the case when 2 ^ k %| n *)
+  *)
 Admitted.
