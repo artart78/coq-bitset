@@ -57,13 +57,6 @@ Qed.
 
 Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
 
-Lemma repr_rec:
-  forall n (bs: BITS n) E b, repr [tuple of b :: bs] E ->
-    repr bs [ set x : 'I_n | inord(x.+1) \in E ].
-Proof.
-  admit.
-Admitted.
-
 Lemma ntz_repr:
   forall n (bs: BITS n) k x E, repr bs E -> x \in E ->
     ntz k bs = [arg min_(k < x in E) k].

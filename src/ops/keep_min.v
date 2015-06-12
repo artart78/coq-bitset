@@ -33,12 +33,21 @@ Proof.
       move=> i' Hi' Hj.
       have ->: getBit (consB true (zero n)) i = (i == ord0).
         by admit.
-      by admit. (* ord0 \in E -> i' <= ord0 -> i' = ord0 *)
+      have H': i' <= ord0 (n' := n).
+        apply (Hj ord0).
+        rewrite HE.
+        by rewrite in_set.
+      have ->: i' = ord0.
+        have H: i' == ord0.
+          admit.
+        apply/eqP: H.
+      by rewrite //.
     - (* b ~ false *)
       rewrite /negB /incB /invB /andB /=.
       rewrite liftUnOpCons tuple.beheadCons.
       rewrite liftBinOpCons andbF.
       rewrite -/andB -/invB -/incB.
-      by admit. (* Harder: we have to show a result over sets of 'I_n.+1 from a result over sets of 'I_n.
-      Maybe using arg_minP & the fact that '<=' is the same for nat and ordinals is enough? *)
+      rewrite /repr -setP /eq_mem=> i.
+      rewrite !in_set.
+      by admit. (* i = 0 is trivial, i > 0 is solved using repr_rec + IHn *)
 Admitted.
