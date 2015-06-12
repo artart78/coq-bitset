@@ -1,8 +1,8 @@
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div finset.
+     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div finset ssralg.
 From Bits
      Require Import bits.
-Require Import props.getbit spec.
+Require Import props.getbit props.tozp spec.
 
 (** Recursive algorithm **)
 
@@ -199,7 +199,7 @@ Admitted.
 Definition pop_table (n: nat) := mkseq (fun i => count_mem true (fromNat (n := 2^n) i)) (2^n).
 
 Definition pop_elem {n}(k: nat)(bs: BITS n)(i: nat): nat
-  := let x := andB (shrBn bs (i * 2^k)) (decB (shrBn #1 (2^k))) in
+  := let x := andB (shrBn bs (i * 2^k)) (dropmsb (decB (shlBn #1 (2^k)))) in
      nth 0 (pop_table (2^k)) (toNat x).
 
 Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): nat :=
@@ -211,22 +211,98 @@ Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): nat :=
 Definition cardinal {n}(k: nat)(bs: BITS n): nat
   := popAux k bs (n %/ 2^k).
 
+Lemma toNat_tcast:
+  forall n m (bs: BITS n)(H: n = m), toNat (tcast H bs) = toNat bs.
+Proof.
+  admit.
+Admitted.
+
+Lemma toNat_catB:
+  forall n1 n2 (bs: BITS n1) (bs': BITS n2), toNat (bs ## bs') = toNat bs' + (toNat bs) * 2 ^ n2.
+Proof.
+  admit.
+Admitted.
+
+(* TODO: merge with makeOnes? *)
+Lemma makeOnes2:
+  forall n k (q: k + (n - k) = n), k <= n -> decB (shlBn #1 k) = joinmsb (false, tcast q (zero (n - k) ## ones k)).
+Proof.
+  admit.
+  (* TODO: adapt
+  move=> n k q H.
+  apply (toZp_inj (n := n.+1)).
+  have ->: tcast q (zero (n - k) ## ones k) = fromNat (toNat (tcast q (zero (n - k) ## ones k))) by rewrite toNatK.
+  rewrite toNat_tcast.
+  rewrite toNat_catB.
+  rewrite toNat_zero toNat_ones.
+  rewrite toZp_joinmsb.
+  rewrite toZp_fromNat.
+  autorewrite with ZpHom.
+  rewrite toZp_shlBn.
+  autorewrite with ZpHom.
+  rewrite !GRing.mulr_natr.
+  rewrite -subn1.
+  rewrite mulnC muln0 addn0.
+  rewrite GRing.natrB.
+  rewrite GRing.mulr1n //.
+  rewrite expn_gt0 //.
+  auto with arith.
+  *)
+Admitted.
+
+Lemma count_low:
+  forall n (bs: BITS n) k (H: n = 2 ^ k + (n - 2 ^ k)), toNat (n := n) bs < 2 ^ 2 ^ k ->
+      count_mem true (fromNat (n := 2 ^ 2 ^ k) (toNat (n := n) bs))
+    = count_mem true (low (2 ^ k) (tcast H bs)).
+Proof.
+  admit.
+Admitted.
+
+Lemma leB_andB:
+  forall n (bs: BITS n) (bs': BITS n), leB (andB bs bs') bs'.
+Proof.
+  admit.
+Admitted.
+
 Lemma pop_elem_repr:
-  forall n k i (bs: BITS n)(q: n = i.+1 * 2 ^ k + (n - i.+1 * 2 ^ k))(q': i.+1 * 2 ^ k = i * 2 ^ k + 2 ^ k),
+  forall n k i (bs: BITS n)(q: n = i.+1 * 2 ^ k + (n - i.+1 * 2 ^ k))(q': i.+1 * 2 ^ k = i * 2 ^ k + 2 ^ k)(H: i.+1 * 2 ^ k <= n),
     pop_elem k bs i = count_mem true (high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))).
 Proof.
-  move=> n k i bs q q'.
+  move=> n k i bs q q' H1.
   rewrite /pop_elem.
   rewrite /pop_table.
+  set bs' := andB (shrBn bs (i * 2 ^ k)) (dropmsb (decB (shlBn #1 (2 ^ k)))).
+  have H'': toNat bs' < 2 ^ 2 ^ k.
+    have ->: 2 ^ 2 ^ k = (toNat (n := n) (dropmsb (decB (shlBn #1 (2 ^ k))))).+1.
+      admit.
+    rewrite ltnS.
+    rewrite -leB_nat.
+    rewrite /bs'.
+    by rewrite leB_andB.
   rewrite nth_mkseq.
-  have H: n = 2 ^ k + (n - 2 ^ k) by admit.
-  have H': 2 ^ k + (n - 2 ^ k) = n by admit.
+  have H: n = 2 ^ k + (n - 2 ^ k).
+    rewrite subnKC //.
+    rewrite (leq_trans (n := i.+1 * 2 ^ k)) //.
+    have {1}->: 2 ^ k = 1 * 2 ^ k by auto with arith.
+    rewrite leq_mul2r.
+    have ->: 0 < i.+1 by auto with arith.
+    rewrite orbT //.
+  have H': 2 ^ k + (n - 2 ^ k) = n by rewrite -H.
   have ->: high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))
-  = low (2 ^ k) (tcast H (andB (shrBn bs (i * 2 ^ k)) (decB (shrBn #1 (2 ^ k))))).
-  have ->: decB (n := n) (shrBn #1 (2 ^ k)) = tcast H' (zero (n - 2 ^ k) ## ones (2 ^ k)).
-    by admit.
-  apply allBitsEq.
-  move=> i0 le_i0.
+  = low (2 ^ k) (tcast H (andB (shrBn bs (i * 2 ^ k)) (dropmsb (decB (shlBn #1 (2 ^ k)))))).
+  case: n bs bs' q q' H1 H H' H''=> [bs|n bs] bs' q q' H1 H H' H''.
+    admit.
+  rewrite makeOnes2.
+  apply allBitsEq=> i0 le_i0.
+  have H''': i0 < n.+1.
+    apply (leq_trans (n := i.+1 * 2 ^ k)).
+    apply (leq_trans (n := 2 ^ k)).
+    apply le_i0.
+    have {1}->: 2 ^ k = 1 * 2 ^ k by auto with arith.
+    rewrite leq_mul2r.
+    have ->: 0 < i.+1 by auto with arith.
+    rewrite orbT //.
+    rewrite H1 //.
   rewrite getBit_low.
   rewrite le_i0.
   rewrite getBit_high.
@@ -235,6 +311,8 @@ Proof.
   have ->: i0 + i * 2 ^ k < i.+1 * 2 ^ k by admit.
   rewrite getBit_tcast.
   rewrite getBit_liftBinOp.
+  rewrite getBit_dropmsb.
+  rewrite getBit_joinmsb.
   rewrite getBit_tcast.
   rewrite getBit_catB.
   rewrite le_i0.
@@ -242,23 +320,25 @@ Proof.
   rewrite andbT.
   rewrite getBit_shrBn.
   rewrite addnC //.
-  rewrite -maxnE in q.
-  admit. (* Simple inequation *)
-  (*
-  rewrite (ltn_trans (n := i * 2 ^ k + 2 ^ k)) //.
+  rewrite (leq_trans (n := i * 2 ^ k + 2 ^ k)) //.
   rewrite ltn_add2l le_i0 //.
-  have ->: i * 2 ^ k + 2 ^ k = i.+1 * 2 ^ k by auto with arith.
-  rewrite ltn_neqAle.
-  rewrite ltn_add2r.
-  *)
+  have {2}->: 2 ^ k = 1 * 2 ^ k by auto with arith.
+  rewrite -mulnDl addn1.
+  rewrite H1 //.
   rewrite le_i0 //.
-  admit. (* Simple inequation *)
-  have ->: forall bs',
-      count_mem true (fromNat (n := 2 ^ 2 ^ k) (toNat (n := n) bs'))
-    = count_mem true (low (2 ^ k) (tcast H bs')).
-    by admit.
-  rewrite //.
-  admit. (* Number is < 2 ^ 2 ^ k *)
+  rewrite -ltnS.
+
+  rewrite (ltn_trans (n := n.+1)) //.
+  apply H'''.
+  apply H'''.
+  rewrite (leq_trans (n := i.+1 * 2 ^ k)) //.
+  have {1}->: 2 ^ k = 1 * 2 ^ k by auto with arith.
+  rewrite leq_mul2r.
+  have ->: 0 < i.+1 by auto with arith.
+  rewrite orbT //.
+  apply count_low.
+  apply H''.
+  apply H''.
 Admitted.
 
 Lemma count_tcast:
@@ -280,16 +360,22 @@ Proof.
     rewrite /popAux.
     rewrite -/popAux.
 
-    have Hi: i * 2 ^ k <= n => //.
+    have Hi: i * 2 ^ k < n => //.
       rewrite (leq_trans (n := i.+1 * 2 ^ k)) //.
-      rewrite leq_mul2r.
+      rewrite ltn_mul2r.
       rewrite -ltnS.
-      have ->: i < i.+2 by auto with arith.
-      by rewrite orbT.
+      have ->: i < i.+1 by auto with arith.
+      have H: 2 ^ k > 0.
+        rewrite expn_gt0.
+        have ->: 0 < 2 by auto with arith.
+        rewrite orbC orbT //.
+      have ->: 1 < (2 ^ k).+1 by auto with arith.
+      rewrite andbT //.
 
     rewrite IHi=> //.
     rewrite subnKC //.
 
+    rewrite ltnW //.
     move=> H0.
     rewrite pop_elem_repr.
     rewrite -addn1.
@@ -317,6 +403,8 @@ Proof.
         by rewrite H //.
     rewrite count_tcast.
     rewrite count_cat addnC //.
+    rewrite le_i //.
+    rewrite ltnW //.
 Qed.
 
 Lemma count_repr:
