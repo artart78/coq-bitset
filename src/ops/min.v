@@ -57,7 +57,12 @@ Qed.
 
 Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
 
-Set Printing Implicit.
+Lemma repr_rec:
+  forall n (bs: BITS n) E b, repr [tuple of b :: bs] E ->
+    repr bs [ set x : 'I_n | inord(x.+1) \in E ].
+Proof.
+  admit.
+Admitted.
 
 Lemma ntz_repr:
   forall n (bs: BITS n) k x E, repr bs E -> x \in E ->
@@ -69,36 +74,44 @@ Proof.
   move=> i Hi Hj.
   rewrite /ntz.
   rewrite fill_ntz_repr.
-  admit.
-  (* TODO!
-  have H: repr (orB bs (negB bs)) (
-  rewrite (cardinal_repr (E := E')) //.
-  rewrite fill_ntz_repr.
-  elim: n bs E HE=> [bs|n IHn /tupleP[b bs]] E HE.
+  set ntzE := [ set x : 'I_n | getBit (fill_ntz bs) x ].
+  have H: repr (fill_ntz bs) ntzE=> //.
+  rewrite (cardinal_repr n k (fill_ntz bs) ntzE)=> //.
+  rewrite -(count_repr n (fill_ntz bs) ntzE)=> //.
+  elim: n bs x E HE Hx i Hi Hj ntzE H=> [bs|n IHn /tupleP[b bs]] x E HE Hx i Hi Hj ntzE H.
   + (* n ~ 0 *)
-    elim: bs HE.
-    rewrite tuple0.
-    by rewrite tuple0 [bs]tuple0.
+    by admit. (* x \in E, E: {set ordinal_inType 0} => absurd *)
   + (* n ~ n.+1 *)
-    case: b.
+    case: b H HE=> H HE.
     - (* b ~ true *)
       have ->: fill_ntz [tuple of true :: bs] = [tuple of true :: ones n].
         apply val_inj.
         by rewrite /= size_tuple //.
       rewrite /=.
       rewrite count_true.
-      by rewrite addnC addn1 subnn.
+      rewrite addnC addn1 subnn.
+      admit. (* i is minimum of true :: ... => i = 0 *)
     - (* b ~ false *)
-      have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
+      have Hrec: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
+      rewrite Hrec.
+      rewrite Hrec in H.
       rewrite /=.
-      rewrite /= -IHn.
       rewrite add0n subSn //.
-      have {2}->: n = size (fill_ntz_seq bs).
-        have H: size (fill_ntz_seq bs) == n by apply fill_ntzP.
-        move/eqP: H=>H.
-        by rewrite H //.
-      apply count_size.
+      have eq_n_m: n.-1.+1 = n by admit.
+      set x' := cast_ord eq_n_m (inord (n' := n.-1) (x.-1)).
+      set E' := [ set x : 'I_n | inord (x.+1) \in E ].
+      set ntzE' := [ set x : 'I_n | inord (x.+1) \in ntzE ].
+      have repr_bs: repr bs E' by apply (repr_rec n bs E false).
+      have x'_in_E': x' \in E' by admit.
+      set i' := (cast_ord eq_n_m (inord (n' := n.-1) (i.-1))).
+      have i'_in_E': i' \in E' by admit.
+      have minH: forall j, j \in E' -> i' <= j by admit.
+      rewrite (IHn bs x' E' repr_bs x'_in_E' i' i'_in_E' minH ntzE').
+      rewrite /i'.
+      admit.
+      rewrite /ntzE'.
+      apply (repr_rec n (fill_ntz bs) ntzE false)=> //.
+      admit. (* count_mem true (..) <= n *)
       admit. (* TODO: only enable the case when 2 ^ k %| n *)
-  *)
 Admitted.
