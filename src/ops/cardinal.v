@@ -261,35 +261,63 @@ Proof.
   admit. (* Number is < 2 ^ 2 ^ k *)
 Admitted.
 
+Lemma count_tcast:
+  forall n m (bs: BITS n) (H: n = m), count_mem true (tcast H bs) = count_mem true bs.
+Proof.
+  admit.
+Admitted.
+
 Lemma pop_rec:
-  forall n k i (bs: BITS n)(q: n = i * 2 ^ k + (n - i * 2 ^ k)),
+  forall n k i (bs: BITS n)(q: n = i * 2 ^ k + (n - i * 2 ^ k))(H: i * 2 ^ k <= n),
     popAux k bs i = count_mem true (low (i * (2 ^ k)) (tcast q bs)).
 Proof.
   move=> n k i.
   move: i n.
-  elim=> [|i IHi] n bs q.
+  elim=> [|i IHi] n bs q le_i.
   + (* i ~ 0 *)
     by rewrite /=.
   + (* i ~ i.+1 *)
     rewrite /popAux.
     rewrite -/popAux.
-    rewrite IHi.
-    admit. (* trivial equation *)
+
+    have Hi: i * 2 ^ k <= n => //.
+      rewrite (leq_trans (n := i.+1 * 2 ^ k)) //.
+      rewrite leq_mul2r.
+      rewrite -ltnS.
+      have ->: i < i.+2 by auto with arith.
+      by rewrite orbT.
+
+    rewrite IHi=> //.
+    rewrite subnKC //.
+
     move=> H0.
     rewrite pop_elem_repr.
-    admit. (* trivial equation *)
+    rewrite -addn1.
+    rewrite mulnDl.
+    auto with arith.
     move=> H1.
-    have H2: i * 2 ^ k + 2 ^ k = i.+1 * 2 ^ k. by admit. (* trivial *)
+    have H2: i * 2 ^ k + 2 ^ k = i.+1 * 2 ^ k by auto with arith.
     have {2}->: low (i.+1 * 2 ^ k) (tcast q bs)
-    = tcast H2 (high (2 ^ k) (tcast H1 (low (i.+1 * 2 ^ k) (tcast q bs))) ## low (i * 2 ^ k) (tcast H0 bs)).
-      by admit.
-    rewrite -count_cat.
-    have ->: high (2 ^ k) (tcast H1 (low (i.+1 * 2 ^ k) (tcast q bs))) ++ low (i * 2 ^ k) (tcast H0 bs) = tcast H2
-        (high (2 ^ k) (tcast H1 (low (i.+1 * 2 ^ k) (tcast q bs)))
-            ## low (i * 2 ^ k) (tcast H0 bs)).
-      by admit.
-    by rewrite //.
-Admitted.
+    = tcast H2 ((high (2 ^ k) (tcast H1 (low (i.+1 * 2 ^ k) (tcast q bs))) ##
+      low (i * 2 ^ k) (tcast H0 bs))).
+      apply allBitsEq=> i0 le_i0.
+      rewrite getBit_low.
+      rewrite le_i0.
+      rewrite getBit_tcast.
+      rewrite getBit_tcast.
+      rewrite getBit_catB.
+      case H: (i0 < i * 2 ^ k).
+      + (* i0 < i * 2 ^ k *)
+        by rewrite getBit_low H getBit_tcast.
+      + (* i0 >= i * 2 ^ k *)
+        rewrite getBit_high getBit_tcast getBit_low getBit_tcast.
+        rewrite subnK.
+        rewrite le_i0 //.
+        rewrite leqNgt.
+        by rewrite H //.
+    rewrite count_tcast.
+    rewrite count_cat addnC //.
+Qed.
 
 Lemma count_repr:
   forall n (bs: BITS n) E, repr bs E ->
@@ -303,14 +331,16 @@ Lemma cardinal_repr:
     cardinal k bs = #|E|.
 Proof.
   move=> n k bs E div_2k_n HE.
+  have H1: n = n %/ 2 ^ k * 2 ^ k.
+    by rewrite divnK //.
   rewrite /cardinal pop_rec.
   rewrite divnK=> //.
   rewrite subnKC //.
   move=> H0.
-  have H1: n = n %/ 2 ^ k * 2 ^ k. by admit.
   have ->: low (n %/ 2 ^ k * 2 ^ k) (tcast H0 bs) = tcast H1 bs.
-    by admit.
-  have ->: count_mem true (tcast H1 bs) = count_mem true bs.
-    by admit.
+    apply allBitsEq=> i le_i.
+    by rewrite getBit_low le_i !getBit_tcast.
+  rewrite count_tcast.
   by apply count_repr.
-Admitted.
+  by rewrite -H1.
+Qed.
