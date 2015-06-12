@@ -10,5 +10,15 @@ Lemma repr_rec:
   forall n (bs: BITS n) E b, repr [tuple of b :: bs] E ->
     repr bs [ set x : 'I_n | inord(x.+1) \in E ].
 Proof.
-  admit.
+  move=> n bs E b.
+  rewrite !/repr -!setP !/eq_mem=> HE.
+  move=> i.
+  rewrite in_set.
+  rewrite HE.
+  rewrite !in_set.
+  rewrite /getBit.
+  rewrite inordK.
+  rewrite -nth_behead.
+  rewrite //=.
+  admit. (* Trivial... *)
 Admitted.
