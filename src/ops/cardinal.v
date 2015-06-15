@@ -529,7 +529,41 @@ Lemma count_repr:
   forall n (bs: BITS n) E, repr bs E ->
     count_mem true bs = #|E|.
 Proof.
-  admit.
+  elim=> [bs|n IHn /tupleP[b bs]] E HE.
+  + (* n ~ 0 *)
+    rewrite tuple0 /=.
+    rewrite eq_card0 //.
+    rewrite /eq_mem=> x.
+    by move: x => [x le_x].
+  + (* n ~ n.+1 *)
+    rewrite /=.
+    rewrite HE.
+    rewrite (cardD1 ord0).
+    have ->: #|[predD1 [set x : 'I_n.+1 | getBit [tuple of b :: bs] x] & ord0]|
+           = #|[set x : 'I_n | getBit bs x]|.
+      have H: injective (fun (x : 'I_n) => inord (n' := n) x.+1).
+        rewrite /injective=> x1 x2 H.
+        have H': x1.+1 = x2.+1.
+          (* TODO: factorize *)
+          have ->: x1.+1 = nat_of_ord (inord (n' := n) x1.+1).
+            rewrite inordK //.
+            rewrite -[x1.+1]addn1 -[n.+1]addn1.
+            rewrite ltn_add2r.
+            by rewrite ltn_ord.
+          have ->: x2.+1 = nat_of_ord (inord (n' := n) x2.+1).
+            rewrite inordK //.
+            rewrite -[x2.+1]addn1 -[n.+1]addn1.
+            rewrite ltn_add2r.
+            by rewrite ltn_ord.
+          rewrite H //.
+        by admit. (* Trivial *)
+      rewrite -(card_image H).
+      admit. (* Shouldn't be too hard... *)
+    rewrite in_set /=.
+    have ->: getBit [tuple of b :: bs] 0 = b by compute.
+    set E' := [set x : 'I_n | getBit bs x].
+    rewrite (IHn bs E')=> //.
+    case: b HE=> //.
 Admitted.
 
 Lemma cardinal_repr:
