@@ -1,7 +1,7 @@
 From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div finset ssralg zmodp.
 From Bits
-     Require Import bits.
+     Require Import bits tuple.
 Require Import props.getbit props.tozp spec.
 
 (** Recursive algorithm **)
@@ -214,16 +214,16 @@ Definition cardinal {n}(k: nat)(bs: BITS n): nat
 Lemma toNat_tcast:
   forall n m (bs: BITS n)(H: n = m), toNat (tcast H bs) = toNat bs.
 Proof.
-  admit.
-Admitted.
+  move=> n m bs H.
+  by case: m / H.
+Qed.
 
-Lemma toNat_catB:
-  forall n1 n2 (bs: BITS n1) (bs': BITS n2), toNat (bs ## bs') = toNat bs' + (toNat bs) * 2 ^ n2.
+Lemma count_tcast:
+  forall n m (bs: BITS n) (H: n = m), count_mem true (tcast H bs) = count_mem true bs.
 Proof.
-  admit.
-Admitted.
-
-Set Printing Implicit.
+  move=> n m bs H.
+  by case: m / H.
+Qed.
 
 (* TODO: merge with makeOnes? *)
 Lemma makeOnes2:
@@ -233,10 +233,10 @@ Proof.
   apply (toZp_inj (n := n.+1)).
   have ->: tcast q (zero (n - k) ## ones k) = fromNat (toNat (tcast q (zero (n - k) ## ones k))) by rewrite toNatK.
   rewrite toNat_tcast.
-  rewrite toNat_catB.
+  rewrite toNatCat.
   rewrite toNat_zero toNat_ones.
   rewrite toZp_joinmsb0.
-  rewrite mul0n addn0.
+  rewrite mul0n add0n.
   have ->: @toZpAux n.+1 n #((2 ^ k).-1) = ((2 ^ k).-1%:R)%R.
     rewrite /toZpAux.
     rewrite toNat_fromNatBounded.
@@ -261,23 +261,97 @@ Qed.
 
 Lemma count_low:
   forall n (bs: BITS n) k (H: n = 2 ^ k + (n - 2 ^ k)), toNat (n := n) bs < 2 ^ 2 ^ k ->
+      (forall i, i < n -> 2 ^ k <= i -> getBit bs i = false) ->
       count_mem true (fromNat (n := 2 ^ 2 ^ k) (toNat (n := n) bs))
     = count_mem true (low (2 ^ k) (tcast H bs)).
 Proof.
-  admit.
+  move=> n bs k H le_n high_bits.
+  have H': zero (n - 2 ^ k) ## low (2 ^ k) (tcast H bs) = tcast H bs.
+    apply allBitsEq=> i le_i.
+    rewrite getBit_catB.
+    case H0: (i < 2 ^ k).
+    + (* i < 2 ^ k *)
+      rewrite getBit_low.
+      by rewrite H0 //.
+    + (* i >= 2 ^ k *)
+      rewrite -fromNat0.
+      rewrite getBit_zero.
+      case H1: (i < n).
+      + (* i < n *)
+        rewrite -(high_bits i).
+        rewrite getBit_tcast //.
+        rewrite H1 //.
+        rewrite leqNgt.
+        by rewrite H0 //.
+      + (* i >= n *)
+        rewrite /getBit.
+        rewrite nth_default //.
+        rewrite size_tuple -H.
+        by rewrite leqNgt H1.
+  have ->: count_mem true (low (2 ^ k) (tcast H bs))
+         = count_mem true (zero (n - 2 ^ k) ## low (2 ^ k) (tcast H bs)).
+    rewrite count_cat.
+    have ->: forall i, count_mem true (zero i) = 0.
+      by elim=> //.
+    by rewrite //.
+  rewrite H'.
+  rewrite count_tcast.
+  have ->: count_mem true (fromNat (n := 2 ^ 2 ^ k) (toNat (n := n) bs)) = count_mem true bs.
+    by admit.
+  rewrite //.
 Admitted.
 
 Lemma leB_andB:
   forall n (bs: BITS n) (bs': BITS n), leB (andB bs bs') bs'.
 Proof.
-  admit.
-Admitted.
+  elim=> [bs bs'|n IHn /tupleP[b bs] /tupleP[b' bs']].
+  + (* n ~ 0 *)
+    by rewrite !tuple0 [bs']tuple0.
+  + (* n ~ n.+1 *)
+    rewrite /andB liftBinOpCons -/andB.
+    rewrite /leB.
+    rewrite /ltB.
+    rewrite /= !beheadCons !theadCons.
+    rewrite -/ltB.
+    case H: (ltB (andB bs bs') bs').
+      rewrite //.
+      rewrite /leB in IHn.
+    have H': (andB bs bs' == bs').
+      rewrite -[andB _ _ == _]orbF.
+      rewrite orbC.
+      rewrite -H.
+      by apply IHn.
+    rewrite H'.
+    move/eqP: H'->.
+    rewrite /=.
+    case: b'=> /=.
+      rewrite !andbT.
+      case: b => //=.
+      rewrite !andbF.
+      rewrite orbC orbF //.
+Qed.
 
 Lemma toNat_shlBn:
   forall n k, k < n -> toNat (shlBn (n := n) #1 k) = 2 ^ k.
 Proof.
-  admit.
-Admitted.
+  move=> n.
+  elim=> [le_k|k IHk le_k].
+  + (* k ~ 0 *)
+    rewrite /= toNat_fromNat.
+    rewrite modn_small=> //.
+    have {1}->: 1 = 2 ^ 0 by rewrite //.
+    by rewrite ltn_exp2l //.
+  + (* k ~ k.+1 *)
+    rewrite /=.
+    rewrite toNat_shlB IHk.
+    rewrite -muln2.
+    have {2}->: 2 = 2 ^ 1 by rewrite //.
+    rewrite -expnD.
+    rewrite addn1.
+    rewrite modn_small //.
+    rewrite ltn_exp2l //.
+    auto with arith.
+Qed.
 
 Lemma pop_elem_repr:
   forall n k i (bs: BITS n)(q: n = i.+1 * 2 ^ k + (n - i.+1 * 2 ^ k))(q': i.+1 * 2 ^ k = i * 2 ^ k + 2 ^ k)(H: i.+1 * 2 ^ k <= n),
@@ -375,14 +449,21 @@ Proof.
   apply le_2k.
   apply count_low.
   apply H''.
+  move=> i0 lt_i0 ge_i0.
+  rewrite getBit_liftBinOp=> //.
+  rewrite makeOnes2=> //.
+  rewrite getBit_dropmsb=> //.
+  rewrite getBit_joinmsb.
+  rewrite getBit_tcast.
+  rewrite getBit_catB.
+  have ->: (i0 < 2 ^ k) = false.
+    by rewrite ltnNge ge_i0.
+  rewrite -fromNat0.
+  rewrite getBit_zero.
+  rewrite andbF //.
+  auto with arith.
   apply H''.
 Qed.
-
-Lemma count_tcast:
-  forall n m (bs: BITS n) (H: n = m), count_mem true (tcast H bs) = count_mem true bs.
-Proof.
-  admit.
-Admitted.
 
 Lemma pop_rec:
   forall n k i (bs: BITS n)(q: n = i * 2 ^ k + (n - i * 2 ^ k))(H: i * 2 ^ k <= n),

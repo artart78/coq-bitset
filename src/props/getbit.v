@@ -4,10 +4,10 @@ From Bits
      Require Import bits.
 
 Lemma getBit_zero:
-  forall n k, k < n -> getBit (n := n) #0 k = false.
+  forall n k, getBit (n := n) #0 k = false.
 Proof.
-  move=> n k le_k.
-  rewrite fromNat0 /zero /copy /getBit nth_nseq le_k //.
+  move=> n k.
+  rewrite fromNat0 /zero /copy /getBit nth_nseq if_same //.
 Qed.
 
 Lemma getBit_tcast:
