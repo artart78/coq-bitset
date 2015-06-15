@@ -308,7 +308,12 @@ Proof.
   rewrite getBit_high.
   rewrite !getBit_tcast.
   rewrite getBit_low.
-  have ->: i0 + i * 2 ^ k < i.+1 * 2 ^ k by admit.
+  have ->: i0 + i * 2 ^ k < i.+1 * 2 ^ k.
+  rewrite -[i.+1]add1n.
+  rewrite mulnDl.
+  rewrite ltn_add2r.
+  rewrite mul1n.
+  apply le_i0.
   rewrite getBit_tcast.
   rewrite getBit_liftBinOp.
   rewrite getBit_dropmsb.
