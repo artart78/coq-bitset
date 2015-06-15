@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
      Require Import bits tuple.
-Require Import props.bineqs spec min.
+Require Import props.bineqs props.getbit spec min.
 
 Definition keep_min {n} (bs: BITS n): BITS n
   := andB bs (negB bs).
@@ -10,8 +10,23 @@ Definition keep_min {n} (bs: BITS n): BITS n
 Lemma singleton_repr:
   forall n (k: 'I_n), repr (setBit #0 k true) [set k].
 Proof.
-  admit.
-Admitted.
+  move=> n k.
+  rewrite /repr -setP /eq_mem=> x.
+  rewrite !in_set.
+  case H: (x == k).
+  + (* x == k *)
+    move/eqP: H ->.
+    by rewrite setBitThenGetSame.
+  + (* x <> k *)
+    rewrite setBitThenGetDistinct=> //.
+    rewrite getBit_zero //.
+    apply not_eq_sym.
+    move=> H'.
+    move/eqP: H=>H.
+    apply H.
+    apply ord_inj.
+    by apply H'.
+Qed.
 
 Lemma keep_min_repr:
   forall n (bs: BITS n) E x, repr bs E -> x \in E ->
