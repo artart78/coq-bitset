@@ -57,54 +57,47 @@ Qed.
 
 Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
 
+Lemma index_repr:
+  forall n (bs: BITS n) x E, repr bs E -> x \in E ->
+    index true bs = [arg min_(k < x in E) k].
+Proof.
+  admit.
+Admitted.
+
 Lemma ntz_repr:
   forall n (bs: BITS n) k x E, repr bs E -> x \in E ->
     ntz k bs = [arg min_(k < x in E) k].
 Proof.
   move=> n bs k x E HE Hx.
-  case: arg_minP.
-  apply Hx.
-  move=> i Hi Hj.
-  rewrite /ntz.
-  rewrite fill_ntz_repr.
+  rewrite -(index_repr n bs x E)=> //.
+  rewrite /ntz fill_ntz_repr.
   set ntzE := [ set x : 'I_n | getBit (fill_ntz bs) x ].
   have H: repr (fill_ntz bs) ntzE=> //.
   rewrite (cardinal_repr n k (fill_ntz bs) ntzE)=> //.
   rewrite -(count_repr n (fill_ntz bs) ntzE)=> //.
-  elim: n bs x E HE Hx i Hi Hj ntzE H=> [bs|n IHn /tupleP[b bs]] x E HE Hx i Hi Hj ntzE H.
+  clear x E Hx HE ntzE H.
+  elim: n bs=> [bs|n IHn /tupleP[b bs]].
   + (* n ~ 0 *)
-    by admit. (* x \in E, E: {set ordinal_inType 0} => absurd *)
+    by rewrite tuple0 [bs]tuple0.
   + (* n ~ n.+1 *)
-    case: b H HE=> H HE.
+    case: b.
     - (* b ~ true *)
       have ->: fill_ntz [tuple of true :: bs] = [tuple of true :: ones n].
         apply val_inj.
         by rewrite /= size_tuple //.
       rewrite /=.
       rewrite count_true.
-      rewrite addnC addn1 subnn.
-      admit. (* i is minimum of true :: ... => i = 0 *)
+      by rewrite addnC addn1 subnn.
     - (* b ~ false *)
-      have Hrec: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
+      have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
-      rewrite Hrec.
-      rewrite Hrec in H.
       rewrite /=.
+      rewrite /= -IHn.
       rewrite add0n subSn //.
-      have eq_n_m: n.-1.+1 = n by admit.
-      set x' := cast_ord eq_n_m (inord (n' := n.-1) (x.-1)).
-      set E' := [ set x : 'I_n | inord (x.+1) \in E ].
-      set ntzE' := [ set x : 'I_n | inord (x.+1) \in ntzE ].
-      have repr_bs: repr bs E' by apply (repr_rec n bs E false).
-      have x'_in_E': x' \in E' by admit.
-      set i' := (cast_ord eq_n_m (inord (n' := n.-1) (i.-1))).
-      have i'_in_E': i' \in E' by admit.
-      have minH: forall j, j \in E' -> i' <= j by admit.
-      rewrite (IHn bs x' E' repr_bs x'_in_E' i' i'_in_E' minH ntzE').
-      rewrite /i'.
-      admit.
-      rewrite /ntzE'.
-      apply (repr_rec n (fill_ntz bs) ntzE false)=> //.
-      admit. (* count_mem true (..) <= n *)
+      have {2}->: n = size (fill_ntz_seq bs).
+        have H: size (fill_ntz_seq bs) == n by apply fill_ntzP.
+        move/eqP: H=>H.
+        by rewrite H //.
+      apply count_size.
       admit. (* TODO: only enable the case when 2 ^ k %| n *)
 Admitted.
