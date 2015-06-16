@@ -196,7 +196,7 @@ Proof.
 Admitted.
 *)
 
-Definition pop_table (n: nat) := mkseq (fun i => count_mem true (fromNat (n := 2^n) i)) (2^n).
+Definition pop_table (n: nat) := mkseq (fun i => count_mem true (fromNat (n := n) i)) (2^n).
 
 Definition pop_elem {n}(k: nat)(bs: BITS n)(i: nat): nat
   := let x := andB (shrBn bs (i * 2^k)) (dropmsb (decB (shlBn #1 (2^k)))) in
@@ -262,44 +262,20 @@ Qed.
 Lemma count_low:
   forall n (bs: BITS n) k (H: n = 2 ^ k + (n - 2 ^ k)), toNat (n := n) bs < 2 ^ 2 ^ k ->
       (forall i, i < n -> 2 ^ k <= i -> getBit bs i = false) ->
-      count_mem true (fromNat (n := 2 ^ 2 ^ k) (toNat (n := n) bs))
+      count_mem true (fromNat (n := 2 ^ k) (toNat (n := n) bs))
     = count_mem true (low (2 ^ k) (tcast H bs)).
 Proof.
   move=> n bs k H le_n high_bits.
-  have H': zero (n - 2 ^ k) ## low (2 ^ k) (tcast H bs) = tcast H bs.
+  have ->: fromNat (n := 2 ^ k) (toNat (n := n) bs)
+         = low (2 ^ k) (fromNat (n := 2 ^ k + (n - 2 ^ k)) (toNat (n := n) bs)).
+    rewrite low_fromNat //.
+  have ->: fromNat (n := 2 ^ k + (n - 2 ^ k)) (toNat (n := n) bs)
+         = tcast H (fromNat (n := n) (toNat (n := n) bs)).
     apply allBitsEq=> i le_i.
-    rewrite getBit_catB.
-    case H0: (i < 2 ^ k).
-    + (* i < 2 ^ k *)
-      rewrite getBit_low.
-      by rewrite H0 //.
-    + (* i >= 2 ^ k *)
-      rewrite -fromNat0.
-      rewrite getBit_zero.
-      case H1: (i < n).
-      + (* i < n *)
-        rewrite -(high_bits i).
-        rewrite getBit_tcast //.
-        rewrite H1 //.
-        rewrite leqNgt.
-        by rewrite H0 //.
-      + (* i >= n *)
-        rewrite /getBit.
-        rewrite nth_default //.
-        rewrite size_tuple -H.
-        by rewrite leqNgt H1.
-  have ->: count_mem true (low (2 ^ k) (tcast H bs))
-         = count_mem true (zero (n - 2 ^ k) ## low (2 ^ k) (tcast H bs)).
-    rewrite count_cat.
-    have ->: forall i, count_mem true (zero i) = 0.
-      by elim=> //.
-    by rewrite //.
-  rewrite H'.
-  rewrite count_tcast.
-  have ->: count_mem true (fromNat (n := 2 ^ 2 ^ k) (toNat (n := n) bs)) = count_mem true bs.
-    by admit.
-  rewrite //.
-Admitted.
+    rewrite getBit_tcast.
+    by case: (2 ^ k + (n - 2 ^ k)) / H.
+  rewrite toNatK //.
+Qed.
 
 Lemma leB_andB:
   forall n (bs: BITS n) (bs': BITS n), leB (andB bs bs') bs'.

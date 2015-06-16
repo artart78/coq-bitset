@@ -178,10 +178,10 @@ Proof.
 Qed.
 
 Lemma ntz_repr:
-  forall n (bs: BITS n) k x E, repr bs E -> x \in E ->
+  forall n (bs: BITS n) k x E, 2 ^ k %| n -> repr bs E -> x \in E ->
     ntz k bs = [arg min_(k < x in E) k].
 Proof.
-  move=> n bs k x E HE Hx.
+  move=> n bs k x E Hk HE Hx.
   rewrite -(index_repr n bs x E)=> //.
   rewrite /ntz fill_ntz_repr.
   set ntzE := [ set x : 'I_n | getBit (fill_ntz bs) x ].
@@ -189,7 +189,8 @@ Proof.
   rewrite (cardinal_repr n k (fill_ntz bs) ntzE)=> //.
   rewrite -(count_repr n (fill_ntz bs) ntzE)=> //.
   clear x E Hx HE ntzE H.
-  elim: n bs=> [bs|n IHn /tupleP[b bs]].
+  move: k Hk.
+  elim: n bs=> [bs|n IHn /tupleP[b bs]] k Hk.
   + (* n ~ 0 *)
     by rewrite tuple0 [bs]tuple0.
   + (* n ~ n.+1 *)
@@ -205,12 +206,12 @@ Proof.
       have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
       rewrite /=.
-      rewrite /= -IHn.
+      rewrite /= -(IHn bs 0).
       rewrite add0n subSn //.
       have {2}->: n = size (fill_ntz_seq bs).
         have H: size (fill_ntz_seq bs) == n by apply fill_ntzP.
         move/eqP: H=>H.
         by rewrite H //.
       apply count_size.
-      admit. (* TODO: only enable the case when 2 ^ k %| n *)
-Admitted.
+      rewrite //.
+Qed.
