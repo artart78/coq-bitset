@@ -556,9 +556,25 @@ Proof.
             rewrite ltn_add2r.
             by rewrite ltn_ord.
           rewrite H //.
-        by admit. (* Trivial *)
+        apply ord_inj.
+        have H1': x1.+1 == x2.+1.
+          apply/eqP.
+          apply H'.
+        apply/eqP.
+        by rewrite -eqSS.
       rewrite -(card_image H).
-      admit. (* Shouldn't be too hard... *)
+      apply eq_card.
+      rewrite /eq_mem=> x.
+      rewrite !unfold_in.
+      rewrite /=.
+      rewrite in_set.
+      case eq0: (x == ord0).
+      + (* x == ord0 *)
+        rewrite /=.
+        admit.
+      + (* x <> ord0 *)
+        rewrite /=.
+        admit.
     rewrite in_set /=.
     have ->: getBit [tuple of b :: bs] 0 = b by compute.
     set E' := [set x : 'I_n | getBit bs x].

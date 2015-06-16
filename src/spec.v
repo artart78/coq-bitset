@@ -13,12 +13,10 @@ Proof.
   move=> n bs E b.
   rewrite !/repr -!setP !/eq_mem=> HE.
   move=> i.
-  rewrite in_set.
-  rewrite HE.
-  rewrite !in_set.
-  rewrite /getBit.
-  rewrite inordK.
-  rewrite -nth_behead.
-  rewrite //=.
-  admit. (* Trivial... *)
-Admitted.
+  rewrite in_set HE !in_set.
+  rewrite /getBit inordK.
+  rewrite -nth_behead //=.
+  rewrite -[i.+1]addn1 -[n.+1]addn1.
+  rewrite ltn_add2r.
+  by apply ltn_ord.
+Qed.
