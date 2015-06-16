@@ -79,18 +79,41 @@ Proof.
     - (* b ~ false *)
       rewrite /=.
       set E' := [ set x : 'I_n | inord(x.+1) \in E ].
-      have HpredK: (n.-1).+1 = n by admit. (* We can't have n = 0, otherwise repr [false] E and x \in E, which is not possible! *)
+      have gtz_E: forall z, z \in E -> z > 0.
+        move=> [z le_z] Hz.
+        case: z le_z Hz=> // le_z Hz.
+        rewrite HE in Hz.
+        rewrite in_set in Hz.
+        rewrite /= in Hz.
+        by rewrite //.
+      have gtz_n: n > 0.
+        clear IHn HE E'.
+        case: n bs x E Hx gtz_E=> [bs|] // x E Hx gtz_E.
+        move: x Hx=> [x le_x] Hx.
+        have H': x = 0.
+          by elim: x le_x Hx=> // le_x Hx.
+        rewrite -{2}H'.
+        rewrite (gtz_E (Ordinal le_x)) //.
+      have HpredK: n.-1.+1 = n.
+        by rewrite prednK.
       set x' := cast_ord HpredK (inord (n' := n.-1) x.-1).
       have Hx': x' \in E'.
         rewrite in_set.
         rewrite /=.
         rewrite inordK.
-        have ->: x.-1.+1 = x by admit.
+        have ->: x.-1.+1 = x.
+          rewrite prednK //.
+          by rewrite (gtz_E x) //.
         have ->: inord (n' := n) x = x.
           apply ord_inj.
           rewrite inordK //.
         apply Hx.
-        admit. (* x.-1 < n.-1.+1 *)
+        rewrite !prednK.
+        rewrite -(leq_add2r 1).
+        rewrite !addn1.
+        rewrite ltn_ord //.
+        rewrite //.
+        by rewrite (gtz_E x) //.
       have HE': repr bs E' by apply (repr_rec n bs E false).
       case: arg_minP=> // i Hi Hj.
       rewrite (IHn bs x' E')=> //.
@@ -114,10 +137,16 @@ Proof.
         have ->: getBit bs (cast_ord HpredK (inord i.-1)) = getBit [tuple of false :: bs] i.
           rewrite /=.
           have {2}->: nat_of_ord i = i.-1.+1.
-            by admit.
+            rewrite prednK //.
+            by rewrite (gtz_E i).
           have ->: getBit [tuple of false :: bs] i.-1.+1 = getBit bs i.-1 by compute.
           rewrite inordK //.
-          admit. (* i.-1 < n.-1.+1 *)
+          rewrite !prednK.
+          rewrite -(leq_add2r 1).
+          rewrite !addn1.
+          rewrite ltn_ord //.
+          rewrite //.
+          by rewrite (gtz_E i).
         rewrite HE in Hi.
         rewrite in_set in Hi.
         apply Hi.
@@ -132,7 +161,8 @@ Proof.
           rewrite /= in H2.
           rewrite inordK in H2.
           have ->: nat_of_ord i = i.-1.+1.
-            by admit. (* See above. *)
+            rewrite prednK //.
+            by rewrite (gtz_E i).
           rewrite -[i'.+1]addn1 -[i.-1.+1]addn1.
           rewrite leq_add2r.
           apply H2.
@@ -140,12 +170,12 @@ Proof.
           rewrite -(leq_add2r 1).
           rewrite !addn1.
           rewrite ltn_ord //.
-          admit. (* 0 < n *)
-          admit. (* 0 < i *)
+          rewrite //.
+          by rewrite (gtz_E i).
         rewrite //=.
       move/eqP: H' ->.
       rewrite //.
-Admitted.
+Qed.
 
 Lemma ntz_repr:
   forall n (bs: BITS n) k x E, repr bs E -> x \in E ->
