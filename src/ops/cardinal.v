@@ -547,16 +547,67 @@ Proof.
       case eq0: (x == ord0).
       + (* x == ord0 *)
         rewrite /=.
-        admit.
+        apply/eqP/imageP.
+        move=> absH.
+        have [x1 H1 H2] := absH.
+        have H': x = ord0.
+          move/eqP: eq0=> //.
+        rewrite H' in H2.
+        have: 0 = x1.+1.
+        have ->: 0 = nat_of_ord (ord0 (n' := n)) by rewrite //.
+        have ->: x1.+1 = nat_of_ord (inord (n' := n) x1.+1).
+          rewrite inordK //.
+          rewrite -[x1.+1]addn1 -[n.+1]addn1.
+          rewrite ltn_add2r.
+          by rewrite ltn_ord.
+        rewrite H2 //.
+        by rewrite //.
       + (* x <> ord0 *)
         rewrite /=.
-        admit.
+        apply/eqP.
+        have gtz_x: x > 0.
+          move: x eq0=> [x le_x] eq0.
+          by elim: x le_x eq0=> // le_x eq0.
+        have H'': nat_of_ord x = x.-1.+1.
+          by rewrite prednK //.
+        have le_x: x.-1 < n.
+          rewrite -(ltn_add2r 1).
+          rewrite !addn1.
+          rewrite -H''.
+          by rewrite ltn_ord.
+        case H': (getBit [tuple of b :: bs] x).
+        - (* getBit [tuple of b :: bs] x == true *)
+          apply/imageP.
+          exists (Ordinal le_x).
+          rewrite in_set /=.
+          rewrite H'' in H'.
+          have ->: getBit bs x.-1 = getBit [tuple of b :: bs] x.-1.+1 by compute.
+          rewrite H' //.
+          rewrite /=.
+          rewrite -H''.
+          have: nat_of_ord x = nat_of_ord (inord (n' := n) x).
+            by rewrite inordK //.
+          apply ord_inj.
+        - (* getBit [tuple of b :: bs] x == false *)
+          apply/imageP.
+          elim=> x' Hx' Hxx'.
+          rewrite Hxx' in H'.
+          have H1: getBit [tuple of b :: bs] (inord (n' := n) x'.+1) = getBit bs x'.
+            rewrite inordK.
+            by compute.
+          rewrite -[x'.+1]addn1 -[n.+1]addn1.
+          rewrite ltn_add2r.
+          rewrite ltn_ord //.
+          rewrite in_set in Hx'.
+          rewrite Hx' in H1.
+          rewrite H1 in H'.
+          by rewrite //.
     rewrite in_set /=.
     have ->: getBit [tuple of b :: bs] 0 = b by compute.
     set E' := [set x : 'I_n | getBit bs x].
     rewrite (IHn bs E')=> //.
     case: b HE=> //.
-Admitted.
+Qed.
 
 Lemma cardinal_repr:
   forall n k (bs: BITS n) E, 2 ^ k %| n -> repr bs E ->
