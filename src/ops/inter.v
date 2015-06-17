@@ -12,7 +12,6 @@ Lemma inter_repr:
     repr (inter bs bs') (E :&: E').
 Proof.
   move=> n bs bs' E E' HE HE'.
-  rewrite /repr.
-  rewrite -setP /eq_mem=> x.
-  rewrite in_setI /inter /andB HE HE' !in_set getBit_liftBinOp //.
+  rewrite /repr -setP /eq_mem=> x.
+  by rewrite in_setI /inter /andB HE HE' !in_set getBit_liftBinOp.
 Qed.

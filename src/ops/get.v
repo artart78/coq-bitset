@@ -7,13 +7,6 @@ Require Import props.bineqs props.getbit spec.
 Definition get {n}(bs: BITS n)(k: 'I_n): bool
   := (andB (shrBn bs k) #1) == #1.
 
-Lemma zero_ones_diff:
-  forall n, (zero n.+1 == ones n.+1) = false.
-Proof.
-  move=> n.
-  case H: (zero n.+1 == ones n.+1)=> //.
-Qed.
-
 Lemma get_repr:
   forall n (k: 'I_n.+1)(bs: BITS n.+1) E, repr bs E ->
     get bs k = (k \in E).

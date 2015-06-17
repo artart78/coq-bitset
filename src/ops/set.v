@@ -12,8 +12,7 @@ Lemma set_repr:
     repr (set bs k b) (if b then (k |: E) else (E :\ k)).
 Proof.
   move=> n bs k b E HE.
-  rewrite /repr.
-  rewrite -setP /eq_mem=> x.
+  rewrite /repr -setP /eq_mem=> x.
   rewrite in_set [getBit _]fun_if if_arg.
   rewrite getBit_set_true=> //.
   rewrite getBit_set_false=> //.
