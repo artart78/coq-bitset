@@ -24,6 +24,46 @@ Proof.
   auto with arith.
 Qed.
 
+Lemma toNat_tcast:
+  forall n m (bs: BITS n)(H: n = m), toNat (tcast H bs) = toNat bs.
+Proof.
+  move=> n m bs H.
+  by case: m / H.
+Qed.
+
+Lemma makeOnes2:
+  forall n k (q: k + (n - k) = n), k <= n -> decB (shlBn #1 k) = joinmsb (false, tcast q (zero (n - k) ## ones k)).
+Proof.
+  move=> n k q H.
+  apply (toZp_inj (n := n.+1)).
+  have ->: tcast q (zero (n - k) ## ones k) = fromNat (toNat (tcast q (zero (n - k) ## ones k))) by rewrite toNatK.
+  rewrite toNat_tcast.
+  rewrite toNatCat.
+  rewrite toNat_zero toNat_ones.
+  rewrite toZp_joinmsb0.
+  rewrite mul0n add0n.
+  have ->: @toZpAux n.+1 n #((2 ^ k).-1) = ((2 ^ k).-1%:R)%R.
+    rewrite /toZpAux.
+    rewrite toNat_fromNatBounded.
+    rewrite Zp_nat //.
+    rewrite -(ltn_add2l 1).
+    rewrite add1n.
+    rewrite prednK.
+    rewrite add1n.
+    rewrite ltnS.
+    rewrite leq_exp2l=> //.
+    by rewrite expn_gt0=> //.
+  autorewrite with ZpHom.
+  rewrite toZp_shlBn.
+  autorewrite with ZpHom.
+  rewrite !GRing.mulr_natr.
+  rewrite -subn1.
+  rewrite GRing.natrB.
+  rewrite GRing.mulr1n //.
+  rewrite expn_gt0 //.
+  auto with arith.
+Qed.
+
 Lemma andB_mask1:
   forall n (bs: BITS n),
     andB bs #1 = (if getBit bs 0 then #1 else #0).
@@ -67,5 +107,35 @@ Proof.
   rewrite getBit_liftBinOp =>//.
   rewrite getBit_liftUnOp =>//.
   rewrite andbN -fromNat0 getBit_zero //.
+Qed.
+
+Lemma leB_andB:
+  forall n (bs: BITS n) (bs': BITS n), leB (andB bs bs') bs'.
+Proof.
+  elim=> [bs bs'|n IHn /tupleP[b bs] /tupleP[b' bs']].
+  + (* n ~ 0 *)
+    by rewrite !tuple0 [bs']tuple0.
+  + (* n ~ n.+1 *)
+    rewrite /andB liftBinOpCons -/andB.
+    rewrite /leB.
+    rewrite /ltB.
+    rewrite /= !tuple.beheadCons !tuple.theadCons.
+    rewrite -/ltB.
+    case H: (ltB (andB bs bs') bs').
+      rewrite //.
+      rewrite /leB in IHn.
+    have H': (andB bs bs' == bs').
+      rewrite -[andB _ _ == _]orbF.
+      rewrite orbC.
+      rewrite -H.
+      by apply IHn.
+    rewrite H'.
+    move/eqP: H'->.
+    rewrite /=.
+    case: b'=> /=.
+      rewrite !andbT.
+      case: b => //=.
+      rewrite !andbF.
+      rewrite orbC orbF //.
 Qed.
 

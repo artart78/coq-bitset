@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div finset ssralg zmodp.
 From Bits
      Require Import bits tuple.
-Require Import props.getbit props.tozp spec.
+Require Import props.bineqs props.getbit props.tozp spec.
 
 Definition pop_table (n: nat) := mkseq (fun i => count_mem true (fromNat (n := n) i)) (2^n).
 
@@ -19,52 +19,11 @@ Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): nat :=
 Definition cardinal {n}(k: nat)(bs: BITS n): nat
   := popAux k bs (n %/ 2^k).
 
-Lemma toNat_tcast:
-  forall n m (bs: BITS n)(H: n = m), toNat (tcast H bs) = toNat bs.
-Proof.
-  move=> n m bs H.
-  by case: m / H.
-Qed.
-
 Lemma count_tcast:
   forall n m (bs: BITS n) (H: n = m), count_mem true (tcast H bs) = count_mem true bs.
 Proof.
   move=> n m bs H.
   by case: m / H.
-Qed.
-
-(* TODO: merge with makeOnes? *)
-Lemma makeOnes2:
-  forall n k (q: k + (n - k) = n), k <= n -> decB (shlBn #1 k) = joinmsb (false, tcast q (zero (n - k) ## ones k)).
-Proof.
-  move=> n k q H.
-  apply (toZp_inj (n := n.+1)).
-  have ->: tcast q (zero (n - k) ## ones k) = fromNat (toNat (tcast q (zero (n - k) ## ones k))) by rewrite toNatK.
-  rewrite toNat_tcast.
-  rewrite toNatCat.
-  rewrite toNat_zero toNat_ones.
-  rewrite toZp_joinmsb0.
-  rewrite mul0n add0n.
-  have ->: @toZpAux n.+1 n #((2 ^ k).-1) = ((2 ^ k).-1%:R)%R.
-    rewrite /toZpAux.
-    rewrite toNat_fromNatBounded.
-    rewrite Zp_nat //.
-    rewrite -(ltn_add2l 1).
-    rewrite add1n.
-    rewrite prednK.
-    rewrite add1n.
-    rewrite ltnS.
-    rewrite leq_exp2l=> //.
-    by rewrite expn_gt0=> //.
-  autorewrite with ZpHom.
-  rewrite toZp_shlBn.
-  autorewrite with ZpHom.
-  rewrite !GRing.mulr_natr.
-  rewrite -subn1.
-  rewrite GRing.natrB.
-  rewrite GRing.mulr1n //.
-  rewrite expn_gt0 //.
-  auto with arith.
 Qed.
 
 Lemma count_low:
@@ -83,58 +42,6 @@ Proof.
     rewrite getBit_tcast.
     by case: (2 ^ k + (n - 2 ^ k)) / H.
   rewrite toNatK //.
-Qed.
-
-Lemma leB_andB:
-  forall n (bs: BITS n) (bs': BITS n), leB (andB bs bs') bs'.
-Proof.
-  elim=> [bs bs'|n IHn /tupleP[b bs] /tupleP[b' bs']].
-  + (* n ~ 0 *)
-    by rewrite !tuple0 [bs']tuple0.
-  + (* n ~ n.+1 *)
-    rewrite /andB liftBinOpCons -/andB.
-    rewrite /leB.
-    rewrite /ltB.
-    rewrite /= !beheadCons !theadCons.
-    rewrite -/ltB.
-    case H: (ltB (andB bs bs') bs').
-      rewrite //.
-      rewrite /leB in IHn.
-    have H': (andB bs bs' == bs').
-      rewrite -[andB _ _ == _]orbF.
-      rewrite orbC.
-      rewrite -H.
-      by apply IHn.
-    rewrite H'.
-    move/eqP: H'->.
-    rewrite /=.
-    case: b'=> /=.
-      rewrite !andbT.
-      case: b => //=.
-      rewrite !andbF.
-      rewrite orbC orbF //.
-Qed.
-
-Lemma toNat_shlBn:
-  forall n k, k < n -> toNat (shlBn (n := n) #1 k) = 2 ^ k.
-Proof.
-  move=> n.
-  elim=> [le_k|k IHk le_k].
-  + (* k ~ 0 *)
-    rewrite /= toNat_fromNat.
-    rewrite modn_small=> //.
-    have {1}->: 1 = 2 ^ 0 by rewrite //.
-    by rewrite ltn_exp2l //.
-  + (* k ~ k.+1 *)
-    rewrite /=.
-    rewrite toNat_shlB IHk.
-    rewrite -muln2.
-    have {2}->: 2 = 2 ^ 1 by rewrite //.
-    rewrite -expnD.
-    rewrite addn1.
-    rewrite modn_small //.
-    rewrite ltn_exp2l //.
-    auto with arith.
 Qed.
 
 Lemma pop_elem_repr:
@@ -307,114 +214,6 @@ Proof.
     rewrite count_cat addnC //.
     rewrite le_i //.
     rewrite ltnW //.
-Qed.
-
-Lemma count_repr:
-  forall n (bs: BITS n) E, repr bs E ->
-    count_mem true bs = #|E|.
-Proof.
-  elim=> [bs|n IHn /tupleP[b bs]] E HE.
-  + (* n ~ 0 *)
-    rewrite tuple0 /=.
-    rewrite eq_card0 //.
-    rewrite /eq_mem=> x.
-    by move: x => [x le_x].
-  + (* n ~ n.+1 *)
-    rewrite /=.
-    rewrite HE.
-    rewrite (cardD1 ord0).
-    have ->: #|[predD1 [set x : 'I_n.+1 | getBit [tuple of b :: bs] x] & ord0]|
-           = #|[set x : 'I_n | getBit bs x]|.
-      have H: injective (fun (x : 'I_n) => inord (n' := n) x.+1).
-        rewrite /injective=> x1 x2 H.
-        have H': x1.+1 = x2.+1.
-          (* TODO: factorize *)
-          have ->: x1.+1 = nat_of_ord (inord (n' := n) x1.+1).
-            rewrite inordK //.
-            rewrite -[x1.+1]addn1 -[n.+1]addn1.
-            rewrite ltn_add2r.
-            by rewrite ltn_ord.
-          have ->: x2.+1 = nat_of_ord (inord (n' := n) x2.+1).
-            rewrite inordK //.
-            rewrite -[x2.+1]addn1 -[n.+1]addn1.
-            rewrite ltn_add2r.
-            by rewrite ltn_ord.
-          rewrite H //.
-        apply ord_inj.
-        have H1': x1.+1 == x2.+1.
-          apply/eqP.
-          apply H'.
-        apply/eqP.
-        by rewrite -eqSS.
-      rewrite -(card_image H).
-      apply eq_card.
-      rewrite /eq_mem=> x.
-      rewrite !unfold_in.
-      rewrite /=.
-      rewrite in_set.
-      case eq0: (x == ord0).
-      + (* x == ord0 *)
-        rewrite /=.
-        apply/eqP/imageP.
-        move=> absH.
-        have [x1 H1 H2] := absH.
-        have H': x = ord0.
-          move/eqP: eq0=> //.
-        rewrite H' in H2.
-        have: 0 = x1.+1.
-        have ->: 0 = nat_of_ord (ord0 (n' := n)) by rewrite //.
-        have ->: x1.+1 = nat_of_ord (inord (n' := n) x1.+1).
-          rewrite inordK //.
-          rewrite -[x1.+1]addn1 -[n.+1]addn1.
-          rewrite ltn_add2r.
-          by rewrite ltn_ord.
-        rewrite H2 //.
-        by rewrite //.
-      + (* x <> ord0 *)
-        rewrite /=.
-        apply/eqP.
-        have gtz_x: x > 0.
-          move: x eq0=> [x le_x] eq0.
-          by elim: x le_x eq0=> // le_x eq0.
-        have H'': nat_of_ord x = x.-1.+1.
-          by rewrite prednK //.
-        have le_x: x.-1 < n.
-          rewrite -(ltn_add2r 1).
-          rewrite !addn1.
-          rewrite -H''.
-          by rewrite ltn_ord.
-        case H': (getBit [tuple of b :: bs] x).
-        - (* getBit [tuple of b :: bs] x == true *)
-          apply/imageP.
-          exists (Ordinal le_x).
-          rewrite in_set /=.
-          rewrite H'' in H'.
-          have ->: getBit bs x.-1 = getBit [tuple of b :: bs] x.-1.+1 by compute.
-          rewrite H' //.
-          rewrite /=.
-          rewrite -H''.
-          have: nat_of_ord x = nat_of_ord (inord (n' := n) x).
-            by rewrite inordK //.
-          apply ord_inj.
-        - (* getBit [tuple of b :: bs] x == false *)
-          apply/imageP.
-          elim=> x' Hx' Hxx'.
-          rewrite Hxx' in H'.
-          have H1: getBit [tuple of b :: bs] (inord (n' := n) x'.+1) = getBit bs x'.
-            rewrite inordK.
-            by compute.
-          rewrite -[x'.+1]addn1 -[n.+1]addn1.
-          rewrite ltn_add2r.
-          rewrite ltn_ord //.
-          rewrite in_set in Hx'.
-          rewrite Hx' in H1.
-          rewrite H1 in H'.
-          by rewrite //.
-    rewrite in_set /=.
-    have ->: getBit [tuple of b :: bs] 0 = b by compute.
-    set E' := [set x : 'I_n | getBit bs x].
-    rewrite (IHn bs E')=> //.
-    case: b HE=> //.
 Qed.
 
 Lemma cardinal_repr:
