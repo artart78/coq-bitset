@@ -2,6 +2,7 @@
 src/bitset.v
 src/extract.v
 src/spec.v
+src/repr_op.v
 src/props/bineqs.v
 src/props/getbit.v
 src/props/misc.v

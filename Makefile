@@ -108,6 +108,7 @@ VFILES:=src/ops/union.v\
   src/props/misc.v\
   src/props/getbit.v\
   src/props/bineqs.v\
+  src/repr_op.v\
   src/spec.v\
   src/extract.v\
   src/bitset.v
