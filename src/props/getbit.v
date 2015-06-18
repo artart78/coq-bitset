@@ -148,6 +148,16 @@ Proof.
   apply IHn; first by auto with arith.
 Qed.
 
+Lemma getBit_shlB:
+  forall n (bs: BITS n) k, k > 0 -> k < n ->
+    getBit (shlB bs) k = getBit bs k.-1.
+Proof.
+  move=> n bs k gtz_k ltn_k.
+  case: k gtz_k ltn_k=> // k ? ltn_k.
+  rewrite /shlB /shlBaux.
+  rewrite getBit_dropmsb=> //.
+Qed.
+
 Lemma dropmsb_joinlsb:
   forall n (bs : BITS n.+1) b,
     dropmsb (joinlsb (bs, b)) = joinlsb (dropmsb bs, b).

@@ -56,31 +56,26 @@ Proof.
     rewrite mul1n.
     rewrite -{1}[2 ^ k]add0n.
     by rewrite leq_add2r //.
+  have H: n = 2 ^ k + (n - 2 ^ k).
+    by rewrite subnKC.
+  have H': 2 ^ k + (n - 2 ^ k) = n by rewrite -H.
   rewrite /pop_elem.
   rewrite /pop_table.
   set bs' := andB (shrBn bs (i * 2 ^ k)) (decB (shlBn #1 (2 ^ k))).
   have H'': toNat bs' < 2 ^ 2 ^ k.
     have ltn_ones: toNat (n := n) (decB (shlBn #1 (2 ^ k))) < 2 ^ 2 ^ k.
-      rewrite toNat_decB.
-      case H: (shlBn #1 (2 ^ k) == #0).
-      + (* shlBn #1 (2 ^ k) == #0, ie 2 ^ k >= n *)
-        by admit. (* That means k >= n, and so, (2 ^ n).-1 < 2 ^ 2 ^ k is trivial *)
-      + (* shlBn #1 (2 ^ k) <> #0, ie 2 ^ k < n *)
-        rewrite toNat_shlBn=> //.
-        rewrite -(ltn_add2r 1).
-        rewrite !addn1.
-        rewrite prednK //.
-        rewrite expn_gt0.
-        auto with arith.
-        admit.
+      rewrite makeOnes2=> //.
+      rewrite toNat_tcast toNatCat toNat_zero toNat_ones mul0n add0n.
+      rewrite -(ltn_add2r 1).
+      rewrite !addn1.
+      rewrite prednK //.
+      rewrite expn_gt0.
+      by auto with arith.
     rewrite (leq_ltn_trans (n := toNat (n := n) (decB (shlBn #1 (2 ^ k))))) //.
     rewrite -leB_nat.
     by rewrite leB_andB.
   rewrite nth_mkseq=> //.
 
-  have H: n = 2 ^ k + (n - 2 ^ k).
-    by rewrite subnKC.
-  have H': 2 ^ k + (n - 2 ^ k) = n by rewrite -H.
   have ->: high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))
   = low (2 ^ k) (tcast H (andB (shrBn bs (i * 2 ^ k)) (decB (shlBn #1 (2 ^ k))))).
   rewrite makeOnes2.
@@ -135,7 +130,7 @@ Proof.
   rewrite -fromNat0.
   rewrite getBit_zero.
   by rewrite andbF.
-Admitted.
+Qed.
 
 Lemma pop_rec:
   forall n k i (bs: BITS n)(q: n = i * 2 ^ k + (n - i * 2 ^ k))(H: i * 2 ^ k <= n),
