@@ -7,7 +7,7 @@ Require Import props.bineqs props.getbit props.tozp spec.
 Definition pop_table (n: nat) := mkseq (fun i => count_mem true (fromNat (n := n) i)) (2^n).
 
 Definition pop_elem {n}(k: nat)(bs: BITS n)(i: nat): nat
-  := let x := andB (shrBn bs (i * 2^k)) (dropmsb (decB (shlBn #1 (2^k)))) in
+  := let x := andB (shrBn bs (i * 2^k)) (decB (shlBn #1 (2^k))) in
      nth 0 (pop_table (2^k)) (toNat x).
 
 Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): nat :=
@@ -58,41 +58,31 @@ Proof.
     by rewrite leq_add2r //.
   rewrite /pop_elem.
   rewrite /pop_table.
-  set bs' := andB (shrBn bs (i * 2 ^ k)) (dropmsb (decB (shlBn #1 (2 ^ k)))).
+  set bs' := andB (shrBn bs (i * 2 ^ k)) (decB (shlBn #1 (2 ^ k))).
   have H'': toNat bs' < 2 ^ 2 ^ k.
-    have ->: 2 ^ 2 ^ k = (toNat (n := n) (dropmsb (decB (shlBn #1 (2 ^ k))))).+1.
-      rewrite toNat_dropmsb.
+    have ltn_ones: toNat (n := n) (decB (shlBn #1 (2 ^ k))) < 2 ^ 2 ^ k.
       rewrite toNat_decB.
-      have ->: (shlBn (n := n.+1) #1 (2 ^ k) == #0) = false.
-        case H: (shlBn (n := n.+1) #1 (2 ^ k) == #0)=> //=.
-          rewrite -(getBit_shlBn_true n.+1 (2 ^ k))=> //.
-          rewrite -(getBit_zero n.+1 (2 ^ k))=> //.
-          move/eqP: H=>H.
-          by rewrite H //.
-      rewrite toNat_shlBn=> //.
-      rewrite modn_small.
-      rewrite prednK //.
-      rewrite expn_gt0.
-      auto with arith.
-      rewrite (leq_trans (n := 2 ^ 2 ^ k)) //.
-      rewrite -(ltn_add2l 1).
-      rewrite add1n.
-      rewrite prednK.
-      auto with arith.
-      rewrite expn_gt0.
-      auto with arith.
-      rewrite leq_exp2l=> //.
-    rewrite ltnS.
+      case H: (shlBn #1 (2 ^ k) == #0).
+      + (* shlBn #1 (2 ^ k) == #0, ie 2 ^ k >= n *)
+        by admit. (* That means k >= n, and so, (2 ^ n).-1 < 2 ^ 2 ^ k is trivial *)
+      + (* shlBn #1 (2 ^ k) <> #0, ie 2 ^ k < n *)
+        rewrite toNat_shlBn=> //.
+        rewrite -(ltn_add2r 1).
+        rewrite !addn1.
+        rewrite prednK //.
+        rewrite expn_gt0.
+        auto with arith.
+        admit.
+    rewrite (leq_ltn_trans (n := toNat (n := n) (decB (shlBn #1 (2 ^ k))))) //.
     rewrite -leB_nat.
-    rewrite /bs'.
     by rewrite leB_andB.
-  rewrite nth_mkseq.
+  rewrite nth_mkseq=> //.
 
   have H: n = 2 ^ k + (n - 2 ^ k).
     by rewrite subnKC.
   have H': 2 ^ k + (n - 2 ^ k) = n by rewrite -H.
   have ->: high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))
-  = low (2 ^ k) (tcast H (andB (shrBn bs (i * 2 ^ k)) (dropmsb (decB (shlBn #1 (2 ^ k)))))).
+  = low (2 ^ k) (tcast H (andB (shrBn bs (i * 2 ^ k)) (decB (shlBn #1 (2 ^ k))))).
   rewrite makeOnes2.
   apply allBitsEq=> i0 le_i0.
   have H''': i0 < n.
@@ -117,8 +107,6 @@ Proof.
   apply le_i0.
   rewrite getBit_tcast.
   rewrite getBit_liftBinOp.
-  rewrite getBit_dropmsb.
-  rewrite getBit_joinmsb.
   rewrite getBit_tcast.
   rewrite getBit_catB.
   rewrite le_i0.
@@ -132,29 +120,22 @@ Proof.
   rewrite -mulnDl addn1.
   rewrite H1 //.
   rewrite le_i0 //.
-  rewrite -ltnS.
+  apply H'''.
 
-  rewrite (ltn_trans (n := n)) //.
-  apply H'''.
-  apply H'''.
   apply le_2k.
   apply count_low.
   apply H''.
   move=> i0 lt_i0 ge_i0.
   rewrite getBit_liftBinOp=> //.
   rewrite makeOnes2=> //.
-  rewrite getBit_dropmsb=> //.
-  rewrite getBit_joinmsb.
   rewrite getBit_tcast.
   rewrite getBit_catB.
   have ->: (i0 < 2 ^ k) = false.
     by rewrite ltnNge ge_i0.
   rewrite -fromNat0.
   rewrite getBit_zero.
-  rewrite andbF //.
-  auto with arith.
-  apply H''.
-Qed.
+  by rewrite andbF.
+Admitted.
 
 Lemma pop_rec:
   forall n k i (bs: BITS n)(q: n = i * 2 ^ k + (n - i * 2 ^ k))(H: i * 2 ^ k <= n),

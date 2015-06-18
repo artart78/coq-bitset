@@ -28,18 +28,13 @@ Proof.
   move=> n.
   elim=> [le_k|k IHk le_k].
   + (* k ~ 0 *)
-    rewrite /= toNat_fromNat.
-    rewrite modn_small=> //.
+    rewrite toNat_fromNat modn_small=> //.
     have {1}->: 1 = 2 ^ 0 by rewrite //.
     by rewrite ltn_exp2l //.
   + (* k ~ k.+1 *)
-    rewrite /=.
     rewrite toNat_shlB IHk.
     rewrite -muln2.
     have {2}->: 2 = 2 ^ 1 by rewrite //.
-    rewrite -expnD.
-    rewrite addn1.
-    rewrite modn_small //.
-    rewrite ltn_exp2l //.
+    rewrite -expnD addn1 modn_small // ltn_exp2l //.
     auto with arith.
 Qed.

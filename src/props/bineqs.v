@@ -4,24 +4,15 @@ From Bits
      Require Import bits.
 Require Import tozp getbit.
 
+(* TODO: merge makeOnes & makeOnes2? *)
 Lemma makeOnes:
   forall n,
-    joinmsb (false, ones n) = subB (shlBn (n := n.+1) #1 n) #1.
+    ones n = decB #0.
 Proof.
   move=> n.
-  apply toZp_inj.
-  have ->: joinmsb (false, ones n) = fromNat (n:=n.+1) (toNat (joinmsb (false, ones n))) by rewrite toNatK.
-  rewrite toNat_joinmsb0 toNat_ones.
-  rewrite toZp_fromNat.
-  autorewrite with ZpHom.
-  rewrite toZp_shlBn.
-  autorewrite with ZpHom.
-  rewrite !GRing.mulr_natr.
-  rewrite -subn1.
-  rewrite GRing.natrB.
-  rewrite GRing.mulr1n //.
-  rewrite expn_gt0 //.
-  auto with arith.
+  apply toNat_inj.
+  rewrite toNat_ones toNat_decB.
+  by have ->: fromNat (n := n) 0 == #0 by apply/eqP.
 Qed.
 
 Lemma toNat_tcast:
@@ -32,37 +23,19 @@ Proof.
 Qed.
 
 Lemma makeOnes2:
-  forall n k (q: k + (n - k) = n), k <= n -> decB (shlBn #1 k) = joinmsb (false, tcast q (zero (n - k) ## ones k)).
+  forall n k (q: k + (n - k) = n), k <= n -> decB (shlBn #1 k) = tcast q (zero (n - k) ## ones k).
 Proof.
-  move=> n k q H.
-  apply (toZp_inj (n := n.+1)).
-  have ->: tcast q (zero (n - k) ## ones k) = fromNat (toNat (tcast q (zero (n - k) ## ones k))) by rewrite toNatK.
-  rewrite toNat_tcast.
-  rewrite toNatCat.
-  rewrite toNat_zero toNat_ones.
-  rewrite toZp_joinmsb0.
-  rewrite mul0n add0n.
-  have ->: @toZpAux n.+1 n #((2 ^ k).-1) = ((2 ^ k).-1%:R)%R.
-    rewrite /toZpAux.
-    rewrite toNat_fromNatBounded.
-    rewrite Zp_nat //.
-    rewrite -(ltn_add2l 1).
-    rewrite add1n.
-    rewrite prednK.
-    rewrite add1n.
-    rewrite ltnS.
-    rewrite leq_exp2l=> //.
-    by rewrite expn_gt0=> //.
-  autorewrite with ZpHom.
-  rewrite toZp_shlBn.
-  autorewrite with ZpHom.
-  rewrite !GRing.mulr_natr.
-  rewrite -subn1.
-  rewrite GRing.natrB.
-  rewrite GRing.mulr1n //.
-  rewrite expn_gt0 //.
-  auto with arith.
-Qed.
+  move=> n k q le_k.
+  apply toNat_inj.
+  rewrite toNat_tcast toNat_decB toNatCat toNat_zero mul0n add0n.
+  rewrite toNat_ones.
+  case k_neqz: (shlBn #1 k == #0).
+  + (* shlBn #1 k == #0, ie k >= n *)
+    by admit.
+  + (* shlBn #1 k <> #0, ie k < n *)
+    rewrite toNat_shlBn //.
+    admit.
+Admitted.
 
 Lemma andB_mask1:
   forall n (bs: BITS n),
