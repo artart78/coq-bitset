@@ -62,9 +62,7 @@ Proof.
       have gtz_E: forall z, z \in E -> z > 0.
         move=> [z le_z] Hz.
         case: z le_z Hz=> // le_z Hz.
-        rewrite HE in Hz.
-        rewrite in_set in Hz.
-        by rewrite /= in Hz.
+        by rewrite HE in_set /= in Hz.
       have gtz_n: n > 0.
         clear IHn HE E'.
         case: n bs x E Hx gtz_E=> [bs|] // x E Hx gtz_E.
@@ -95,8 +93,7 @@ Proof.
         rewrite (Hj (inord i'.+1)) // HE in_set.
         have ->: getBit [tuple of false :: bs] (inord (n' := n) i'.+1) = getBit bs i'.
           by rewrite inordK // -[i'.+1]addn1 -[n.+1]addn1 ltn_add2r ltn_ord.
-        rewrite HE' in Hi'.
-        rewrite in_set in Hi'.
+        rewrite HE' in_set in Hi'.
         by apply Hi'.
       have nat_i_prednK: nat_of_ord i = i.-1.+1.
         by rewrite prednK // (gtz_E i).
@@ -109,8 +106,7 @@ Proof.
           rewrite !prednK=> //.
           rewrite -(leq_add2r 1) !addn1 ltn_ord //.
           by rewrite (gtz_E i).
-        rewrite HE in Hi.
-        rewrite in_set in Hi.
+        rewrite HE in_set in Hi.
         by apply Hi.
       have Heq: i'.+1 == i.
         rewrite eqn_leq.
@@ -119,8 +115,7 @@ Proof.
           apply H1.
           by rewrite -[i'.+1]addn1 -[n.+1]addn1 ltn_add2r.
         have ->: i'.+1 <= i => //.
-          rewrite /= in H2.
-          rewrite inordK in H2.
+          rewrite /= inordK in H2.
           rewrite nat_i_prednK -[i'.+1]addn1 -[i.-1.+1]addn1 leq_add2r=> //.
           rewrite !prednK=> //.
           rewrite -(leq_add2r 1) !addn1 ltn_ord //.
