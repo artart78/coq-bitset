@@ -35,21 +35,15 @@ Proof.
       by rewrite -(ltn_add2r 1) !addn1 prednK //.
     have predk_lt_Sn: k.-1 < n.+1.
       by rewrite (ltn_trans (n := k))=> //.
-    rewrite /shlBn iterS.
-    rewrite -[iter _ _ _]/(shlBn _ _).
-    rewrite getBit_shlB=> //.
+    rewrite /shlBn iterS -[iter _ _ _]/(shlBn _ _) getBit_shlB=> //.
     rewrite getBit_shlBn_false=> //.
     apply/eqP.
     rewrite gtn_eqF //.
-    rewrite -(ltn_add2r 1).
-    rewrite !addn1.
-    rewrite prednK //.
+    by rewrite -(ltn_add2r 1) !addn1 prednK.
   + (* k <= 0 *)
     have ->: k = 0.
       by case: k le_k k_gtz=> //.
-    rewrite /shlBn iterS -[iter _ _ _]/(shlBn _ _).
-    rewrite /shlB /shlBaux.
-    rewrite getBit_dropmsb=> //.
+    by rewrite /shlBn iterS -[iter _ _ _]/(shlBn _ _) getBit_dropmsb=> //.
 Qed.
 
 Lemma makeOnes2:
@@ -64,7 +58,6 @@ Proof.
     case ltn_k: (k < n).
     + (* k < n *)
       move/eqP: k_neqz=>k_neqz.
-      exfalso.
       have: true = false=> //.
       have->: true = getBit (n := n) (shlBn #1 k) k by rewrite getBit_shlBn_true.
       have->: false = getBit (n := n) #0 k by rewrite getBit_zero.
@@ -72,9 +65,7 @@ Proof.
     + (* k >= n *)
       have ->: k = n=> //.
         apply/eqP.
-        rewrite -[k == n]orbF.
-        rewrite -ltn_k.
-        by rewrite -leq_eqVlt //.
+        by rewrite -[k == n]orbF -ltn_k -leq_eqVlt.
   + (* shlBn #1 k <> #0 -> k < n *)
     rewrite toNat_shlBn //.
     case k_eq_n: (k == n).
@@ -82,12 +73,10 @@ Proof.
       move/eqP: k_neqz=>k_neqz.
       exfalso.
       apply k_neqz.
-      move/eqP: k_eq_n=>k_eq_n.
-      rewrite k_eq_n.
+      move/eqP: k_eq_n ->.
       by apply shlBn_overflow.
     + (* k <> n *)
-      rewrite ltn_neqAle.
-      by rewrite k_eq_n le_k //.
+      by rewrite ltn_neqAle k_eq_n le_k.
 Qed.
 
 Lemma andB_mask1:
@@ -120,7 +109,7 @@ Proof.
   apply allBitsEq=> k le_k.
   rewrite getBit_liftBinOp =>//.
   rewrite getBit_liftUnOp =>//.
-  rewrite orbN /getBit nth_nseq le_k //.
+  by rewrite orbN /getBit nth_nseq le_k.
 Qed.
 
 Lemma andB_invB:
@@ -132,7 +121,7 @@ Proof.
   move=> k le_k.
   rewrite getBit_liftBinOp =>//.
   rewrite getBit_liftUnOp =>//.
-  rewrite andbN -fromNat0 getBit_zero //.
+  by rewrite andbN -fromNat0 getBit_zero.
 Qed.
 
 Lemma leB_andB:
@@ -142,26 +131,20 @@ Proof.
   + (* n ~ 0 *)
     by rewrite !tuple0 [bs']tuple0.
   + (* n ~ n.+1 *)
-    rewrite /andB liftBinOpCons -/andB.
-    rewrite /leB.
-    rewrite /ltB.
-    rewrite /= !tuple.beheadCons !tuple.theadCons.
-    rewrite -/ltB.
+    rewrite /andB liftBinOpCons -/andB /leB /ltB /=
+            !tuple.beheadCons !tuple.theadCons -/ltB.
     case H: (ltB (andB bs bs') bs').
-      rewrite //.
-      rewrite /leB in IHn.
+      by rewrite /leB in IHn.
     have H': (andB bs bs' == bs').
-      rewrite -[andB _ _ == _]orbF.
-      rewrite orbC.
-      rewrite -H.
+      rewrite -[andB _ _ == _]orbF orbC -H.
       by apply IHn.
     rewrite H'.
     move/eqP: H'->.
-    rewrite /=.
     case: b'=> /=.
+    + (* b' = true *)
       rewrite !andbT.
-      case: b => //=.
-      rewrite !andbF.
-      rewrite orbC orbF //.
+      by case: b=> /=.
+    + (* b' = false *)
+      by rewrite !andbF orbC orbF //.
 Qed.
 
