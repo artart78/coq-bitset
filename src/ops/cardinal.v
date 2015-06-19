@@ -26,110 +26,57 @@ Proof.
   by case: m / H.
 Qed.
 
-Lemma count_low:
-  forall n (bs: BITS n) k (H: n = 2 ^ k + (n - 2 ^ k)), toNat (n := n) bs < 2 ^ 2 ^ k ->
-      (forall i, i < n -> 2 ^ k <= i -> getBit bs i = false) ->
-      count_mem true (fromNat (n := 2 ^ k) (toNat (n := n) bs))
-    = count_mem true (low (2 ^ k) (tcast H bs)).
-Proof.
-  move=> n bs k H le_n high_bits.
-  have ->: fromNat (n := 2 ^ k) (toNat (n := n) bs)
-         = low (2 ^ k) (fromNat (n := 2 ^ k + (n - 2 ^ k)) (toNat (n := n) bs)).
-    rewrite low_fromNat //.
-  have ->: fromNat (n := 2 ^ k + (n - 2 ^ k)) (toNat (n := n) bs)
-         = tcast H (fromNat (n := n) (toNat (n := n) bs)).
-    apply allBitsEq=> i le_i.
-    rewrite getBit_tcast.
-    by case: (2 ^ k + (n - 2 ^ k)) / H.
-  rewrite toNatK //.
-Qed.
-
 Lemma pop_elem_repr:
-  forall n k i (bs: BITS n)(q: n = i.+1 * 2 ^ k + (n - i.+1 * 2 ^ k))(q': i.+1 * 2 ^ k = i * 2 ^ k + 2 ^ k)(H: i.+1 * 2 ^ k <= n),
+  forall n k i (bs: BITS n)(q: n = i.+1 * 2 ^ k + (n - i.+1 * 2 ^ k))(q': i.+1 * 2 ^ k = i * 2 ^ k + 2 ^ k)(leq_Si2k: i.+1 * 2 ^ k <= n),
     pop_elem k bs i = count_mem true (high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))).
 Proof.
-  move=> n k i bs q q' H1.
+  move=> n k i bs q q' leq_Si2k.
   have le_2k: 2 ^ k < n.+1.
     rewrite (leq_ltn_trans (n := i.+1 * 2 ^ k)) //.
-    rewrite -[i.+1]addn1.
-    rewrite mulnDl.
-    rewrite mul1n.
-    rewrite -{1}[2 ^ k]add0n.
-    by rewrite leq_add2r //.
+    by rewrite -[i.+1]addn1 mulnDl mul1n -{1}[2 ^ k]add0n leq_add2r.
   have H: n = 2 ^ k + (n - 2 ^ k).
     by rewrite subnKC.
   have H': 2 ^ k + (n - 2 ^ k) = n by rewrite -H.
-  rewrite /pop_elem.
-  rewrite /pop_table.
-  set bs' := andB (shrBn bs (i * 2 ^ k)) (decB (shlBn #1 (2 ^ k))).
-  have H'': toNat bs' < 2 ^ 2 ^ k.
-    have ltn_ones: toNat (n := n) (decB (shlBn #1 (2 ^ k))) < 2 ^ 2 ^ k.
-      rewrite makeOnes2=> //.
-      rewrite toNat_tcast toNatCat toNat_zero toNat_ones mul0n add0n.
-      rewrite -(ltn_add2r 1).
-      rewrite !addn1.
-      rewrite prednK //.
-      rewrite expn_gt0.
+  rewrite /pop_elem /pop_table.
+  rewrite makeOnes2=> //.
+  set bs' := andB (shrBn bs (i * 2 ^ k)) (tcast H' (zero (n - 2 ^ k) ## ones (2 ^ k))).
+  have toNat_bounded: toNat bs' < 2 ^ 2 ^ k.
+    have ltn_ones: toNat (n := n) (tcast H' (zero (n - 2 ^ k) ## ones (2 ^ k))) < 2 ^ 2 ^ k.
+      rewrite toNat_tcast toNatCat toNat_zero toNat_ones mul0n add0n
+              -(ltn_add2r 1) !addn1 prednK // expn_gt0.
       by auto with arith.
-    rewrite (leq_ltn_trans (n := toNat (n := n) (decB (shlBn #1 (2 ^ k))))) //.
-    rewrite -leB_nat.
-    by rewrite leB_andB.
+    by rewrite (leq_ltn_trans (n := toNat (n := n) (tcast H' (zero (n - 2 ^ k) ## ones (2 ^ k))))) //
+              -leB_nat leB_andB.
   rewrite nth_mkseq=> //.
 
   have ->: high (2 ^ k) (tcast q' (low (i.+1 * 2 ^ k) (tcast q bs)))
-  = low (2 ^ k) (tcast H (andB (shrBn bs (i * 2 ^ k)) (decB (shlBn #1 (2 ^ k))))).
-  rewrite makeOnes2.
-  apply allBitsEq=> i0 le_i0.
-  have H''': i0 < n.
-    apply (leq_trans (n := i.+1 * 2 ^ k)).
-    apply (leq_trans (n := 2 ^ k)).
-    apply le_i0.
-    have {1}->: 2 ^ k = 1 * 2 ^ k by auto with arith.
-    rewrite leq_mul2r.
-    have ->: 0 < i.+1 by auto with arith.
-    rewrite orbT //.
-    rewrite H1 //.
-  rewrite getBit_low.
-  rewrite le_i0.
-  rewrite getBit_high.
-  rewrite !getBit_tcast.
-  rewrite getBit_low.
-  have ->: i0 + i * 2 ^ k < i.+1 * 2 ^ k.
-  rewrite -[i.+1]add1n.
-  rewrite mulnDl.
-  rewrite ltn_add2r.
-  rewrite mul1n.
-  apply le_i0.
-  rewrite getBit_tcast.
-  rewrite getBit_liftBinOp.
-  rewrite getBit_tcast.
-  rewrite getBit_catB.
-  rewrite le_i0.
-  rewrite getBit_ones.
-  rewrite andbT.
-  rewrite getBit_shrBn.
-  rewrite addnC //.
-  rewrite (leq_trans (n := i * 2 ^ k + 2 ^ k)) //.
-  rewrite ltn_add2l le_i0 //.
-  have {2}->: 2 ^ k = 1 * 2 ^ k by auto with arith.
-  rewrite -mulnDl addn1.
-  rewrite H1 //.
-  rewrite le_i0 //.
-  apply H'''.
+         = low (2 ^ k) (tcast H (andB (shrBn bs (i * 2 ^ k)) (tcast H' (zero (n - 2 ^ k) ## ones (2 ^ k))))).
+    apply allBitsEq=> i0 ltn_i0_2k.
+    have ltn_i0_n: i0 < n.
+      apply (leq_trans (n := i.+1 * 2 ^ k))=> //.
+      apply (leq_trans (n := 2 ^ k))=> //.
+      have {1}->: 2 ^ k = 1 * 2 ^ k by auto with arith.
+      by rewrite leq_mul2r orbT // leq_Si2k.
+    rewrite getBit_low ltn_i0_2k getBit_high !getBit_tcast getBit_low.
+    have ->: i0 + i * 2 ^ k < i.+1 * 2 ^ k.
+      by rewrite -[i.+1]add1n mulnDl ltn_add2r mul1n.
+    rewrite getBit_tcast getBit_liftBinOp=> //.
+    rewrite getBit_tcast getBit_catB ltn_i0_2k getBit_ones=> //.
+    rewrite andbT getBit_shrBn addnC //.
+    rewrite addnC (leq_trans (n := i * 2 ^ k + 2 ^ k)) //.
+    rewrite ltn_add2l ltn_i0_2k //.
+    have {2}->: 2 ^ k = 1 * 2 ^ k by auto with arith.
+    by rewrite -mulnDl addn1 leq_Si2k //.
 
-  apply le_2k.
-  apply count_low.
-  apply H''.
-  move=> i0 lt_i0 ge_i0.
-  rewrite getBit_liftBinOp=> //.
-  rewrite makeOnes2=> //.
-  rewrite getBit_tcast.
-  rewrite getBit_catB.
-  have ->: (i0 < 2 ^ k) = false.
-    by rewrite ltnNge ge_i0.
-  rewrite -fromNat0.
-  rewrite getBit_zero.
-  by rewrite andbF.
+  have ->: fromNat (n := 2 ^ k) (toNat (n := n) bs')
+         = low (2 ^ k) (fromNat (n := 2 ^ k + (n - 2 ^ k)) (toNat (n := n) bs')).
+    by rewrite low_fromNat.
+  have ->: fromNat (n := 2 ^ k + (n - 2 ^ k)) (toNat (n := n) bs')
+         = tcast H (fromNat (n := n) (toNat (n := n) bs')).
+    apply allBitsEq=> i0 le_i0.
+    rewrite getBit_tcast.
+    by case: (2 ^ k + (n - 2 ^ k)) / H.
+  by rewrite toNatK.
 Qed.
 
 Lemma pop_rec:
@@ -142,54 +89,40 @@ Proof.
   + (* i ~ 0 *)
     by rewrite /=.
   + (* i ~ i.+1 *)
-    rewrite /popAux.
-    rewrite -/popAux.
-
-    have Hi: i * 2 ^ k < n => //.
-      rewrite (leq_trans (n := i.+1 * 2 ^ k)) //.
-      rewrite ltn_mul2r.
-      rewrite -ltnS.
+    rewrite /popAux -/popAux.
+    have ltn_i2k: i * 2 ^ k < n.
+      rewrite (leq_trans (n := i.+1 * 2 ^ k)) // ltn_mul2r -ltnS.
       have ->: i < i.+1 by auto with arith.
       have H: 2 ^ k > 0.
         rewrite expn_gt0.
-        have ->: 0 < 2 by auto with arith.
-        rewrite orbC orbT //.
+        by auto with arith.
       have ->: 1 < (2 ^ k).+1 by auto with arith.
-      rewrite andbT //.
+      by rewrite /=.
+    have leq_i2k: i * 2 ^ k <= n.
+      by rewrite ltnW.
 
     rewrite IHi=> //.
     rewrite subnKC //.
 
-    rewrite ltnW //.
-    move=> H0.
-    rewrite pop_elem_repr.
-    rewrite -addn1.
-    rewrite mulnDl.
+    move=> Hcast0.
+    rewrite pop_elem_repr=> //.
+    rewrite -addn1 mulnDl.
     auto with arith.
-    move=> H1.
-    have H2: i * 2 ^ k + 2 ^ k = i.+1 * 2 ^ k by auto with arith.
+    move=> Hcast1.
+    have Hcast2: i * 2 ^ k + 2 ^ k = i.+1 * 2 ^ k by auto with arith.
     have {2}->: low (i.+1 * 2 ^ k) (tcast q bs)
-    = tcast H2 ((high (2 ^ k) (tcast H1 (low (i.+1 * 2 ^ k) (tcast q bs))) ##
-      low (i * 2 ^ k) (tcast H0 bs))).
+    = tcast Hcast2 ((high (2 ^ k) (tcast Hcast1 (low (i.+1 * 2 ^ k) (tcast q bs))) ##
+      low (i * 2 ^ k) (tcast Hcast0 bs))).
       apply allBitsEq=> i0 le_i0.
-      rewrite getBit_low.
-      rewrite le_i0.
-      rewrite getBit_tcast.
-      rewrite getBit_tcast.
-      rewrite getBit_catB.
+      rewrite getBit_low le_i0 !getBit_tcast getBit_catB.
       case H: (i0 < i * 2 ^ k).
       + (* i0 < i * 2 ^ k *)
         by rewrite getBit_low H getBit_tcast.
       + (* i0 >= i * 2 ^ k *)
-        rewrite getBit_high getBit_tcast getBit_low getBit_tcast.
-        rewrite subnK.
+        rewrite getBit_high getBit_tcast getBit_low getBit_tcast subnK.
         rewrite le_i0 //.
-        rewrite leqNgt.
-        by rewrite H //.
-    rewrite count_tcast.
-    rewrite count_cat addnC //.
-    rewrite le_i //.
-    rewrite ltnW //.
+        by rewrite leqNgt H //.
+    by rewrite count_tcast count_cat addnC.
 Qed.
 
 Lemma cardinal_repr:
@@ -197,16 +130,11 @@ Lemma cardinal_repr:
     cardinal k bs = #|E|.
 Proof.
   move=> n k bs E div_2k_n HE.
-  have H1: n = n %/ 2 ^ k * 2 ^ k.
-    by rewrite divnK //.
-  rewrite /cardinal pop_rec.
-  rewrite divnK=> //.
+  rewrite /cardinal pop_rec divnK=> //.
   rewrite subnKC //.
-  move=> H0.
-  have ->: low (n %/ 2 ^ k * 2 ^ k) (tcast H0 bs) = tcast H1 bs.
+  move=> Hcast0.
+  have ->: low n (tcast Hcast0 bs) = bs.
     apply allBitsEq=> i le_i.
-    by rewrite getBit_low le_i !getBit_tcast.
-  rewrite count_tcast.
+    by rewrite getBit_low le_i getBit_tcast.
   by apply count_repr.
-  by rewrite -H1.
 Qed.
