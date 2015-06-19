@@ -41,18 +41,16 @@ Proof.
     + (* Case: b ~ true *)
       have ->: fill_ntz [tuple of true :: bs] = [tuple of true :: (ones n)].
         apply val_inj.
-        by rewrite /= size_tuple //.
-      rewrite /negB /incB /invB /orB /=.
-      rewrite liftUnOpCons tuple.beheadCons.
-      rewrite liftBinOpCons orbT.
-      by rewrite -/orB -/invB orB_invB //.
+        by rewrite /= size_tuple.
+      by rewrite /negB /incB /invB /orB /=
+                 liftUnOpCons tuple.beheadCons liftBinOpCons orbT
+                 -/orB -/invB orB_invB.
     + (* Case: b ~ false *)
       have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
-      rewrite /negB /incB /invB /orB /=.
-      rewrite liftUnOpCons tuple.beheadCons.
-      rewrite liftBinOpCons orbF.
-      by rewrite -/orB IHn.
+      by rewrite /negB /incB /invB /orB /=
+                 liftUnOpCons tuple.beheadCons liftBinOpCons orbF
+                 -/orB IHn.
 Qed.
 
 Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
@@ -79,19 +77,14 @@ Proof.
       have ->: fill_ntz [tuple of true :: bs] = [tuple of true :: ones n].
         apply val_inj.
         by rewrite /= size_tuple //.
-      rewrite /=.
-      rewrite count_true.
-      by rewrite addnC addn1 subnn.
+      by rewrite /= count_true addnC addn1 subnn.
     - (* b ~ false *)
       have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
-      rewrite /=.
-      rewrite /= -(IHn bs 0).
+      rewrite /= -(IHn bs 0)=> //.
       rewrite add0n subSn //.
       have {2}->: n = size (fill_ntz_seq bs).
         have H: size (fill_ntz_seq bs) == n by apply fill_ntzP.
-        move/eqP: H=>H.
-        by rewrite H //.
-      apply count_size.
-      rewrite //.
+        by move/eqP: H ->.
+      by apply count_size.
 Qed.

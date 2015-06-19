@@ -13,19 +13,17 @@ Lemma set_repr:
 Proof.
   move=> n bs k b E HE.
   rewrite /repr -setP /eq_mem=> x.
-  rewrite in_set [getBit _]fun_if if_arg.
-  rewrite getBit_set_true=> //.
+  rewrite in_set [getBit _]fun_if if_arg getBit_set_true=> //.
   rewrite getBit_set_false=> //.
+  rewrite !fun_if !if_arg.
   case H: (x == k).
     + (* Case: x == k *)
-      move/eqP: H=> ->.
-      rewrite !fun_if !if_arg.
+      move/eqP: H ->.
       rewrite ![if k == k then _ else _]ifT=> //.
       rewrite setU11 setD11.
-      by case: b=> //.
+      by case: b.
     + (* Case: x <> k *)
-      rewrite !fun_if !if_arg.
       rewrite ![if x == k then _ else _]ifF=> //.
       rewrite in_setU1 in_setD1 H HE in_set.
-      by case: b=> //.
+      by case: b.
 Qed.
