@@ -9,7 +9,7 @@ Parameter wordsize: nat.
 Definition Word := BITS wordsize.
 Definition SET := Word.
 
-Require create get set inter union symdiff compl cardinal.
+Require create get set inter union symdiff compl keep_min min cardinal.
 
 Definition create (b: bool): SET
   := create.create b.

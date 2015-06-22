@@ -9,9 +9,10 @@ Definition keep_min {n} (bs: BITS n): BITS n
 
 Lemma keep_min_repr:
   forall n (bs: BITS n) E x, repr bs E -> x \in E ->
-    repr (andB bs (negB bs)) [set [arg min_(k < x in E) k]].
+    repr (keep_min bs) [set [arg min_(k < x in E) k]].
 Proof.
   move=> n bs.
+  rewrite /keep_min.
   have ->: andB bs (negB bs) = setBit #0 (index true bs) true.
   elim: n bs=> [bs|n IHn /tupleP[b bs]].
   + (* bs ~ [tuple] *)

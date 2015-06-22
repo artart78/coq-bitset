@@ -5,23 +5,19 @@ From Bits
 
 Require Import ExtrOcamlNatInt.
 
-Require Import bitset.
+Require Import repr_op.
 
-Extract Constant wordsize => "63".
-Extract Constant BITS => "int".
+Extract Inlined Constant Int63 => "int".
 
-(* TODO: check that n <= 63 *)
-Extract Constant shrBn => "fun n p k -> p lsr k".
-Extract Constant shlBn => "fun n p k -> p lsl k".
-(* TODO: It would have been better to replace subB; here, we should ensure that b != false *)
-Extract Constant sbbB => "fun n b p1 p2 -> (0, p1 - p2)".
-Extract Constant andB => "fun n p1 p2 -> p1 land p2".
-Extract Constant orB => "fun n p1 p2 -> p1 lor p2".
-Extract Constant invB => "fun n p -> lnot p".
-(* TODO: check that the highest bit is 0 *)
-Extract Constant dropmsb => "fun n p -> p".
-Extract Constant fromNat => "fun n p -> p".
-Extract Inlined Constant eq_op => "(fun t x y -> x = y)".
+Extract Inlined Constant lsl => "(lsl)".
+Extract Inlined Constant lsr => "(lsr)".
+Extract Inlined Constant land => "(land)".
+Extract Inlined Constant lor => "(lor)".
+Extract Inlined Constant lxor => "(lxor)".
+Extract Inlined Constant lnot => "lnot".
+Extract Inlined Constant ldec => "(fun x -> x - 1)".
+Extract Inlined Constant leq => "(=)".
+Extract Inlined Constant toInt63 => "".
 
 Definition mytest (k: 'I_wordsize) (k': 'I_wordsize): nat :=
   let S := create true in
