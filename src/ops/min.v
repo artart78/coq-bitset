@@ -56,10 +56,10 @@ Qed.
 Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
 
 Lemma ntz_repr:
-  forall n (bs: BITS n) k x E, 2 ^ k %| n -> repr bs E -> x \in E ->
+  forall n (bs: BITS n) k x E, k %| n -> k > 0 -> repr bs E -> x \in E ->
     ntz k bs = [arg min_(k < x in E) k].
 Proof.
-  move=> n bs k x E Hk HE Hx.
+  move=> n bs k x E Hk gtz_k HE Hx.
   rewrite -(index_repr n bs x E)=> //.
   rewrite /ntz fill_ntz_repr.
   set ntzE := [ set x : 'I_n | getBit (fill_ntz bs) x ].
@@ -67,8 +67,8 @@ Proof.
   rewrite (cardinal_repr n k (fill_ntz bs) ntzE)=> //.
   rewrite -(count_repr n (fill_ntz bs) ntzE)=> //.
   clear x E Hx HE ntzE H.
-  move: k Hk.
-  elim: n bs=> [bs|n IHn /tupleP[b bs]] k Hk.
+  move: k Hk gtz_k.
+  elim: n bs=> [bs|n IHn /tupleP[b bs]] k Hk gtz_k.
   + (* n ~ 0 *)
     by rewrite tuple0 [bs]tuple0.
   + (* n ~ n.+1 *)
@@ -81,7 +81,7 @@ Proof.
     - (* b ~ false *)
       have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
-      rewrite /= -(IHn bs 0)=> //.
+      rewrite /= -(IHn bs 1)=> //.
       rewrite add0n subSn //.
       have {2}->: n = size (fill_ntz_seq bs).
         have H: size (fill_ntz_seq bs) == n by apply fill_ntzP.
