@@ -24,6 +24,7 @@ Axiom lneg: Int63 -> Int63.
 Axiom ldec: Int63 -> Int63.
 Axiom leq: Int63 -> Int63 -> bool.
 Axiom toInt63: nat -> Int63.
+Axiom fromInt63: Int63 -> nat.
 
 Axiom lnot_repr: forall i bs, repr_op i bs -> repr_op (lnot i) (invB bs).
 Axiom land_repr: forall i i' bs bs', repr_op i bs -> repr_op i' bs' -> repr_op (land i i') (andB bs bs').
@@ -35,6 +36,7 @@ Axiom lneg_repr: forall i bs, repr_op i bs -> repr_op (lneg i) (negB bs).
 Axiom ldec_repr: forall i bs, repr_op i bs -> repr_op (ldec i) (decB bs).
 Axiom leq_repr: forall i i' bs bs', repr_op i bs -> repr_op i' bs' -> (leq i i') = (bs == bs').
 Axiom toInt63_repr: forall k, repr_op (toInt63 k) #k.
+Axiom fromInt63_repr: forall i bs, repr_op i bs -> fromInt63 i = toNat bs.
 
 Definition compl (bs: Int63): Int63
   := lnot bs.
@@ -179,4 +181,60 @@ Proof.
   by apply repr_ax.
 Qed.
 
-(* TODO: cardinal & min *)
+Definition pop_table := cardinal.pop_table 3.
+
+Definition pop_elem (bs: Int63)(i: nat): nat
+  := let x := land (lsr bs (i * 3)) (ldec (lsl (toInt63 1) 3)) in
+     nth 0 pop_table (fromInt63 x).
+
+Fixpoint popAux (bs: Int63)(i: nat): nat :=
+  match i with
+  | 0 => 0
+  | i'.+1 => (pop_elem bs i') + (popAux bs i')
+  end.
+
+Definition cardinal (bs: Int63): nat
+  := Eval compute in (popAux bs 21).
+
+Lemma cardinal_repr:
+  forall (bs: Int63) E, nat_repr bs E ->
+    cardinal bs = #|E|.
+Proof.
+  move=> bs H HE.
+  rewrite -(cardinal.cardinal_repr _ 3 (toBs bs))=> //.
+  rewrite /cardinal.cardinal.
+  rewrite /=.
+  rewrite /cardinal.pop_elem.
+  (* All of these freeze!
+  have ->: toNat (andB (shrBn (toBs bs) (20 * 3)) (decB (shlBn # (1) 3)))
+         = fromInt63 (land (lsl bs (20 * 3)) (ldec (lsl (toInt63 1) 3))).
+  simpl.
+  rewrite -fromInt63_repr.
+  rewrite -(fromInt63_repr (land (lsr bs (20 * 3)) (ldec (lsl (toInt63 1) 3)))).
+  *)
+  admit.
+  by apply repr_ax=> //.
+Admitted.
+
+Definition ntz (bs: Int63): nat := 63 - (cardinal (lor bs (lneg bs))).
+
+Lemma ntz_repr:
+  forall (bs: Int63) x E, nat_repr bs E -> x \in E ->
+    ntz bs = [arg min_(k < x in E) k].
+Proof.
+  move=> bs x E HE Hx.
+  rewrite -(min.ntz_repr _ (toBs bs) 3)=> //.
+  rewrite /ntz /min.ntz.
+  set E' := [ set x : 'I_wordsize | getBit (min.fill_ntz (toBs bs)) x ].
+  have H: repr (orB (toBs bs) (negB (toBs bs))) E'.
+    rewrite /repr -setP /eq_mem=> i.
+    rewrite !in_set min.fill_ntz_repr //.
+  rewrite (cardinal_repr _ E').
+  rewrite (cardinal.cardinal_repr _ _ _ E')=> //.
+  apply (nat_repr_ax _ (orB (toBs bs) (negB (toBs bs))))=> //.
+  apply lor_repr.
+  apply repr_op_ax.
+  apply lneg_repr.
+  apply repr_op_ax.
+  by apply repr_ax=> //.
+Qed.
