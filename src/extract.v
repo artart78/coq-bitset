@@ -16,8 +16,10 @@ Extract Inlined Constant lor => "(lor)".
 Extract Inlined Constant lxor => "(lxor)".
 Extract Inlined Constant lnot => "lnot".
 Extract Inlined Constant ldec => "(fun x -> x - 1)".
+Extract Inlined Constant lneg => "-".
 Extract Inlined Constant leq => "(=)".
 Extract Inlined Constant toInt63 => "".
+Extract Inlined Constant fromInt63 => "".
 
 Definition mytest (k: 'I_wordsize) (k': 'I_wordsize): nat :=
   let S := create true in
@@ -26,4 +28,4 @@ Definition mytest (k: 'I_wordsize) (k': 'I_wordsize): nat :=
 Set Extraction Optimize.
 Set Extraction AutoInline.
 
-Extraction "test.ml" mytest.
+Extraction "test.ml" repr_op.create repr_op.get repr_op.set repr_op.inter repr_op.union repr_op.compl repr_op.cardinal repr_op.ntz mytest.
