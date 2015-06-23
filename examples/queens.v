@@ -5,31 +5,34 @@ From Bits
 
 Require Import extract repr_op.
 
-Fixpoint countNQueensEachPos (poss: Int63)(ld: Int63)(col: Int63)(rd: Int63)(curCount: nat)(full: Int63)(fuel: nat)
+Fixpoint countNQueensEachPos (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(curCount: nat)(full: BitsRepr.Int63)(fuel: nat)
   := match fuel with
      | 0 => 0
      | n'.+1 =>
-       if (leq (land poss full) (toInt63 0)) then
+       if (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero) then
          curCount
        else (
-         let bit := land poss (lneg poss) in
-         let count := countNQueensAux (lsr (lor ld bit) 1) (lor col bit) (lsl (lor rd bit) 1) full n' in
-         countNQueensEachPos (land poss (lnot bit)) ld col rd (curCount + count) full n'
+         let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+         let count := countNQueensAux (BitsRepr.lsr (BitsRepr.lor ld bit) 1) (BitsRepr.lor col bit) (BitsRepr.lsl (BitsRepr.lor rd bit) 1) full n' in
+         countNQueensEachPos (BitsRepr.land poss (BitsRepr.lnot bit)) ld col rd (curCount + count) full n'
        )
      end
-with countNQueensAux (ld: Int63)(col: Int63)(rd: Int63)(full: Int63)(fuel: nat)
+with countNQueensAux (ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(full: BitsRepr.Int63)(fuel: nat)
   := match fuel with
      | 0 => 0
      | n'.+1 =>
-       if (leq col full) then
+       if (BitsRepr.leq col full) then
          1
        else (
-         let poss := lnot (lor (lor ld rd) col) in
+         let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
          countNQueensEachPos poss ld col rd 0 full n'
        )
      end.       
 
 Definition countNQueens (n: nat) (fuel: nat)
-  := countNQueensAux (toInt63 0) (toInt63 0) (toInt63 0) (ldec (lsl (toInt63 1) n)) fuel.
+  := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one n)) fuel.
 
-Extraction "queens.ml" countNQueens.     
+Cd "extraction".
+
+
+Separate Extraction countNQueens.
