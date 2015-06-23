@@ -15,4 +15,8 @@ Definition mytest (k: 'I_BitsRepr.wordsize) (k': 'I_BitsRepr.wordsize): nat :=
 Set Extraction Optimize.
 Set Extraction AutoInline.
 
+(* TODO: check the extracted code *)
+
+
+
 Extraction "test.ml" repr_op.create repr_op.get repr_op.set repr_op.inter repr_op.union repr_op.compl repr_op.cardinal repr_op.ntz mytest.

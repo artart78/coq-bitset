@@ -19,15 +19,6 @@ Axiom Int63: Type.
 Extract Inlined Constant Int63 => "int".
 
 
-(** We can convert to and from the axiomatized [Int63] and our
-    bitvectors: theyr are in fact the same thing. *)
-
-Axiom toInt63: BITS wordsize -> Int63.
-Extract Inlined Constant toInt63 => "".
-
-Axiom fromInt63: Int63 -> BITS wordsize.
-Extract Inlined Constant fromInt63 => "".
-
 (** We import the following operations from OCaml: *)
 
 Axiom leq: Int63 -> Int63 -> bool.
@@ -58,6 +49,44 @@ Extract Inlined Constant lneg => "-".
 Axiom ldec: Int63 -> Int63.
 Extract Inlined Constant ldec => "(fun x -> x - 1)".
 
+(** We can convert to and from the axiomatized [Int63] and our
+    bitvectors: in fact, they are isomorphic. *)
+
+Axiom zero : Int63.
+Extract Inlined Constant zero => "0".
+
+Axiom one : Int63.
+Extract Inlined Constant one => "1".
+
+Fixpoint toInt (bs: seq bool)(k: nat): Int63 :=
+  match bs with
+    | [::] => zero
+    | [:: false & bs] => toInt bs (k.+1)
+    | [:: true & bs ] => land (lsr one k) (toInt bs (k.+1))
+  end.
+
+(** Careful, this is painfully slow... Any workaround? *)
+Definition toInt63 (bs: BITS wordsize): Int63 
+  := toInt bs 0.
+
+
+Fixpoint fromInt (n: Int63)(k: nat): seq bool :=
+  match k with 
+    | 0 => [::]
+    | k.+1 =>
+      [:: leq (land n (lsr one (63 - k.+1))) one &
+          fromInt n k]
+  end.
+
+Lemma fromInt63P {k} (n: Int63): size (fromInt n k) == k.
+Proof.
+  elim: k=> // [k IH].
+Qed.
+
+Canonical fromInt63 (n: Int63): BITS 63
+  := Tuple (fromInt63P n).
+
+
 (** ** Axiomatized equivalence with BITS *)
 
 (** We say that an [n : Int63] is the representation of a bitvectir
@@ -65,11 +94,6 @@ Extract Inlined Constant ldec => "(fun x -> x - 1)".
 means that both represent the same number (ie. same 63 booleans). *)
 
 Axiom native_repr: Int63 -> (BITS wordsize) -> Prop.
-
-(** Our conversion, being the identity, respect this relation. *)
-
-Axiom toInt63_repr: forall k, native_repr (toInt63 k) k.
-Axiom fromInt63_repr: forall i bs, native_repr i bs -> fromInt63 i = bs.
 
 (** We postulate that OCaml's operations are a refinement of the
     coq-bits ones. *)
@@ -83,6 +107,19 @@ Axiom lsl_repr: forall i bs k, native_repr i bs -> native_repr (lsl i k) (shlBn 
 Axiom lneg_repr: forall i bs, native_repr i bs -> native_repr (lneg i) (negB bs).
 Axiom ldec_repr: forall i bs, native_repr i bs -> native_repr (ldec i) (decB bs).
 Axiom leq_repr: forall i i' bs bs', native_repr i bs -> native_repr i' bs' -> (leq i i') = (bs == bs').
+
+(** Our conversion, being the identity, respect this relation. *)
+
+Axiom zero_repr: native_repr zero #0.
+Axiom one_repr: native_repr one #1.
+
+(* TODO: this one won't be easy *)
+Lemma toInt63_repr: forall bs, native_repr (toInt63 bs) bs.
+Admitted.
+
+(* TODO: this one won't be easy *)
+Lemma fromInt63_repr: forall i bs, native_repr i bs -> fromInt63 i = bs.
+Admitted.
 
 End BitsRepr.
 
@@ -115,7 +152,6 @@ Definition toInt63 (n: nat): BitsRepr.Int63
 
 Definition fromInt63 (n: BitsRepr.Int63): nat
   := toNat (BitsRepr.fromInt63 n).
-
 
 (** ** Complement *)
 
