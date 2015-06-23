@@ -1,5 +1,5 @@
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun.
+     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
      Require Import bits.
 
@@ -32,7 +32,22 @@ with countNQueensAux (ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int6
 Definition countNQueens (n: nat) (fuel: nat)
   := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one n)) fuel.
 
-Cd "extraction".
+Definition get_coord {n} (B: n.-tuple (n.-tuple bool)) (x: 'I_n) (y: 'I_n) := tnth (tnth B x) y.
 
+Definition is_complete (n: nat) B : bool :=
+  [forall k, exists k', get_coord (n := n) B k k' == true].
+
+Definition is_correct (n: nat) B :=
+  [forall i in 'I_n, forall i' in 'I_n, forall j in 'I_n, forall j' in 'I_n, (i' < i) ==> (j' < j) ==>
+    (get_coord B i i' == true && get_coord B j j' == true) ==>
+    (i != j) && (i' != j') && (i - i' != j - j')].
+
+Definition valid_pos (n: nat) := [set B | is_complete n B && is_correct n B].
+
+Theorem queens_correct: forall n, exists f, countNQueens n f = #|valid_pos n|.
+Proof.
+Admitted.
+
+Cd "extraction".
 
 Separate Extraction countNQueens.
