@@ -116,7 +116,17 @@ Proof.
   split.
   exact: BitsRepr.zero_repr.
   have ->: (make_ld empty_board 0) = set0.
-    by admit.
+    rewrite -setP /eq_mem=> i.
+    rewrite in_set in_set0.
+    have ->: false = ~~ true by trivial.
+    apply negbRL.
+    rewrite negb_exists.
+    apply/forallP=> j.
+    rewrite negb_exists.
+    apply/forallP=> j'.
+    have ->: get_coord empty_board j j' = false.
+      by rewrite /get_coord /empty_board !tnth_mktuple.
+    by rewrite andbC andbF.
   apply spec.empty_repr.
   rewrite /repr_rd /native_repr.
   exists (zero BitsRepr.wordsize).
@@ -124,7 +134,17 @@ Proof.
   split.
   exact: BitsRepr.zero_repr.
   have ->: (make_rd empty_board 0) = set0.
-    by admit.
+    rewrite -setP /eq_mem=> i.
+    rewrite in_set in_set0.
+    have ->: false = ~~ true by trivial.
+    apply negbRL.
+    rewrite negb_exists.
+    apply/forallP=> j.
+    rewrite negb_exists.
+    apply/forallP=> j'.
+    have ->: get_coord empty_board j j' = false.
+      by rewrite /get_coord /empty_board !tnth_mktuple.
+    by rewrite andbC andbF.
   apply spec.empty_repr.
   rewrite /repr_full.
   rewrite /native_repr.
@@ -134,7 +154,7 @@ Proof.
   apply BitsRepr.lsl_repr.
   apply BitsRepr.one_repr.
   by apply spec.subset_repr.
-Admitted.
+Qed.
 
 Cd "extraction".
 
