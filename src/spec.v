@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
      Require Import bits.
-Require Import props.getbit.
+Require Import props.bineqs props.getbit.
 
 Definition repr {n}(bs: BITS n) E :=
   E = [ set x : 'I_n | getBit bs x ].
@@ -17,6 +17,32 @@ Proof.
   rewrite /getBit -nth_behead //=.
   have ltn_i: i < n by apply ltn_ord.
   by auto with arith.
+Qed.
+
+Lemma empty_repr:
+  forall n, repr (zero n) set0.
+Proof.
+  move=> n.
+  rewrite /repr -setP /eq_mem=> i.
+  by rewrite in_set in_set0 -fromNat0 getBit_zero.
+Qed.
+
+Lemma subset_repr:
+  forall k n, k <= n -> repr (decB (shlBn #1 k)) [set x : 'I_n | x < k].
+Proof.
+  move=> k n le_k.
+  rewrite makeOnes2=> //.
+  rewrite subnKC //.
+  move=> ?.
+  rewrite /repr -setP /eq_mem=> i.
+  rewrite !in_set.
+  rewrite getBit_tcast.
+  rewrite getBit_catB.
+  case ltn_i: (i < k).
+  + (* i < k *)
+    by rewrite getBit_ones.
+  + (* i >= k *)
+    by rewrite -fromNat0 getBit_zero.
 Qed.
 
 Lemma singleton_repr:
