@@ -75,6 +75,11 @@ Definition empty_board := [tuple [tuple false | i < BitsRepr.wordsize] | i < Bit
 
 Definition board_possible n (P: {set ordinal_finType BitsRepr.wordsize}) B' i' := [forall i, get_coord n B' i i' ==> (i \in P)].
 
+Set Printing Implicit.
+
+(* Note: i' is the number of columns (cardinal of make_col), it should probably be replaced *)
+(* Note: we want i' < n in the hypothesises or easily deducible *)
+(* Note: there's a missing hypothesis about 'poss': that all of these positions still make it correct *)
 Lemma queensEachPos_correct (n: nat) : exists f, forall fuel, fuel >= f ->
   forall poss ld col rd full B (i': 'I_BitsRepr.wordsize),
     forall curCount, is_correct n B ->
@@ -100,7 +105,7 @@ Proof.
   rewrite -/countNQueensEachPos.
   case: (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero).
   + (* (poss & full) == 0 *)
-    have H1: forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n by admit.
+    have H1: forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n by admit. (* Representation... *)
     have ->: [set B' in valid_pos n | board_included n B B' & board_possible n P B' i'] = set0.
       rewrite -setP /eq_mem=> B0.
       rewrite in_set in_set0.
@@ -109,7 +114,7 @@ Proof.
       rewrite in_set.
       apply/andP.
       move=> [/andP[/forallP Hcompl _] /andP[_ /forallP Hposs]].
-      have ltn_i': 0 <= i' < n by admit.
+      have ltn_i': 0 <= i' < n by admit. (* This should always be true, by hypothesis *)
       move: (Hcompl i')=> Honeset.
       rewrite ltn_i' implyTb in Honeset.
       move/andP: Honeset=> [Honeset1 Honeset2].
@@ -122,7 +127,7 @@ Proof.
     by rewrite cards0 add0n.
   + (* (poss & full) != 0 *)
     set bit := (BitsRepr.land poss (BitsRepr.lneg poss)).
-    have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit.
+    have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit. (* Representation... *)
     move=> [x Hx].
     set min := [arg min_(k < x in P) k].
     set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) 1).
@@ -131,16 +136,27 @@ Proof.
     set B' := [tuple [tuple (if ((x == min) && (y == i')) then true else get_coord n B x y) | x < BitsRepr.wordsize] | y < BitsRepr.wordsize].
     set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
     set P' := P :\ min.
-    have ltn_i': i'.+1 < BitsRepr.wordsize by admit.
+    have ltn_i': i'.+1 < BitsRepr.wordsize by admit. (* Because i'.+1 < n, because i' is the number of occupied columns in 'col' and col is not full, because poss in not full *)
     rewrite (H _ _ _ _ _ _ B' (Ordinal ltn_i'))=> //.
     rewrite (H' _ _ _ _ _ _ _ B i' _ _ _ _ _ _ P')=> //.
     rewrite [curCount + _]addnC addnA.
     set setA := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P' B'0 i'].
     set setB := [set B'0 in valid_pos n | board_included n B' B'0].
     set setC := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P B'0 i'].
-    have ->: setC = setA :|: setB by admit.
+    have ->: setC = setA :|: setB.
+      rewrite -setP /eq_mem=> i.
+      rewrite in_setU !in_set.
+      rewrite -Bool.andb_orb_distrib_r.
+      have ->: board_included n B i && board_possible n P i i'
+             = board_included n B i && board_possible n P' i i' || board_included n B' i.
+        by admit.
+      by rewrite //.
     rewrite cardsU.
-    have ->: setA :&: setB = set0 by admit.
+    have ->: setA :&: setB = set0.
+      rewrite -setP /eq_mem=> i.
+      rewrite in_setI !in_set.
+      (* board_included n B' i && board_possible n P' i i' = false *)
+      by admit.
     rewrite cards0 subn0 //.
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
     rewrite gtn_max in Hfuel.
@@ -159,11 +175,29 @@ Proof.
     rewrite andbT in Hfuel=> //.
     rewrite andbF in Hfuel=> //.
     (* is_correct B' *)
-    admit.
+    admit. (* B is correct & the 3 conditions are respected thanks to the spec of 'poss' *)
     (* ld' *)
-    admit.
+    rewrite /repr_ld.
+    have ->: (make_ld n B' (Ordinal ltn_i')) = [set i : 'I_BitsRepr.wordsize | (inord i.+1 \in (make_ld n B' i'))].
+      rewrite /make_ld -setP /eq_mem=> i.
+      rewrite !in_set.
+      have ->: i + Ordinal (n:=BitsRepr.wordsize) (m:=i'.+1) ltn_i' = inord (n':=BitsRepr.wordsize.-1) i.+1 + i'.
+        rewrite inordK /=.
+        rewrite -add1n addnA addn1 //.
+        admit. (* i.+1 < 63.. this should be limited in make_ld *)
+      by rewrite //=.
+    admit. (* Representation of lsr *)
     (* rd' *)
-    admit.
+    rewrite /repr_rd.
+    have ->: (make_rd n B' (Ordinal ltn_i')) = [set i : 'I_BitsRepr.wordsize | ((i > 0) && (inord i.-1 \in (make_rd n B' i')))].
+      rewrite /make_rd -setP /eq_mem=> i.
+      rewrite !in_set.
+      (*
+      have ->: forall j j', ((Ordinal ltn_i' < i) ==> (j' < j) ==> (i - Ordinal ltn_i' != j - j'))
+             = (0 < i) && ((i' < inord i.-1) ==> (j' < j) ==> (inord i.-1 - i' != j - j')).
+      *)
+      admit.
+    admit. (* Representation of lsl *)
     (* col' *)
     rewrite /repr_col.
     have ->: make_col n B' = (make_col n B) :|: [set min] by admit.
@@ -183,7 +217,7 @@ Proof.
   case Hend: (BitsRepr.leq col full).
   + (* col = full *)
     have ->: [set B' in valid_pos n | board_included n B B'] = [set B].
-      admit.
+      admit. (* Because B is full (should it be in the hypothesises? *)
     by rewrite cards1.
   + (* col != full *)
     set P := (~: (((make_ld n B i') :|: (make_rd n B i')) :|: (make_col n B))).
