@@ -91,7 +91,8 @@ Proof.
   move: (queensEachPos_correct n)=> [f' H'].
   exists ((maxn f f').+1).
   move=> fuel Hfuel poss ld col rd full B i' curCount HB Hld Hrd Hcol Hfull P HP.
-  have Hfuel': fuel = fuel.-1.+1 by admit.
+  have Hfuel': fuel = fuel.-1.+1.
+    by rewrite (ltn_predK (m := maxn f f')).
   rewrite Hfuel'.
   rewrite /countNQueensEachPos.
   rewrite -/countNQueensAux.
@@ -116,18 +117,27 @@ Proof.
     rewrite (H _ _ _ _ _ _ B' (Ordinal ltn_i'))=> //.
     rewrite (H' _ _ _ _ _ _ _ B i' _ _ _ _ _ _ P')=> //.
     admit. (* Either 'min' is taken or not *)
-    admit. (* Trivial. *)
+    rewrite -(leq_add2r 1) !addn1 -Hfuel'.
+    rewrite gtn_max in Hfuel.
+    case: (f < fuel) in Hfuel=> //.
     admit. (* P' *)
-    admit. (* Trivial. *)
+    rewrite -(leq_add2r 1) !addn1 -Hfuel'.
+    rewrite gtn_max in Hfuel.
+    case: (f' < fuel) in Hfuel=> //.
+    rewrite andbT in Hfuel=> //.
+    rewrite andbF in Hfuel=> //.
     admit. (* B' *)
     admit. (* ld' *)
     admit. (* rd' *)
     admit. (* col' *)
+
   (****)
+
   move: (queensEachPos_correct n)=> [f H].
   exists (f.+1).
   move=> fuel Hfuel ld col rd full B i' HB Hld Hrd Hcol Hfull.
-  have Hfuel': fuel = fuel.-1.+1 by admit.
+  have Hfuel': fuel = fuel.-1.+1.
+    by rewrite (ltn_predK (m := f)).
   rewrite Hfuel'.
   rewrite /countNQueensAux.
   rewrite -/countNQueensEachPos.
@@ -146,7 +156,7 @@ Proof.
       rewrite !in_set.
       admit. (* For each complete & correct board, there is one bit in P / poss *)
     rewrite //.
-    admit. (* Trivial. *)
+    rewrite -(leq_add2r 1) !addn1 -Hfuel' Hfuel //.
     apply compl_repr.
     apply union_repr=> //.
     by apply union_repr.
@@ -154,12 +164,12 @@ Admitted.
 
 Theorem queens_correct: forall n, n <= BitsRepr.wordsize -> exists f, countNQueens n f = #|valid_pos n|.
 Proof.
-  move=> n.
-  move: (queensAux_correct n BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one n)) empty_board ord0).
-  move=> [f H].
+  move=> n Hn.
+  move: (queensAux_correct n)=> [f H].
+ (* BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one n)) empty_board ord0). *)
   exists f.
   rewrite /countNQueens.
-  rewrite H.
+  rewrite (H _ _ _ _ _ _ empty_board ord0)=> //.
   have ->: [set B' in valid_pos n | board_included empty_board B'] = valid_pos n.
     rewrite -setP /eq_mem=> i.
     rewrite in_set.
@@ -171,7 +181,6 @@ Proof.
         by rewrite /get_coord /empty_board !tnth_mktuple.
       by rewrite implyFb.
     by rewrite andbT.
-  rewrite //.
   rewrite //.
   rewrite /is_correct.
 
