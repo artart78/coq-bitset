@@ -74,34 +74,23 @@ Definition empty_board := [tuple [tuple false | i < BitsRepr.wordsize] | i < Bit
 
 Definition board_possible (P: {set ordinal_finType BitsRepr.wordsize}) B' i' := [forall i, get_coord B' i i' ==> (i \in P)].
 
-Lemma queensEachPos_correct (n: nat) :
-  forall poss ld col rd full B (i': 'I_BitsRepr.wordsize), exists f, forall fuel, fuel >= f ->
+Lemma queensEachPos_correct (n: nat) : exists f, forall fuel, fuel >= f ->
+  forall poss ld col rd full B (i': 'I_BitsRepr.wordsize),
     forall curCount, is_correct B ->
       (repr_ld B i' ld) -> (repr_rd B i' rd) -> (repr_col B col) -> (repr_full n full) ->
       forall P, (native_repr poss P) ->
       countNQueensEachPos poss ld col rd curCount full fuel =
         #|[set B' in (valid_pos n) | board_included B B' && board_possible P B' i']| + curCount
-with queensAux_correct (n: nat) :
-  forall ld col rd full B (i': 'I_BitsRepr.wordsize), exists f, forall fuel, fuel >= f -> is_correct B ->
+with queensAux_correct (n: nat) : exists f, forall fuel, fuel >= f ->
+  forall ld col rd full B (i': 'I_BitsRepr.wordsize), is_correct B ->
     (repr_ld B i' ld) -> (repr_rd B i' rd) -> (repr_col B col) -> (repr_full n full) ->
       countNQueensAux ld col rd full fuel =
         #|[set B' in (valid_pos n) | board_included B B']|.
 Proof.
-  move=> poss ld col rd full B i'.
-  set bit := (BitsRepr.land poss (BitsRepr.lneg poss)).
-  set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) 1).
-  set col' := (BitsRepr.lor col bit).
-  set rd' := (BitsRepr.lsl (BitsRepr.lor rd bit) 1).
-  set B' := B. (* 'bit' needs to be added! *)
-  set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
-  have ltn_i': i'.+1 < BitsRepr.wordsize by admit.
-  move: (queensAux_correct n ld' col' rd' full B' (Ordinal ltn_i')).
-  move=> [f H].
-  move: (queensEachPos_correct n poss' ld col rd full B i').
-  move=> [f' H'].
+  move: (queensAux_correct n)=> [f H].
+  move: (queensEachPos_correct n)=> [f' H'].
   exists ((maxn f f').+1).
-  move=> fuel Hfuel curCount HB Hld Hrd Hcol Hfull P HP.
-  set P' := P. (* 'bit' needs to be removed! *)
+  move=> fuel Hfuel poss ld col rd full B i' curCount HB Hld Hrd Hcol Hfull P HP.
   have Hfuel': fuel = fuel.-1.+1 by admit.
   rewrite Hfuel'.
   rewrite /countNQueensEachPos.
@@ -113,21 +102,31 @@ Proof.
       admit.
     by rewrite cards0 add0n.
   + (* (poss & full) != 0 *)
-    rewrite H=> //.
-    rewrite (H' _ _ _ _ _ _ _ _ P')=> //.
-    admit. (* Looks weird. *)
+    set bit := (BitsRepr.land poss (BitsRepr.lneg poss)).
+    have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit.
+    move=> [x Hx].
+    set min := [arg min_(k < x in P) k].
+    set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) 1).
+    set col' := (BitsRepr.lor col bit).
+    set rd' := (BitsRepr.lsl (BitsRepr.lor rd bit) 1).
+    set B' := [tuple [tuple (if ((x == min) && (y == i')) then true else get_coord B x y) | x < BitsRepr.wordsize] | y < BitsRepr.wordsize].
+    set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
+    set P' := P :\ min.
+    have ltn_i': i'.+1 < BitsRepr.wordsize by admit.
+    rewrite (H _ _ _ _ _ _ B' (Ordinal ltn_i'))=> //.
+    rewrite (H' _ _ _ _ _ _ _ B i' _ _ _ _ _ _ P')=> //.
+    admit. (* Either 'min' is taken or not *)
     admit. (* Trivial. *)
     admit. (* P' *)
     admit. (* Trivial. *)
+    admit. (* B' *)
     admit. (* ld' *)
-    admit. (* col' *)
     admit. (* rd' *)
+    admit. (* col' *)
   (****)
-  move=> ld col rd full B i'.
-  move: (queensEachPos_correct n (BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col)) ld col rd full B i').
-  move=> [f H].
+  move: (queensEachPos_correct n)=> [f H].
   exists (f.+1).
-  move=> fuel Hfuel HB Hld Hrd Hcol Hfull.
+  move=> fuel Hfuel ld col rd full B i' HB Hld Hrd Hcol Hfull.
   have Hfuel': fuel = fuel.-1.+1 by admit.
   rewrite Hfuel'.
   rewrite /countNQueensAux.
@@ -139,13 +138,13 @@ Proof.
     by rewrite cards1.
   + (* col != full *)
     set P := (~: (((make_ld B i') :|: (make_rd B i')) :|: (make_col B))).
-    rewrite (H _ _ _ _ _ _ _ _ P)=> //.
+    rewrite (H _ _ _ _ _ _ _ B i' _ _ _ _ _ _ P)=> //.
     rewrite addn0.
     have ->: [set B' in valid_pos n | board_included B B' & board_possible P B' i']
            = [set B' in valid_pos n | board_included B B'].
       rewrite -setP /eq_mem=> i.
       rewrite !in_set.
-      admit.
+      admit. (* For each complete & correct board, there is one bit in P / poss *)
     rewrite //.
     admit. (* Trivial. *)
     apply compl_repr.
