@@ -189,7 +189,49 @@ Proof.
               move: (HBix y0)=> HBixy.
               by move/implyP: HBixy ->=> //.
           + (* board_possible n P i i' = false *)
-            admit.
+            case HiP': (board_possible n P' i i').
+            + (* board_possible n P' i i' = true *)
+              rewrite orbC orbT.
+              have: board_possible n P i i' = true.
+                rewrite /board_possible.
+                apply/forallP.
+                move=> y.
+                apply/implyP=> Hy.
+                rewrite /board_possible in HiP'.
+                move/forallP: HiP'=>HiP'.
+                move: (HiP' y)=> /implyP HiP'y.
+                rewrite in_setD in HiP'y.
+                move: (HiP'y Hy)=> /andP [_ HyP] //.
+              by rewrite HiP.
+            + (* board_possible n P' i i' = false *)
+              have: board_included n B' i = false.
+                rewrite /board_included.
+                apply/forallP/forallP.
+                rewrite negb_forall.
+                apply/existsP.
+                exists min.
+                rewrite negb_forall.
+                apply/existsP.
+                exists i'.
+                rewrite negb_imply.
+                rewrite {1}/get_coord /B' !tnth_mktuple.
+                have ->: (min == min) by trivial.
+                have ->: (i' == i') by trivial.
+                rewrite andbT andbC andbT.
+                rewrite /board_possible in HiP.
+                move/forallP: HiP=> /forallP HiP.
+                rewrite negb_forall in HiP.
+                move/existsP: HiP=> [j Hj].
+                rewrite negb_imply in Hj.
+                move: Hj=> /andP [Hj HjP].
+                case Habs: (j == min).
+                - (* j == min *)
+                  move/eqP: Habs=>Habs.
+                  rewrite Habs in HjP.
+                  admit. (* Trivially absurd: [arg min_(k < x in P) k] \in P *)
+                - (* j <> min *)
+                  admit. (* Trivial with the correctness of B *)
+              by rewrite //.
         by rewrite //.
       by rewrite //.
     rewrite cardsU.
