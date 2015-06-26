@@ -48,7 +48,7 @@ Definition is_correct n B :=
 
 Definition valid_pos n := [set B | is_complete n B && is_correct n B].
 
-Definition make_ld n B i' := [set i : 'I_BitsRepr.wordsize | [exists j : 'I_BitsRepr.wordsize, exists j' : 'I_BitsRepr.wordsize, (get_coord n B j j') && (i + i' == j + j')]].
+Definition make_ld n B i' := [set i : 'I_BitsRepr.wordsize | (i < n) && [exists j : 'I_BitsRepr.wordsize, exists j' : 'I_BitsRepr.wordsize, (get_coord n B j j') && (i + i' == j + j')]].
 
 Definition repr_ld n B i' ld
   := native_repr ld (make_ld n B i').
@@ -75,26 +75,29 @@ Definition empty_board := [tuple [tuple false | i < BitsRepr.wordsize] | i < Bit
 
 Definition board_possible n (P: {set ordinal_finType BitsRepr.wordsize}) B' i' := [forall i, get_coord n B' i i' ==> (i \in P)].
 
+Set Printing Implicit.
+
 (* Note: i' is the number of columns (cardinal of make_col), it should probably be replaced *)
 (* Note: we want i' < n in the hypothesises or easily deducible *)
 (* Note: there's a missing hypothesis about 'poss': that all of these positions still make it correct *)
 (* Note: it should be added that, if i is in 'poss', it is not in 'col' *)
 (* Note: the hypothesis "everything below i' is empty" would also be handy *)
-Lemma queensEachPos_correct (n: nat) : exists f, forall fuel, fuel >= f ->
+Lemma queensEachPos_correct (n: nat) : n <= BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
   forall poss ld col rd full B (i': 'I_BitsRepr.wordsize),
     forall curCount, is_correct n B -> is_complete i' B ->
       (repr_ld n B i' ld) -> (repr_rd n B i' rd) -> (repr_col n B col) -> (repr_full n full) ->
       forall P, (native_repr poss P) ->
       countNQueensEachPos poss ld col rd curCount full fuel =
         #|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' i']| + curCount
-with queensAux_correct (n: nat) : exists f, forall fuel, fuel >= f ->
+with queensAux_correct (n: nat) : n <= BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
   forall ld col rd full B (i': 'I_BitsRepr.wordsize), is_correct n B -> is_complete i' B ->
     (repr_ld n B i' ld) -> (repr_rd n B i' rd) -> (repr_col n B col) -> (repr_full n full) ->
       countNQueensAux ld col rd full fuel =
         #|[set B' in (valid_pos n) | board_included n B B']|.
 Proof.
-  move: (queensAux_correct n)=> [f H].
-  move: (queensEachPos_correct n)=> [f' H'].
+  move=> ltn_n.
+  move: (queensAux_correct n ltn_n)=> [f H].
+  move: (queensEachPos_correct n ltn_n)=> [f' H'].
   exists ((maxn f f').+1).
   move=> fuel Hfuel poss ld col rd full B i' curCount HBcor HBcompl Hld Hrd Hcol Hfull P HP.
   have Hfuel': fuel = fuel.-1.+1.
@@ -263,14 +266,28 @@ Proof.
     admit. (* Easy: there is one for each line thanks to B + the added one *)
     (* ld' *)
     rewrite /repr_ld.
-    have ->: (make_ld n B' (Ordinal ltn_i')) = [set i : 'I_BitsRepr.wordsize | (inord i.+1 \in (make_ld n B' i'))].
+    have ->: (make_ld n B' (Ordinal ltn_i')) = [set i : 'I_BitsRepr.wordsize | (i < n) && (inord i.+1 \in (make_ld n B' i'))].
       rewrite /make_ld -setP /eq_mem=> i.
       rewrite !in_set.
-      have ->: i + Ordinal (n:=BitsRepr.wordsize) (m:=i'.+1) ltn_i' = inord (n':=BitsRepr.wordsize.-1) i.+1 + i'.
-        rewrite inordK /=.
-        rewrite -add1n addnA addn1 //.
-        admit. (* i.+1 < 63.. this should be limited in make_ld *)
-      by rewrite //=.
+      case ltn_i: (i < n).
+      + (* i < n *)
+        case ltn_Si: (i.+1 < n).
+        + (* inord i.+1 < n *)
+          have ->: i + Ordinal (n:=BitsRepr.wordsize) (m:=i'.+1) ltn_i' = inord (n':=BitsRepr.wordsize.-1) i.+1 + i'.
+            rewrite inordK /=.
+            rewrite -add1n addnA addn1 //.
+            by apply (leq_trans (n := n))=> //.
+          rewrite /=.
+          have ->: inord (n' := BitsRepr.wordsize.-1) i.+1 < n.
+            rewrite inordK=> //.
+            rewrite prednK //.
+            by apply (leq_trans (n := n))=> //.
+          by rewrite /=.
+        + (* inord i.+1 >= n -> i.+1 = n *)
+          have ->: i.+1 = n by admit.
+          admit. (* Not possible because j' < i' and j < n (easy) *)
+      + (* i >= n *)
+        by rewrite andbC andbF andbC andbF.
     admit. (* Representation of lsr *)
     (* rd' *)
     rewrite /repr_rd.
@@ -289,9 +306,11 @@ Proof.
     apply union_repr=> //.
     apply keep_min_repr=> //.
     apply Hx.
-  (****)
 
-  move: (queensEachPos_correct n)=> [f H].
+  (****************************************************)
+
+  move=> ltn_n.
+  move: (queensEachPos_correct n ltn_n)=> [f H].
   exists (f.+1).
   move=> fuel Hfuel ld col rd full B i' HBcorr HBcompl Hld Hrd Hcol Hfull.
   have Hfuel': fuel = fuel.-1.+1.
@@ -358,8 +377,8 @@ Admitted.
 
 Theorem queens_correct: forall n, n <= BitsRepr.wordsize -> exists f, countNQueens n f = #|valid_pos n|.
 Proof.
-  move=> n Hn.
-  move: (queensAux_correct n)=> [f H].
+  move=> n ltn_n.
+  move: (queensAux_correct n ltn_n)=> [f H].
   have Hempty: forall x y, get_coord n empty_board x y = false.
     move=> x y.
     by rewrite /get_coord !tnth_mktuple.
@@ -395,13 +414,15 @@ Proof.
   have ->: (make_ld n empty_board 0) = set0.
     rewrite -setP /eq_mem=> i.
     rewrite in_set in_set0.
+    have ->: [exists j, exists j', get_coord n empty_board j j' && (i + 0 == j + j')] = false.
     have ->: false = ~~ true by trivial.
     apply negbRL.
     rewrite negb_exists.
     apply/forallP=> j.
     rewrite negb_exists.
     apply/forallP=> j'.
-    by rewrite Hempty andbC andbF.
+    rewrite Hempty andbC andbF //.
+    by rewrite andbF.
   apply spec.empty_repr.
   (* rd *)
   rewrite /repr_rd /native_repr.
