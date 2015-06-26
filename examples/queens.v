@@ -80,6 +80,8 @@ Set Printing Implicit.
 (* Note: i' is the number of columns (cardinal of make_col), it should probably be replaced *)
 (* Note: we want i' < n in the hypothesises or easily deducible *)
 (* Note: there's a missing hypothesis about 'poss': that all of these positions still make it correct *)
+(* Note: it should be added that, if i is in 'poss', it is not in 'col' *)
+(* Note: the hypothesis "everything below i' is empty" would also be handy *)
 Lemma queensEachPos_correct (n: nat) : exists f, forall fuel, fuel >= f ->
   forall poss ld col rd full B (i': 'I_BitsRepr.wordsize),
     forall curCount, is_correct n B ->
@@ -133,7 +135,7 @@ Proof.
     set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) 1).
     set col' := (BitsRepr.lor col bit).
     set rd' := (BitsRepr.lsl (BitsRepr.lor rd bit) 1).
-    set B' := [tuple [tuple (if ((x == min) && (y == i')) then true else get_coord n B x y) | x < BitsRepr.wordsize] | y < BitsRepr.wordsize].
+    set B' := [tuple [tuple (if ((x == min) && (y == i')) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize].
     set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
     set P' := P :\ min.
     have ltn_i': i'.+1 < BitsRepr.wordsize by admit. (* Because i'.+1 < n, because i' is the number of occupied columns in 'col' and col is not full, because poss in not full *)
@@ -149,7 +151,54 @@ Proof.
       rewrite -Bool.andb_orb_distrib_r.
       have ->: board_included n B i && board_possible n P i i'
              = board_included n B i && board_possible n P' i i' || board_included n B' i.
-        by admit.
+        have ->: board_included n B' i = board_included n B i && board_included n B' i.
+          by admit. (* Trivial *)
+        rewrite -Bool.andb_orb_distrib_r.
+        case HBi: (board_included n B i)=> //=.
+        have ->: board_possible n P i i' = board_possible n P' i i' || board_included n B' i.
+          case HiP: (board_possible n P i i').
+          + (* board_possible n P i i' = true *)
+            case HiP': (board_possible n P' i i')=> //=.
+            rewrite /board_included.
+            symmetry.
+            apply/forallP=> x0.
+            apply/forallP=> y0.
+            apply/implyP=> HinB'.
+            case Hoob: ((x0 < n) && (y0 < n)).
+            - (* x0 < n && y0 < n *)
+              rewrite /get_coord Hoob.
+              rewrite /get_coord Hoob in HinB'.
+              case Hmin: ((x0 == min) && (y0 == i')).
+              + (* x0 == min && y0 == i' is true *)
+                move/existsP: HiP'=>[x' Hx'].
+                rewrite negb_imply in Hx'.
+                move/andP: Hx'=>[Hx1 Hx2].
+                move/forallP: HiP=>HiP.
+                move: (HiP x')=> /implyP HxP.
+                have Hx': x' = min.
+                  by admit.
+                move/andP: Hmin=>[/eqP Hmin1 /eqP Hmin2].
+                rewrite Hmin1 Hmin2 -Hx'.
+                rewrite /get_coord in Hx1.
+                by rewrite {1}Hx' -{1}Hmin1 -{1}Hmin2 Hoob in Hx1.
+              + (* x0 == min && y0 == i' is false *)
+                rewrite /B' in HinB'.
+                rewrite !tnth_mktuple in HinB'.
+                rewrite Hmin in HinB'.
+                rewrite /board_included in HBi.
+                move/forallP: HBi=>HBi.
+                move: (HBi x0)=> HBix.
+                move/forallP: HBix=>HBix.
+                move: (HBix y0)=> HBixy.
+                move/implyP: HBixy=> HBixy.
+                rewrite {2}/get_coord in HBixy.
+                rewrite Hoob in HBixy.
+                apply HBixy=> //.
+            - (* ~~ (x0 < n && y0 < n) *)
+                rewrite /get_coord Hoob in HinB'=> //.
+          + (* board_possible n P i i' = true *)
+            admit.
+        by rewrite //.
       by rewrite //.
     rewrite cardsU.
     have ->: setA :&: setB = set0.
@@ -196,7 +245,7 @@ Proof.
       have ->: forall j j', ((Ordinal ltn_i' < i) ==> (j' < j) ==> (i - Ordinal ltn_i' != j - j'))
              = (0 < i) && ((i' < inord i.-1) ==> (j' < j) ==> (inord i.-1 - i' != j - j')).
       *)
-      admit.
+      admit. (* Easy but annoying (need to permutation (0 < i) and [exists] ) *)
     admit. (* Representation of lsl *)
     (* col' *)
     rewrite /repr_col.
