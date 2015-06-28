@@ -4,6 +4,11 @@ From Bits
      Require Import bits tuple.
 Require Import props.bineqs props.getbit props.tozp spec.
 
+(** * Cardinal through binary population count  *)
+
+(* TODO: add ref. to Hacker's delight *)
+(* TODO: document the algorithm *)
+
 Definition pop_table (n: nat) := mkseq (fun i => count_mem true (fromNat (n := n) i)) (2^n).
 
 Definition pop_elem {n}(k: nat)(bs: BITS n)(i: nat): nat
@@ -26,9 +31,15 @@ Proof.
   by case: m / H.
 Qed.
 
+(* TODO: passing the associative/commutative proofs by hand is an
+         annoyance. That's something to ponder.. *)
+
 Lemma pop_elem_repr:
-  forall n k i (bs: BITS n)(q: n = i.+1 * k + (n - i.+1 * k))(q': i.+1 * k = i * k + k)(leq_Si2k: i.+1 * k <= n),
-    pop_elem k bs i = count_mem true (high k (tcast q' (low (i.+1 * k) (tcast q bs)))).
+  forall n k i (bs: BITS n)
+         (q: n = i.+1 * k + (n - i.+1 * k))
+         (q': i.+1 * k = i * k + k),
+    i.+1 * k <= n ->
+        pop_elem k bs i = count_mem true (high k (tcast q' (low (i.+1 * k) (tcast q bs)))).
 Proof.
   move=> n k i bs q q' leq_Sik.
   have le_k: k < n.+1.
@@ -80,8 +91,10 @@ Proof.
 Qed.
 
 Lemma pop_rec:
-  forall n k i (bs: BITS n)(q: n = i * k + (n - i * k))(H: i * k <= n)(k_gtz: k > 0),
-    popAux k bs i = count_mem true (low (i * k) (tcast q bs)).
+  forall n k i (bs: BITS n)
+         (q: n = i * k + (n - i * k)),
+    i * k <= n -> k > 0 ->
+        popAux k bs i = count_mem true (low (i * k) (tcast q bs)).
 Proof.
   move=> n k i.
   move: i n.
@@ -123,8 +136,9 @@ Proof.
 Qed.
 
 Lemma cardinal_repr:
-  forall n k (bs: BITS n) E, k %| n -> k > 0 -> repr bs E ->
-    cardinal k bs = #|E|.
+  forall n k (bs: BITS n) E,
+    k %| n -> k > 0 -> repr bs E ->
+        cardinal k bs = #|E|.
 Proof.
   move=> n k bs E div_k_n gtz_k HE.
   have Hcast1: n = n %/ k * k.

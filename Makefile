@@ -106,12 +106,10 @@ VFILES:=src/ops/union.v\
   src/ops/compl.v\
   src/ops/cardinal.v\
   src/props/tozp.v\
-  src/props/misc.v\
   src/props/getbit.v\
   src/props/bineqs.v\
   src/repr_op.v\
   src/spec.v\
-  src/extract.v\
   src/bitset.v
 
 -include $(addsuffix .d,$(VFILES))

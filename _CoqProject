@@ -1,11 +1,9 @@
 -R src Bitset
 src/bitset.v
-src/extract.v
 src/spec.v
 src/repr_op.v
 src/props/bineqs.v
 src/props/getbit.v
-src/props/misc.v
 src/props/tozp.v
 src/ops/cardinal.v
 src/ops/compl.v

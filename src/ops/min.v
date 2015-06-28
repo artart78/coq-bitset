@@ -2,7 +2,13 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div finset.
 From Bits
      Require Import bits.
-Require Import props.bineqs props.misc cardinal spec.
+Require Import props.bineqs cardinal spec.
+
+(** * Smallest inhabitant of a set *)
+
+(* TODO: explain the algorithm *)
+(* TODO: add ref to Hacker's delight *)
+
 
 (* Fill all the bits to 1 after the LSB *)
 

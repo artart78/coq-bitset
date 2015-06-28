@@ -4,6 +4,8 @@ From Bits
      Require Import bits.
 Require Import props.getbit spec.
 
+(** * Set complement  *)
+
 Definition compl {n} (bs: BITS n): BITS n
   := invB bs.
 
