@@ -3,12 +3,23 @@ From Ssreflect
 From Bits
      Require Import bits.
 
+(* TODO: It seems that some lemma here have nothing to do with
+[getBit]. Find them and move them to a suitable location. It is very
+tempting to merge every files in this directory in a single
+[properties.v] file. *)
+
+(** * Commutation properties between [getBit] and various operations *)
+
+(** ** [zero] *)
+
 Lemma getBit_zero:
   forall n k, getBit (n := n) #0 k = false.
 Proof.
   move=> n k.
   rewrite fromNat0 /zero /copy /getBit nth_nseq if_same //.
 Qed.
+
+(** ** [tcast] *)
 
 Lemma getBit_tcast:
   forall n m (bs: BITS n)(H: n = m), getBit (tcast H bs) = getBit bs.
@@ -18,12 +29,16 @@ Proof.
   rewrite //.
 Qed.
 
+(** ** [ones] *)
+
 Lemma getBit_ones:
   forall n k, k < n -> getBit (ones n) k = true.
 Proof.
   move=> n k le_k.
   by rewrite /getBit nth_nseq le_k.
 Qed.
+
+(** ** [joinmsb] *)
 
 Lemma getBit_joinmsb :
   forall n (bs: BITS n) k,
@@ -46,6 +61,9 @@ Proof.
       by apply: IHn; assumption.
 Qed.
 
+
+(** ** [dropmsb] *)
+
 Lemma getBit_dropmsb:
   forall n (bs : BITS n.+1) k, k < n ->
     getBit (dropmsb bs) k = getBit bs k.
@@ -62,6 +80,8 @@ Proof.
     have H: forall bs', getBit (joinlsb (bs', b)) k.+1 = getBit bs' k by compute.
     by rewrite !H; auto with arith.
 Qed.
+
+(** ** Any binary operation lifted through [liftBinOp] *)
 
 Lemma getBit_liftBinOp:
   forall n op (bs: BITS n)(bs': BITS n) k, k < n ->
@@ -81,6 +101,8 @@ Proof.
     by apply IHn.
 Qed.
 
+(** ** Any unary operation lifted through [liftUnOp] *)
+
 Lemma getBit_liftUnOp:
   forall n op (bs : BITS n) k, k < n -> getBit (liftUnOp op bs) k = op (getBit bs k).
 Proof.
@@ -94,6 +116,8 @@ Proof.
       by compute.
     by apply IHn; apply le_k.
 Qed.
+
+(** ** [shrBn] *)
 
 Lemma shrB_joinmsb0:
   forall n (bs: BITS n),
@@ -148,6 +172,8 @@ Proof.
   apply IHn; first by auto with arith.
 Qed.
 
+(** ** [shlB] and [shlBn] *)
+
 Lemma getBit_shlB:
   forall n (bs: BITS n) k, k > 0 -> k < n ->
     getBit (shlB bs) k = getBit bs k.-1.
@@ -172,6 +198,7 @@ Proof.
     have H: forall bs', getBit (joinlsb (bs', b)) k.+1 = getBit bs' k by compute.
     by rewrite !H getBit_dropmsb.
 Qed.
+
 
 Lemma setBit_0:
   forall n, setBit (n := n) #0 0 true = #1.
