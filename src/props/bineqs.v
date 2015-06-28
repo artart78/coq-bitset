@@ -4,6 +4,18 @@ From Bits
      Require Import bits.
 Require Import tozp getbit.
 
+(* TODO: what is this file about? 
+         combinatorial of boolean operations? *)
+
+
+Lemma count_true:
+  forall n, (count_mem true (nseq n true)) = n.
+Proof.
+  elim=> //=.
+  auto with arith.
+Qed.
+
+
 (* TODO: merge makeOnes & makeOnes2? *)
 Lemma makeOnes:
   forall n,
