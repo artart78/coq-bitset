@@ -38,15 +38,15 @@ Definition is_complete n B : bool :=
   [forall k : 'I_BitsRepr.wordsize, (0 <= k < n) ==>
     [exists k', get_coord n B k' k == true]].
 
-Definition is_correct n B :=
+Definition is_correct cur n B :=
   [forall i : 'I_BitsRepr.wordsize, forall i' : 'I_BitsRepr.wordsize,
-   (get_coord n B i i') ==> (i < n) && (i' < n)
+   (get_coord n B i i') ==> (i < n) && (i' < cur)
    && [forall j : 'I_BitsRepr.wordsize, forall j' : 'I_BitsRepr.wordsize, (get_coord n B j j') ==>
     (i != j) && (i' != j') (* Not on the same horizontal / vertical line *)
     && ((i' < i) ==> (j' < j) ==> (i - i' != j - j')) (* Not on the same right diagonal *)
     && (i + i' != j + j')]]. (* Not on the same left diagonal *)
 
-Definition valid_pos n := [set B | is_complete n B && is_correct n B].
+Definition valid_pos n := [set B | is_complete n B && is_correct n n B].
 
 Definition make_ld n B i' := [set i : 'I_BitsRepr.wordsize | (i < n) && [exists j : 'I_BitsRepr.wordsize, exists j' : 'I_BitsRepr.wordsize, (get_coord n B j j') && (i + i' == j + j')]].
 
@@ -84,13 +84,13 @@ Set Printing Implicit.
 (* Note: the hypothesis "everything below i' is empty" would also be handy *)
 Lemma queensEachPos_correct (n: nat) : n <= BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
   forall poss ld col rd full B (i': 'I_BitsRepr.wordsize),
-    forall curCount, is_correct n B -> is_complete i' B ->
+    forall curCount, is_correct i' n B -> is_complete i' B ->
       (repr_ld n B i' ld) -> (repr_rd n B i' rd) -> (repr_col n B col) -> (repr_full n full) ->
       forall P, (native_repr poss P) ->
       countNQueensEachPos poss ld col rd curCount full fuel =
         #|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' i']| + curCount
 with queensAux_correct (n: nat) : n <= BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
-  forall ld col rd full B (i': 'I_BitsRepr.wordsize), is_correct n B -> is_complete i' B ->
+  forall ld col rd full B (i': 'I_BitsRepr.wordsize), is_correct i' n B -> is_complete i' B ->
     (repr_ld n B i' ld) -> (repr_rd n B i' rd) -> (repr_col n B col) -> (repr_full n full) ->
       countNQueensAux ld col rd full fuel =
         #|[set B' in (valid_pos n) | board_included n B B']|.
@@ -280,7 +280,18 @@ Proof.
           rewrite neq_ltn.
           case Hjj': (get_coord n B' j j')=> //.
           have ->: j + j' < i + i'.+1.
-            by admit.
+            rewrite -[i'.+1]add1n addnA addn1.
+            have HB'cor: is_correct (Ordinal ltn_i') n B' by admit.
+            move/forallP: HB'cor=>HB'cor.
+            move: (HB'cor j)=> HB'corj.
+            move/forallP: HB'corj=>HB'corj.
+            move: (HB'corj j')=> /implyP HB'corjj'.
+            move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
+            apply (leq_trans (n := n + i')).
+            apply (leq_ltn_trans (n := j + i')).
+            rewrite leq_add2l=> //.
+            rewrite ltn_add2r=> //.
+            rewrite leq_add2r=> //.
           by rewrite orbT orbT.
         case ltn'_i: (i < BitsRepr.wordsize .-1).
         + (* i < BitsRepr.wordsize .-1 *)
@@ -355,6 +366,7 @@ Proof.
         move/eqP: HB' ->.
         have ->: is_complete n B.
           by have ->: n = i' by admit. (* Immediate if i' = #|make_col| *)
+        have {1}->: n = i' by admit.
         rewrite HBcorr.
         have ->: board_included n B B = true.
           rewrite /board_included.
