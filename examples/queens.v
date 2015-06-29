@@ -266,28 +266,55 @@ Proof.
     admit. (* Easy: there is one for each line thanks to B + the added one *)
     (* ld' *)
     rewrite /repr_ld.
-    have ->: (make_ld n B' (Ordinal ltn_i')) = [set i : 'I_BitsRepr.wordsize | (i < n) && (inord i.+1 \in (make_ld n B' i'))].
+    have ->: (make_ld n B' (Ordinal ltn_i')) = [set i : 'I_BitsRepr.wordsize | (i < BitsRepr.wordsize.-1) && (inord i.+1 \in (make_ld n B' i'))].
       rewrite /make_ld -setP /eq_mem=> i.
       rewrite !in_set.
-      case ltn_i: (i < n).
-      + (* i < n *)
-        case ltn_Si: (i.+1 < n).
-        + (* inord i.+1 < n *)
-          have ->: i + Ordinal (n:=BitsRepr.wordsize) (m:=i'.+1) ltn_i' = inord (n':=BitsRepr.wordsize.-1) i.+1 + i'.
-            rewrite inordK /=.
-            rewrite -add1n addnA addn1 //.
-            by apply (leq_trans (n := n))=> //.
-          rewrite /=.
-          have ->: inord (n' := BitsRepr.wordsize.-1) i.+1 < n.
-            rewrite inordK=> //.
-            rewrite prednK //.
-            by apply (leq_trans (n := n))=> //.
-          by rewrite /=.
-        + (* inord i.+1 >= n -> i.+1 = n *)
-          have ->: i.+1 = n by admit.
-          admit. (* Not possible because j' < i' and j < n (easy) *)
-      + (* i >= n *)
-        by rewrite andbC andbF andbC andbF.
+        have Habs: i.+1 >= n -> [exists j, exists j', get_coord n B' j j' && (i + i'.+1 == j + j')] = false.
+          move=> leq_n.
+          apply negbTE.
+          rewrite negb_exists.
+          apply/forallP=> j.
+          rewrite negb_exists.
+          apply/forallP=> j'.
+          rewrite negb_and.
+          rewrite neq_ltn.
+          case Hjj': (get_coord n B' j j')=> //.
+          have ->: j + j' < i + i'.+1.
+            by admit.
+          by rewrite orbT orbT.
+        case ltn'_i: (i < BitsRepr.wordsize .-1).
+        + (* i < BitsRepr.wordsize .-1 *)
+          rewrite inordK.
+          case ltn_i: (i < n)=> //=.
+          * (* i < n *)
+            case Hi: (i.+1 < n).
+            - (* i.+1 < n *)
+              have ->: i + i'.+1 = i.+1 + i'.
+                by rewrite -add1n addnA addn1 //.
+              by rewrite andbC andbT.
+            - (* i.+1 >= n *)
+              apply negbT in Hi.
+              rewrite -leqNgt in Hi.
+              rewrite (Habs Hi).
+              by rewrite andbC andbF.
+          * (* i >= n *)
+            have ->: i.+1 < n = false.
+              apply negbTE.
+              rewrite -leqNgt.
+              apply (leq_trans (n := i)).
+              apply negbT in ltn_i.
+              rewrite -leqNgt in ltn_i=> //.
+              rewrite //.
+            by rewrite andbC andbF.
+          by rewrite -[i.+1]addn1 -[63]addn1 ltn_add2r ltn'_i //.
+        + (* i >= BitsRepr.wordsize .-1 *)
+          have Hi: i.+1 >= n.
+            apply (leq_trans (n := BitsRepr.wordsize))=> //.
+            rewrite -(leq_add2r 1) !addn1 /= in ltn'_i.
+            rewrite leqNgt.
+            rewrite ltn'_i //.
+          rewrite (Habs Hi) //.
+          by rewrite andbF andbC andbF.
     admit. (* Representation of lsr *)
     (* rd' *)
     rewrite /repr_rd.
