@@ -43,7 +43,7 @@ Definition is_correct cur n B :=
    (get_coord n B i i') ==> (i < n) && (i' < cur)
    && [forall j : 'I_BitsRepr.wordsize, forall j' : 'I_BitsRepr.wordsize, (get_coord n B j j') ==>
     (i != j) && (i' != j') (* Not on the same horizontal / vertical line *)
-    && ((i' < i) ==> (j' < j) ==> (i - i' != j - j')) (* Not on the same right diagonal *)
+    && (i + j' != j + i') (* Not on the same right diagonal *)
     && (i + i' != j + j')]]. (* Not on the same left diagonal *)
 
 Definition valid_pos n := [set B | is_complete n B && is_correct n n B].
@@ -61,7 +61,7 @@ Definition repr_col n B col
 
 Definition make_rd n B i'
   := [set i : 'I_BitsRepr.wordsize | [exists j : 'I_BitsRepr.wordsize, exists j' : 'I_BitsRepr.wordsize,
-     (get_coord n B j j') && ((i' < i) ==> (j' < j) ==> (i - i' != j - j'))]].
+     (get_coord n B j j') && (i + j' == j + i')]].
 
 Definition repr_rd n B i' rd
   := native_repr rd (make_rd n B i').
@@ -353,15 +353,61 @@ Proof.
     have ->: (make_rd n B' (Ordinal ltn_i')) = [set i : 'I_BitsRepr.wordsize | ((i > 0) && (inord i.-1 \in (make_rd n B' i')))].
       rewrite /make_rd -setP /eq_mem=> i.
       rewrite !in_set.
-      (*
-      have ->: forall j j', ((Ordinal ltn_i' < i) ==> (j' < j) ==> (i - Ordinal ltn_i' != j - j'))
-             = (0 < i) && ((i' < inord i.-1) ==> (j' < j) ==> (inord i.-1 - i' != j - j')).
-      *)
-      admit. (* Easy but annoying (need to permutation (0 < i) and [exists] ) *)
+      case Hi: (i > 0)=> /=.
+      + (* i > 0 *)
+        admit. (* Two cases: [exists j, exists j', get_coord n B' j j' && __] or not *)
+      + (* i <= 0 *)
+        apply negbTE.
+        rewrite negb_exists.
+        apply/forallP=> j.
+        rewrite negb_exists.
+        apply/forallP=> j'.
+        rewrite negb_and.
+        case Hjj': (get_coord n B' j j')=> //=.
+        have ->: i + j' != j + i'.+1.
+          rewrite neq_ltn.
+          have ->: i + j' < j + i'.+1.
+            have ->: i + j' = j' by admit.
+            rewrite ltn_addl //.
+            have HB'cor: is_correct (Ordinal ltn_i') n B' by admit.
+            move/forallP: HB'cor=>HB'cor.
+            move: (HB'cor j)=> /forallP HB'corj.
+            move: (HB'corj j')=> /implyP HB'corjj'.
+            move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
+            apply Hj'.
+          by rewrite /=.
+      rewrite //.
     admit. (* Representation of lsl *)
     (* col' *)
     rewrite /repr_col.
-    have ->: make_col n B' = (make_col n B) :|: [set min] by admit.
+    have ->: make_col n B' = (make_col n B) :|: [set min].
+      rewrite /make_col -setP /eq_mem=> i.
+      rewrite in_setU !in_set.
+      case Hi: (i == min).
+      + (* i == min *)
+        rewrite orbT.
+        apply/existsP.
+        exists i'.
+        rewrite /B' /get_coord !tnth_mktuple Hi /=.
+        by have ->: i' == i' by trivial.
+      + (* i <> min *)
+        rewrite orbF.
+        rewrite /B' {1}/get_coord !tnth_mktuple Hi /=.
+        case Hi'0: [exists i'0, get_coord n B i i'0].
+        + (* [exists i'0, get_coord n B i i'0] *)
+          move/existsP: Hi'0=> [y Hy].
+          apply/existsP.
+          exists y.
+          by rewrite tnth_mktuple.
+        + (* ~~ [exists i'0, get_coord n B i i'0] *)
+          apply negbT in Hi'0.
+          rewrite negb_exists in Hi'0.
+          move/forallP: Hi'0=>Hi'0.
+          apply negbTE.
+          rewrite negb_exists.
+          apply/forallP=> y.
+          rewrite tnth_mktuple.
+          by apply (Hi'0 y).
     apply union_repr=> //.
     apply keep_min_repr=> //.
     apply Hx.
