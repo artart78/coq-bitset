@@ -158,7 +158,20 @@ Proof.
       have ->: board_included n B i && board_possible n P i i'
              = board_included n B i && board_possible n P' i i' || board_included n B' i.
         have ->: board_included n B' i = board_included n B i && board_included n B' i.
-          by admit. (* Trivial *)
+          rewrite andb_idl // => Hi.
+          rewrite /board_included.
+          apply/forallP=> j.
+          apply/forallP=> j'.
+          apply/implyP=> Hjj'.
+          rewrite /board_included in Hi.
+          move/forallP: Hi=>Hi.
+          move: (Hi j)=> /forallP Hij.
+          move: (Hij j')=> /implyP Hijj'.
+          have Hjj'1: get_coord n B' j j'.
+            rewrite /B' /get_coord !tnth_mktuple.
+            rewrite /get_coord in Hjj'.
+            by rewrite Hjj' if_same.
+          by rewrite (Hijj' Hjj'1).
         rewrite -Bool.andb_orb_distrib_r.
         case HBi: (board_included n B i)=> //=.
         have ->: board_possible n P i i' = board_possible n P' i i' || board_included n B' i.
@@ -178,7 +191,15 @@ Proof.
               move/forallP: HiP=>HiP.
               move: (HiP x')=> /implyP HxP.
               have Hx': x' = min.
-                by admit.
+                apply/eqP.
+                rewrite -in_set1.
+                have ->: [set min] = P :\: P'.
+                rewrite setDDr setDv set0U.
+                symmetry.
+                apply /setIidPr.
+                rewrite sub1set.
+                admit. (* Trivial: [arg min_(k < x in P) k] \in P *)
+              rewrite in_setD Hx2 (HxP Hx1) //.
               move/andP: Hmin=>[/eqP Hmin1 /eqP Hmin2].
               by rewrite Hmin1 Hmin2 -Hx' Hx1.
             + (* x0 == min && y0 == i' is false *)
