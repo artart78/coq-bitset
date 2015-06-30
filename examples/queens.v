@@ -282,8 +282,32 @@ Proof.
     have ->: setA :&: setB = set0.
       rewrite -setP /eq_mem=> i.
       rewrite in_setI !in_set.
-      (* board_included n B' i && board_possible n P' i i' = false *)
-      by admit.
+      case Hinc: (board_included n B' i) setB=> setB.
+      + (* B' included in i *)
+        case Hpos: (board_possible n P' i i').
+        - (* (x, i') in i => x in P' *)
+          exfalso.
+          have Hmin: get_coord n i min i'.
+            rewrite /board_included in Hinc.
+            move/forallP: Hinc=> Hinc.
+            move: (Hinc min)=> /forallP Hinc2.
+            move: (Hinc2 i')=> Hinc3.
+            have Hmin: get_coord n B' min i'.
+              rewrite /B' /get_coord !tnth_mktuple.
+              have ->: (min == min) by trivial.
+              by have ->: (i' == i') by trivial.
+            by rewrite Hmin implyTb in Hinc3.
+          rewrite /board_possible in Hpos.
+          move/forallP: Hpos=> Hpos.
+          move: (Hpos min)=> Hpos2.
+          rewrite Hmin implyTb in_setD in Hpos2.
+          move/andP: Hpos2=> [Habs _].
+          rewrite in_set1 in Habs.
+          by move/eqP: Habs.
+        - (* board_possible n P' i i' = false *)
+          by rewrite andbF andbF andbC andbF.
+      + (* B' not included in i *)
+        by rewrite !andbF.
     rewrite cards0 subn0 //.
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
     rewrite gtn_max in Hfuel.
@@ -464,6 +488,7 @@ Proof.
   rewrite -/countNQueensEachPos.
   case Hend: (BitsRepr.leq col full).
   + (* col = full *)
+    have Hi': n = i' by admit. (* Immediate if i' = #|make_col| *)
     have ->: [set B' in valid_pos n | board_included n B B'] = [set B].
       rewrite -setP /eq_mem=> B'.
       rewrite !in_set.
@@ -471,8 +496,8 @@ Proof.
       + (* B' = B *)
         move/eqP: HB' ->.
         have ->: is_complete n B.
-          by have ->: n = i' by admit. (* Immediate if i' = #|make_col| *)
-        have {1}->: n = i' by admit.
+          by rewrite Hi'.
+        rewrite {1}Hi'.
         rewrite HBcorr.
         have ->: board_included n B B = true.
           rewrite /board_included.
@@ -499,7 +524,38 @@ Proof.
             rewrite /get_coord in H3xy.
             by rewrite H3xy.
           - (* tnth (tnth B x) y = false *)
-            admit.
+            case Hy: (y < i').
+            + (* y < i' *)
+              rewrite /is_complete in HBcompl.
+              move/forallP: HBcompl=> HBcompl.
+              move: (HBcompl y)=> HBcompl2.
+              rewrite Hy /= in HBcompl2.
+              move/existsP: HBcompl2=> [k' /eqP Hk'].
+              rewrite -Hi' in Hk'.
+              have Hk'1: get_coord n B' k' y.
+                rewrite /board_included in H3.
+                move/forallP: H3=> H3.
+                move: (H3 k')=> /forallP H3'.
+                move: (H3' y)=> H3''.
+                by rewrite Hk' /= in H3''.
+              rewrite /is_correct in H2.
+              move/forallP: H2=>H2'.
+              move: (H2' k')=> /forallP H2''.
+              move: (H2'' y)=> H2'''.
+              rewrite Hk'1 /= in H2'''.
+              move: H2'''=> /andP [_ /forallP Hcorr'].
+              move: (Hcorr' x)=> /forallP Hcorr''.
+              move: (Hcorr'' y)=> Hcorr'''.
+              have Htrivial: y == y by trivial.
+              rewrite Htrivial /= andbF andbC andbF implybF /get_coord in Hcorr'''.
+              by apply negbTE.
+            + (* y >= i' *)
+              rewrite /is_correct in H2.
+              move/forallP: H2=>H2.
+              move: (H2 x)=> /forallP H2'.
+              move: (H2' y)=> H2''.
+              rewrite {3}Hi' Hy andbF andbC andbF implybF /get_coord in H2''.
+              by apply negbTE.
         rewrite Habs in HB'.
         move/eqP: HB'=>HB'.
         by rewrite //.
