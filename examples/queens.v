@@ -88,17 +88,17 @@ Proof.
   admit.
 Admitted.
 
-Lemma queensEachPos_correct (n: nat) : n <= BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
+Lemma queensEachPos_correct (n: nat) : n < BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
   forall poss ld col rd full B (i': 'I_BitsRepr.wordsize) curCount,
     nat_of_ord i' = #|make_col n B| -> i' < n ->
     is_correct i' n B -> is_complete i' B ->
       (repr_ld n B i' ld) -> (repr_rd n B i' rd) -> (repr_col n B col) -> (repr_full n full) ->
-      forall P, (native_repr poss P) ->
+      forall P, (native_repr poss P) -> P \subset (~: make_col n B) ->
       countNQueensEachPos poss ld col rd curCount full fuel =
         #|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' i']| + curCount
-with queensAux_correct (n: nat) : n <= BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
+with queensAux_correct (n: nat) : n < BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
   forall ld col rd full B (i': 'I_BitsRepr.wordsize),
-    nat_of_ord i' = #|make_col n B| -> i' < n ->
+    nat_of_ord i' = #|make_col n B| ->
     is_correct i' n B -> is_complete i' B ->
       (repr_ld n B i' ld) -> (repr_rd n B i' rd) -> (repr_col n B col) -> (repr_full n full) ->
         countNQueensAux ld col rd full fuel =
@@ -108,7 +108,7 @@ Proof.
   move: (queensAux_correct n ltn_n)=> [f H].
   move: (queensEachPos_correct n ltn_n)=> [f' H'].
   exists ((maxn f f').+1).
-  move=> fuel Hfuel poss ld col rd full B i' curCount Hi' ltn_i' HBcor HBcompl Hld Hrd Hcol Hfull P HP.
+  move=> fuel Hfuel poss ld col rd full B i' curCount Hi' ltn_i' HBcor HBcompl Hld Hrd Hcol Hfull P HP HPcol.
   have Hfuel': fuel = fuel.-1.+1.
     by rewrite (ltn_predK (m := maxn f f')).
   rewrite Hfuel'.
@@ -152,7 +152,8 @@ Proof.
     set B' := [tuple [tuple (if ((x == min) && (y == i')) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize].
     set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
     set P' := P :\ min.
-    have ltn_Si': i'.+1 < BitsRepr.wordsize by admit. (* Because i'.+1 < n, because i' is the number of occupied columns in 'col' and col is not full, because poss in not full *)
+    have ltn_Si': i'.+1 < BitsRepr.wordsize.
+      by apply (leq_ltn_trans (n := n))=> //.
     rewrite (H _ _ _ _ _ _ B' (Ordinal ltn_Si'))=> //.
     rewrite (H' _ _ _ _ _ _ _ B i' _ _ _ _ _ _ _ _ _ P')=> //.
     rewrite [curCount + _]addnC addnA.
@@ -326,6 +327,10 @@ Proof.
     apply inter_repr=> //.
     apply compl_repr.
     apply keep_min_repr=> //.
+    (* P' \subset (~: make_col n B) *)
+    rewrite /P'.
+    apply (subset_trans (B := pred_of_set P))=> //.
+    rewrite subD1set //.
     (* f <= fuel.-1 *)
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
     rewrite gtn_max in Hfuel.
@@ -333,8 +338,6 @@ Proof.
     rewrite andbT in Hfuel=> //.
     rewrite andbF in Hfuel=> //.
     (* i'.+1 = #|make_col n B'| *)
-    admit.
-    (* i'.+1 < n *)
     admit.
     (* is_correct B' *)
     admit. (* B is correct & the 3 conditions are respected thanks to the spec of 'poss' *)
@@ -381,9 +384,9 @@ Proof.
       + (* i >= BitsRepr.wordsize .-1 *)
         have Hi: i.+1 >= n.
           apply (leq_trans (n := BitsRepr.wordsize))=> //.
+          rewrite leq_eqVlt ltn_n orbT //.
           rewrite -(leq_add2r 1) !addn1 /= in ltn'_i.
-          rewrite leqNgt.
-          rewrite ltn'_i //.
+          by rewrite leqNgt ltn'_i.
         by rewrite (Habs Hi).
     admit. (* Representation of lsr *)
     (* rd' *)
@@ -493,7 +496,7 @@ Proof.
   move=> ltn_n.
   move: (queensEachPos_correct n ltn_n)=> [f H].
   exists (f.+1).
-  move=> fuel Hfuel ld col rd full B i' Hi' ltn_i' HBcorr HBcompl Hld Hrd Hcol Hfull.
+  move=> fuel Hfuel ld col rd full B i' Hi' HBcorr HBcompl Hld Hrd Hcol Hfull.
   have Hfuel': fuel = fuel.-1.+1.
     by rewrite (ltn_predK (m := f)).
   rewrite Hfuel'.
@@ -591,12 +594,31 @@ Proof.
       admit. (* For each complete & correct board containing B, there is one bit in P / poss *)
     rewrite //.
     rewrite -(leq_add2r 1) !addn1 -Hfuel' Hfuel //.
+    have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit. (* Representation... *)
+    move=> [x [ltn_x Hx]].
+    rewrite Hi' {2}(size_full n).
+    have Hprop: make_col n B \proper [set x0 : 'I_BitsRepr.wordsize | x0 < n].
+      rewrite /proper.
+      have ->: make_col n B \subset [set x0 : 'I_BitsRepr.wordsize | x0 < n] by admit. (* Trivial *)
+      have ->: ([set x0 : 'I_BitsRepr.wordsize | x0 < n] \subset (make_col n B)) = false.
+        apply negbTE.
+        apply/subsetPn.
+        exists x.
+        rewrite in_set ltn_x //.
+        apply/negP.
+        move=> Habs.
+        have Habs': x \in (make_ld n B i' :|: make_rd n B i' :|: make_col n B).
+          by rewrite in_setU Habs orbT.
+        rewrite in_setC in Hx.
+        by rewrite Habs' in Hx.
+      by trivial.
+    by apply proper_card.
     apply compl_repr.
     apply union_repr=> //.
     by apply union_repr.
 Admitted.
 
-Theorem queens_correct: forall n, n > 0 -> n <= BitsRepr.wordsize -> exists f, countNQueens n f = #|valid_pos n|.
+Theorem queens_correct: forall n, n > 0 -> n < BitsRepr.wordsize -> exists f, countNQueens n f = #|valid_pos n|.
 Proof.
   move=> n gtz_n ltn_n.
   move: (queensAux_correct n ltn_n)=> [f H].
@@ -693,7 +715,8 @@ Proof.
   apply BitsRepr.ldec_repr.
   apply BitsRepr.lsl_repr.
   apply BitsRepr.one_repr.
-  by apply spec.subset_repr.
+  apply spec.subset_repr.
+  by rewrite leq_eqVlt ltn_n orbT.
 Qed.
 
 Cd "extraction".
