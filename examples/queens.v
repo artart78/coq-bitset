@@ -48,7 +48,7 @@ Definition is_correct cur n B :=
 
 Definition valid_pos n := [set B | is_complete n B && is_correct n n B].
 
-Definition make_ld n B i' := [set i : 'I_BitsRepr.wordsize | (i < n) && [exists j : 'I_BitsRepr.wordsize, exists j' : 'I_BitsRepr.wordsize, (get_coord n B j j') && (i + i' == j + j')]].
+Definition make_ld n B i' := [set i : 'I_BitsRepr.wordsize | [exists j : 'I_BitsRepr.wordsize, exists j' : 'I_BitsRepr.wordsize, (get_coord n B j j') && (i + i' == j + j')]].
 
 Definition repr_ld n B i' ld
   := native_repr ld (make_ld n B i').
@@ -290,63 +290,45 @@ Proof.
     have ->: (make_ld n B' (Ordinal ltn_i')) = [set i : 'I_BitsRepr.wordsize | (i < BitsRepr.wordsize.-1) && (inord i.+1 \in (make_ld n B' i'))].
       rewrite /make_ld -setP /eq_mem=> i.
       rewrite !in_set.
-        have Habs: i.+1 >= n -> [exists j, exists j', get_coord n B' j j' && (i + i'.+1 == j + j')] = false.
-          move=> leq_n.
-          apply negbTE.
-          rewrite negb_exists.
-          apply/forallP=> j.
-          rewrite negb_exists.
-          apply/forallP=> j'.
-          rewrite negb_and.
-          rewrite neq_ltn.
-          case Hjj': (get_coord n B' j j')=> //.
-          have ->: j + j' < i + i'.+1.
-            rewrite -[i'.+1]add1n addnA addn1.
-            have HB'cor: is_correct (Ordinal ltn_i') n B' by admit.
-            move/forallP: HB'cor=>HB'cor.
-            move: (HB'cor j)=> HB'corj.
-            move/forallP: HB'corj=>HB'corj.
-            move: (HB'corj j')=> /implyP HB'corjj'.
-            move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
-            apply (leq_trans (n := n + i')).
-            apply (leq_ltn_trans (n := j + i')).
-            rewrite leq_add2l=> //.
-            rewrite ltn_add2r=> //.
-            rewrite leq_add2r=> //.
-          by rewrite orbT orbT.
-        case ltn'_i: (i < BitsRepr.wordsize .-1).
-        + (* i < BitsRepr.wordsize .-1 *)
-          rewrite inordK.
-          case ltn_i: (i < n)=> //=.
-          * (* i < n *)
-            case Hi: (i.+1 < n).
-            - (* i.+1 < n *)
-              have ->: i + i'.+1 = i.+1 + i'.
-                by rewrite -add1n addnA addn1 //.
-              by rewrite andbC andbT.
-            - (* i.+1 >= n *)
-              apply negbT in Hi.
-              rewrite -leqNgt in Hi.
-              rewrite (Habs Hi).
-              by rewrite andbC andbF.
-          * (* i >= n *)
-            have ->: i.+1 < n = false.
-              apply negbTE.
-              rewrite -leqNgt.
-              apply (leq_trans (n := i)).
-              apply negbT in ltn_i.
-              rewrite -leqNgt in ltn_i=> //.
-              rewrite //.
-            by rewrite andbC andbF.
-          by rewrite -[i.+1]addn1 -[63]addn1 ltn_add2r ltn'_i //.
-        + (* i >= BitsRepr.wordsize .-1 *)
-          have Hi: i.+1 >= n.
-            apply (leq_trans (n := BitsRepr.wordsize))=> //.
-            rewrite -(leq_add2r 1) !addn1 /= in ltn'_i.
-            rewrite leqNgt.
-            rewrite ltn'_i //.
-          rewrite (Habs Hi) //.
-          by rewrite andbF andbC andbF.
+      have Habs: i.+1 >= n -> [exists j, exists j', get_coord n B' j j' && (i + i'.+1 == j + j')] = false.
+        move=> leq_n.
+        apply negbTE.
+        rewrite negb_exists.
+        apply/forallP=> j.
+        rewrite negb_exists.
+        apply/forallP=> j'.
+        rewrite negb_and.
+        rewrite neq_ltn.
+        case Hjj': (get_coord n B' j j')=> //.
+        have ->: j + j' < i + i'.+1.
+          rewrite -[i'.+1]add1n addnA addn1.
+          have HB'cor: is_correct (Ordinal ltn_i') n B' by admit.
+          move/forallP: HB'cor=>HB'cor.
+          move: (HB'cor j)=> HB'corj.
+          move/forallP: HB'corj=>HB'corj.
+          move: (HB'corj j')=> /implyP HB'corjj'.
+          move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
+          apply (leq_trans (n := n + i')).
+          apply (leq_ltn_trans (n := j + i')).
+          rewrite leq_add2l=> //.
+          rewrite ltn_add2r=> //.
+          rewrite leq_add2r=> //.
+        by rewrite orbT orbT.
+      case ltn'_i: (i < BitsRepr.wordsize .-1).
+      + (* i < BitsRepr.wordsize .-1 *)
+        rewrite inordK.
+        have ->: i + i'.+1 = i.+1 + i'.
+          by rewrite -add1n addnA addn1 //.
+        rewrite //=.
+        rewrite -[i.+1]addn1 -[63]addn1 ltn_add2r.
+        by apply ltn'_i.
+      + (* i >= BitsRepr.wordsize .-1 *)
+        have Hi: i.+1 >= n.
+          apply (leq_trans (n := BitsRepr.wordsize))=> //.
+          rewrite -(leq_add2r 1) !addn1 /= in ltn'_i.
+          rewrite leqNgt.
+          rewrite ltn'_i //.
+        by rewrite (Habs Hi).
     admit. (* Representation of lsr *)
     (* rd' *)
     rewrite /repr_rd.
@@ -355,7 +337,40 @@ Proof.
       rewrite !in_set.
       case Hi: (i > 0)=> /=.
       + (* i > 0 *)
-        admit. (* Two cases: [exists j, exists j', get_coord n B' j j' && __] or not *)
+        rewrite inordK.
+        have Heq: forall j j', (i.-1 + j' == j + i') = (i + j' == j + i'.+1).
+          move=> j j'.
+          rewrite -(eqn_add2r 1).
+          rewrite addnC addnA -subn1 subnKC=> //.
+          by rewrite -addnA addn1.
+        case Hex: [exists j, exists j', get_coord n B' j j' && (i + j' == j + i'.+1)].
+        + (* true *)
+          move/existsP: Hex=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+          symmetry.
+          apply/existsP.
+          exists j.
+          apply/existsP.
+          exists j'.
+          rewrite Hjj'1.
+          by rewrite (Heq j j').
+        + (* false *)
+          symmetry.
+          apply negbTE.
+          rewrite negb_exists.
+          apply/forallP => j.
+          rewrite negb_exists.
+          apply/forallP=> j'.
+          rewrite (Heq j j').
+          apply negbT in Hex.
+          rewrite negb_exists in Hex.
+          move/forallP: Hex=> Hex.
+          move: (Hex j)=> Hexj.
+          rewrite negb_exists in Hexj.
+          move/forallP: Hexj=> Hexj.
+          by move: (Hexj j')=> Hexjj'.
+        apply (ltn_trans (n := i)).
+        rewrite prednK // => //.
+        apply ltn_ord.
       + (* i <= 0 *)
         apply negbTE.
         rewrite negb_exists.
@@ -367,7 +382,13 @@ Proof.
         have ->: i + j' != j + i'.+1.
           rewrite neq_ltn.
           have ->: i + j' < j + i'.+1.
-            have ->: i + j' = j' by admit.
+            have ->: i = ord0.
+              apply negbT in Hi.
+              rewrite -eqn0Ngt in Hi.
+              move/eqP: Hi=> Hi.
+              apply ord_inj.
+              by rewrite Hi.
+            have ->: ord0 (n' := BitsRepr.wordsize.-1) + j' = j' by trivial.
             rewrite ltn_addl //.
             have HB'cor: is_correct (Ordinal ltn_i') n B' by admit.
             move/forallP: HB'cor=>HB'cor.
