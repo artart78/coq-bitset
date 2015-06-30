@@ -3,7 +3,7 @@ From Ssreflect
 From Bits
      Require Import bits.
 
-Require Import bineqs extract repr_op.
+Require Import bineqs repr_op.
 
 Fixpoint countNQueensEachPos (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(curCount: nat)(full: BitsRepr.Int63)(fuel: nat)
   := match fuel with
@@ -136,7 +136,7 @@ Proof.
   + (* (poss & full) != 0 *)
     set bit := (BitsRepr.land poss (BitsRepr.lneg poss)).
     have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit. (* Representation... *)
-    move=> [x Hx].
+    move=> [x [ltn_x Hx]].
     set min := [arg min_(k < x in P) k].
     set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) 1).
     set col' := (BitsRepr.lor col bit).
@@ -155,6 +155,7 @@ Proof.
       rewrite -setP /eq_mem=> i.
       rewrite in_setU !in_set.
       rewrite -Bool.andb_orb_distrib_r.
+      case Hicorr: (is_correct n n i).
       have ->: board_included n B i && board_possible n P i i'
              = board_included n B i && board_possible n P' i i' || board_included n B' i.
         have ->: board_included n B' i = board_included n B i && board_included n B' i.
@@ -198,7 +199,9 @@ Proof.
                 symmetry.
                 apply /setIidPr.
                 rewrite sub1set.
-                admit. (* Trivial: [arg min_(k < x in P) k] \in P *)
+                rewrite /min /arg_min.
+                case: pickP=> y //=.
+                by move/andP => [H1 _].
               rewrite in_setD Hx2 (HxP Hx1) //.
               move/andP: Hmin=>[/eqP Hmin1 /eqP Hmin2].
               by rewrite Hmin1 Hmin2 -Hx' Hx1.
@@ -252,12 +255,29 @@ Proof.
                 - (* j == min *)
                   move/eqP: Habs=>Habs.
                   rewrite Habs in HjP.
-                  admit. (* Trivially absurd: [arg min_(k < x in P) k] \in P *)
+                  exfalso.
+                  have Habs': min \in P.
+                    rewrite /min /arg_min.
+                    case: pickP=> y //=.
+                    by move/andP => [H1 _].
+                  by rewrite Habs' in HjP.
                 - (* j <> min *)
-                  admit. (* Trivial with the correctness of B *)
+                  apply/negP=> Hmin.
+                  rewrite /is_correct in Hicorr.
+                  move/forallP: Hicorr=> Hicorr.
+                  move: (Hicorr j)=> /forallP Hicorr1.
+                  move: (Hicorr1 i')=> Hicorr2.
+                  rewrite Hj implyTb in Hicorr2.
+                  move: Hicorr2 => /andP [_ /forallP Hicorr3].
+                  move: (Hicorr3 min)=> /forallP Hicorr4.
+                  move: (Hicorr4 i')=> Hicorr5.
+                  rewrite Hmin implyTb in Hicorr5.
+                  move: Hicorr5=> /andP [/andP [/andP[ _ Habs'] _] _].
+                  by move/eqP: Habs'.
               by rewrite //.
         by rewrite //.
       by rewrite //.
+      by rewrite andbF andbC andbF andbC andbF.
     rewrite cardsU.
     have ->: setA :&: setB = set0.
       rewrite -setP /eq_mem=> i.
@@ -274,7 +294,6 @@ Proof.
     apply inter_repr=> //.
     apply compl_repr.
     apply keep_min_repr=> //.
-    apply Hx.
     (* f <= fuel.-1 *)
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
     rewrite gtn_max in Hfuel.
@@ -431,7 +450,6 @@ Proof.
           by apply (Hi'0 y).
     apply union_repr=> //.
     apply keep_min_repr=> //.
-    apply Hx.
 
   (****************************************************)
 
@@ -549,7 +567,7 @@ Proof.
     rewrite negb_exists.
     apply/forallP=> j'.
     rewrite Hempty andbC andbF //.
-    by rewrite andbF.
+    rewrite //.
   apply spec.empty_repr.
   (* rd *)
   rewrite /repr_rd /native_repr.
