@@ -124,7 +124,8 @@ Lemma queensEachPos_correct (n: nat) : n < BitsRepr.wordsize -> exists f, forall
     nat_of_ord i' = #|make_col n B| -> i' < n ->
     is_correct i' n B -> is_complete i' B ->
       (repr_ld n B i' ld) -> (repr_rd n B i' rd) -> (repr_col n B col) -> (repr_full n full) ->
-      forall P, (native_repr poss P) -> P \subset (~: make_col n B) ->
+      forall P, (native_repr poss P) ->
+      P \subset (~: make_ld n B i') -> P \subset (~: make_rd n B i') -> P \subset (~: make_col n B) ->
       countNQueensEachPos poss ld col rd curCount full fuel =
         #|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' i']| + curCount
 with queensAux_correct (n: nat) : n < BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
@@ -139,7 +140,8 @@ Proof.
   move: (queensAux_correct n ltn_n)=> [f H].
   move: (queensEachPos_correct n ltn_n)=> [f' H'].
   exists ((maxn f f').+1).
-  move=> fuel Hfuel poss ld col rd full B i' curCount Hi' ltn_i' HBcor HBcompl Hld Hrd Hcol Hfull P HP HPcol.
+  move=> fuel Hfuel poss ld col rd full B i' curCount Hi' ltn_i' HBcor HBcompl Hld Hrd Hcol Hfull.
+  move=> P HP HPld HPrd HPcol.
   have Hfuel': fuel = fuel.-1.+1.
     by rewrite (ltn_predK (m := maxn f f')).
   rewrite Hfuel'.
@@ -359,10 +361,19 @@ Proof.
     apply inter_repr=> //.
     apply compl_repr.
     apply keep_min_repr=> //.
-    (* P' \subset (~: make_col n B) *)
+    (* TODO: factorize *)
+    (* P' \subset (~: make_ld n B) *)
     rewrite /P'.
     apply (subset_trans (B := pred_of_set P))=> //.
-    rewrite subD1set //.
+    by rewrite subD1set.
+    (* P' \subset (~: make_ld n B i') *)
+    rewrite /P'.
+    apply (subset_trans (B := pred_of_set P))=> //.
+    by rewrite subD1set.
+    (* P' \subset (~: make_rd n B i') *)
+    rewrite /P'.
+    apply (subset_trans (B := pred_of_set P))=> //.
+    by rewrite subD1set.
     (* f <= fuel.-1 *)
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
     rewrite gtn_max in Hfuel.
@@ -810,6 +821,9 @@ Proof.
     apply compl_repr.
     apply union_repr=> //.
     by apply union_repr.
+    by rewrite /P !setCU -setIA subsetIl.
+    by rewrite /P !setCU -setIAC subsetIr.
+    by rewrite /P !setCU subsetIr.
 Admitted.
 
 Theorem queens_correct: forall n, n > 0 -> n < BitsRepr.wordsize -> exists f, countNQueens n f = #|valid_pos n|.
