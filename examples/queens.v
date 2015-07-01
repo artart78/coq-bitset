@@ -89,6 +89,36 @@ Proof.
   admit.
 Admitted.
 
+Lemma correct: forall n cur i i' B, is_correct cur n B -> get_coord n B i i' ->
+    (i < n) /\ (i' < cur) /\
+      forall j j', (~~ ((i == j) && (i' == j'))) ==> (get_coord n B j j') ==>
+        (i != j) && (i' != j') && (i + j' != j + i') && (i + i' != j + j').
+  move=> n cur i i' B Hcorr Hii'.
+  rewrite /is_correct in Hcorr.
+  move/forallP: Hcorr=> Hcorr.
+  move: (Hcorr i)=> /forallP Hcorr1.
+  move: (Hcorr1 i')=> Hcorr2.
+  rewrite Hii' /= in Hcorr2.
+  move/andP: Hcorr2=> [/andP [HcorrA HcorrB] HcorrC].
+  split.
+  exact: HcorrA.
+  split.
+  exact: HcorrB.
+  move=> j j'.
+  move/forallP: HcorrC=> HcorrC.
+  move: (HcorrC j)=> /forallP HcorrCj.
+  by exact: (HcorrCj j').
+Qed.
+
+Lemma included: forall n B i j j', board_included n B i -> get_coord n B j j' -> get_coord n i j j'.
+  move=> n B i j j' Hincl Hjj'.
+  rewrite /board_included in Hincl.
+  move/forallP: Hincl=> Hincl.
+  move: (Hincl j)=> /forallP Hinclj.
+  move: (Hinclj j')=> Hincljj'.
+  by rewrite Hjj' /= in Hincljj'.
+Qed.
+
 Lemma queensEachPos_correct (n: nat) : n < BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
   forall poss ld col rd full B (i': 'I_BitsRepr.wordsize) curCount,
     nat_of_ord i' = #|make_col n B| -> i' < n ->
@@ -703,7 +733,59 @@ Proof.
            = [set B' in valid_pos n | board_included n B B'].
       rewrite -setP /eq_mem=> i.
       rewrite !in_set.
-      admit. (* For each complete & correct board containing B, there is one bit in P / poss *)
+      rewrite andbA.
+      case Hi: (is_complete n i && is_correct n n i && board_included n B i).
+      + (* is_complete n i && is_correct n n i && board_included n B i *)
+        rewrite andbC andbT.
+        move/andP: Hi=> [/andP[Hicompl Hicorr] HBi].
+        rewrite /board_possible.
+        apply/forallP=> x.
+        apply/implyP=> Hxi'.
+        rewrite in_setC !in_setU.
+        rewrite !negb_or.
+        have ->: x \notin make_ld n B i'.
+          apply/negP=> Habs.
+          rewrite /make_ld in_set in Habs.
+          move/existsP: Habs=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+          move: (correct n n x i' i Hicorr Hxi')=> [_ [_ Hicorr2]].
+          move: (Hicorr2 j j')=> Hicorr2'.
+          move: (correct n i' j j' B HBcorr Hjj'1)=> [_ [Hj' _]].
+          have Hj'2: (i' == j') = false.
+            apply negbTE.
+            by rewrite neq_ltn Hj' orbT.
+          move: (included n B i j j' HBi Hjj'1)=> HjB.
+          rewrite Hj'2 andbF /= HjB /= in Hicorr2'.
+          by rewrite Hjj'2 /= andbF in Hicorr2'.
+        have ->: x \notin make_rd n B i'.
+          apply/negP=> Habs.
+          rewrite /make_rd in_set in Habs.
+          move/existsP: Habs=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+          move: (correct n n x i' i Hicorr Hxi')=> [_ [_ Hicorr2]].
+          move: (Hicorr2 j j')=> Hicorr2'.
+          move: (correct n i' j j' B HBcorr Hjj'1)=> [_ [Hj' _]].
+          have Hj'2: (i' == j') = false.
+            apply negbTE.
+            by rewrite neq_ltn Hj' orbT.
+          move: (included n B i j j' HBi Hjj'1)=> HjB.
+          rewrite Hj'2 andbF /= HjB /= in Hicorr2'.
+          by rewrite Hjj'2 /= andbF in Hicorr2'.
+        have ->: x \notin make_col n B.
+          apply/negP=> Habs.
+          rewrite /make_col in_set in Habs.
+          move/existsP: Habs=> [j Hj].
+          move: (correct n n x i' i Hicorr Hxi')=> [_ [_ Hicorr2]].
+          move: (Hicorr2 x j)=> Hicorr2'.
+          move: (correct n i' x j B HBcorr Hj)=> [_ [Hj2 _]].
+          have Hx: x == x by trivial.
+          rewrite Hx /= in Hicorr2'.
+          rewrite (included n B i x j HBi Hj) /= in Hicorr2'.
+          have Hj2': (i' == j) = false.
+            apply negbTE.
+            by rewrite neq_ltn Hj2 orbT.
+          by rewrite Hj2' /= in Hicorr2'.
+        by rewrite /=.
+      + (* ~~ (is_complete n i && is_correct n n i && board_included n B i ) *)
+        by rewrite andbC andbF.
     rewrite //.
     rewrite -(leq_add2r 1) !addn1 -Hfuel' Hfuel //.
     have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit. (* Representation... *)
