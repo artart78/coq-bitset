@@ -679,7 +679,11 @@ Proof.
                 rewrite Hk'x /= andbF /get_coord implybF in Hcorr'''.
                 by apply negbTE.
               + (* k' == x *)
-                admit. (* ??? *)
+                apply negbT in Hk'x.
+                move/negPn: Hk'x=> /eqP Hk'x.
+                rewrite Hk'x in Hk'.
+                rewrite /get_coord in Hk'.
+                by rewrite Hxy in Hk'.
             + (* y >= i' *)
               rewrite /is_correct in H2.
               move/forallP: H2=>H2.
