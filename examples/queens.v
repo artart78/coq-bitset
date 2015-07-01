@@ -214,7 +214,9 @@ Proof.
       apply/andP.
       split.
       (* Horizontal *)
-      have Hmincol: min \in (~: make_col n B) by admit. (* Should be trivial... *)
+      have Hmincol: min \in (~: make_col n B).
+        move/subsetP: HPcol=> HPcol.
+        by apply: (HPcol min).
       rewrite /make_col !in_set negb_exists in Hmincol.
       move/forallP: Hmincol=> Hmincol.
       case Hj: (min == j)=> //=.
@@ -226,7 +228,9 @@ Proof.
       move: (correct n i' j j' B HBcor Hjj'3)=> [_ [Hltn _]].
       by rewrite neq_ltn Hltn orbT.
       (* rd *)
-      have Hminrd: min \in (~: make_rd n B i') by admit. (* Should be trivial... *)
+      have Hminrd: min \in (~: make_rd n B i').
+        move/subsetP: HPrd=> HPrd.
+        by apply: (HPrd min).
       rewrite /make_rd !in_set negb_exists in Hminrd.
       move/forallP: Hminrd=> Hminrd.
       move: (Hminrd j)=> Hminrd1.
@@ -235,7 +239,9 @@ Proof.
       move: (Hminrd1 j')=> Hminrd2.
       by rewrite Hjj'3 andbC andbT in Hminrd2.
       (* ld *)
-      have Hminld: min \in (~: make_ld n B i') by admit. (* Should be trivial... *)
+      have Hminld: min \in (~: make_ld n B i').
+        move/subsetP: HPld=> HPld.
+        by apply: (HPld min).
       rewrite /make_ld !in_set negb_exists in Hminld.
       move/forallP: Hminld=> Hminld.
       move: (Hminld j)=> Hminld1.
@@ -519,7 +525,9 @@ Proof.
           rewrite andbT.
           move/eqP: Hi ->.
           apply negbTE.
-          admit. (* Trivial *)
+          rewrite -in_setC.
+          move/subsetP: HPcol=> HPcol.
+          by apply (HPcol min).
         + (* i <> min *)
           by rewrite andbF.
       by rewrite cards0 subn0 -Hi' cards1 addn1.
@@ -863,7 +871,13 @@ Proof.
     rewrite Hi' {2}(size_full n).
     have Hprop: make_col n B \proper [set x0 : 'I_BitsRepr.wordsize | x0 < n].
       rewrite /proper.
-      have ->: make_col n B \subset [set x0 : 'I_BitsRepr.wordsize | x0 < n] by admit.
+      have ->: make_col n B \subset [set x0 : 'I_BitsRepr.wordsize | x0 < n].
+        apply/subsetP.
+        rewrite /sub_mem=> i Hi.
+        rewrite /make_col in_set in Hi.
+        move/existsP: Hi=> [j Hj].
+        rewrite in_set.
+        by move: (correct n i' i j B HBcorr Hj)=> [res _].
       have ->: ([set x0 : 'I_BitsRepr.wordsize | x0 < n] \subset (make_col n B)) = false.
         apply negbTE.
         apply/subsetPn.
