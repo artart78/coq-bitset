@@ -179,6 +179,10 @@ Proof.
     have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit. (* Representation... *)
     move=> [x [ltn_x Hx]].
     set min := [arg min_(k < x in P) k].
+    have HminP: min \in P.
+      rewrite /min /arg_min.
+      case: pickP=> y //=.
+      by move/andP => [H1 _].
     set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) 1).
     set col' := (BitsRepr.lor col bit).
     set rd' := (BitsRepr.lsl (BitsRepr.lor rd bit) 1).
@@ -240,10 +244,7 @@ Proof.
                 rewrite setDDr setDv set0U.
                 symmetry.
                 apply /setIidPr.
-                rewrite sub1set.
-                rewrite /min /arg_min.
-                case: pickP=> y //=.
-                by move/andP => [H1 _].
+                by rewrite sub1set.
               rewrite in_setD Hx2 (HxP Hx1) //.
               move/andP: Hmin=>[/eqP Hmin1 /eqP Hmin2].
               by rewrite Hmin1 Hmin2 -Hx' Hx1.
@@ -298,11 +299,7 @@ Proof.
                   move/eqP: Habs=>Habs.
                   rewrite Habs in HjP.
                   exfalso.
-                  have Habs': min \in P.
-                    rewrite /min /arg_min.
-                    case: pickP=> y //=.
-                    by move/andP => [H1 _].
-                  by rewrite Habs' in HjP.
+                  by rewrite HminP in HjP.
                 - (* j <> min *)
                   apply/negP=> Hmin.
                   rewrite /is_correct in Hicorr.
@@ -425,43 +422,100 @@ Proof.
     apply/forallP=> a.
     apply/forallP=> b.
     apply/implyP=> Hab.
+    have Hmincorr: forall j j', ~~ ((min == j) && (i' == j')) -> get_coord n B' j j' ->
+      (min != j) && (i' != j') && (min + j' != j + i') && (min + i' != j + j').
+      move=> j j' Hjj'1 Hjj'2.
+      have Hjj'3: get_coord n B j j'.
+        rewrite /get_coord /B' !tnth_mktuple in Hjj'2.
+        have Hsym1: (j == min) = (min == j) by exact: eq_sym.
+        have Hsym2: (j' == i') = (i' == j') by exact: eq_sym.
+        apply negbTE in Hjj'1.
+        rewrite Hsym1 Hsym2 in Hjj'2.
+        by rewrite Hjj'1 in Hjj'2.
+      apply/andP.
+      split.
+      apply/andP.
+      split.
+      apply/andP.
+      split.
+      (* Horizontal *)
+      have Hmincol: min \in (~: make_col n B) by admit. (* Should be trivial... *)
+      rewrite /make_col !in_set negb_exists in Hmincol.
+      move/forallP: Hmincol=> Hmincol.
+      case Hj: (min == j)=> //=.
+      move: (Hmincol j')=> Habs.
+      move/eqP: Hj=>Hj.
+      rewrite -Hj in Hjj'3.
+      by rewrite Hjj'3 in Habs.
+      (* Vertical *)
+      move: (correct n i' j j' B HBcor Hjj'3)=> [_ [Hltn _]].
+      by rewrite neq_ltn Hltn orbT.
+      (* rd *)
+      have Hminrd: min \in (~: make_rd n B i') by admit. (* Should be trivial... *)
+      rewrite /make_rd !in_set negb_exists in Hminrd.
+      move/forallP: Hminrd=> Hminrd.
+      move: (Hminrd j)=> Hminrd1.
+      rewrite negb_exists in Hminrd1.
+      move/forallP: Hminrd1=> Hminrd1.
+      move: (Hminrd1 j')=> Hminrd2.
+      by rewrite Hjj'3 andbC andbT in Hminrd2.
+      (* ld *)
+      have Hminld: min \in (~: make_ld n B i') by admit. (* Should be trivial... *)
+      rewrite /make_ld !in_set negb_exists in Hminld.
+      move/forallP: Hminld=> Hminld.
+      move: (Hminld j)=> Hminld1.
+      rewrite negb_exists in Hminld1.
+      move/forallP: Hminld1=> Hminld1.
+      move: (Hminld1 j')=> Hminld2.
+      by rewrite Hjj'3 andbC andbT in Hminld2.
+
     case Hmin: ((a == min) && (b == i')).
     + (* (a == min) && (b == i') *)
       move/andP: Hmin=> [/eqP Ha /eqP Hb].
+      rewrite !Ha !Hb.
       apply/andP.
       split.
       apply/andP.
       split.
-      admit. (* min \in P => min < n *)
-      rewrite Hb //.
+      admit. (* x < n -> min = [arg min_(k < x in P) k] < n *)
+      rewrite //.
       apply/forallP=> j.
       apply/forallP=> j'.
       apply/implyP=> Hjj'.
       apply/implyP=> Hjj'2.
-      apply/andP.
-      split.
-      apply/andP.
-      split.
-      apply/andP.
-      split.
-      admit. (* min is in P => min is not in make_col *)
-      admit.
-      admit.
-      admit.
+      exact: (Hmincorr j j' Hjj' Hjj'2).
     + (* (a <> min) || (b <> i') *)
-      rewrite /is_correct in HBcor.
-      move/forallP: HBcor=> HBcor.
-      move: (HBcor a)=> /forallP HBcora.
-      move: (HBcora b)=> HBcorab.
-      rewrite /get_coord /B' !tnth_mktuple Hmin in Hab.
-      rewrite Hab /= in HBcorab.
-      have ->: (b < Ordinal ltn_Si') = (b < i') by admit. (* b < i'.+1 && b != i' -> b < i' *)
-      have ->: [forall j, forall j', (~~ ((a == j) && (b == j'))) ==> (get_coord n B' j j') ==>
-                 (a != j) && (b != j') && (a + j' != j + b) && (a + b != j + j')]
-             = [forall j, forall j', (~~ ((a == j) && (b == j'))) ==> (get_coord n B j j') ==>
-                 (a != j) && (b != j') && (a + j' != j + b) && (a + b != j + j')].
-        admit. (* Same than is_correct B, except if (j == min) && (j == i') => see above *)
-      by apply HBcorab.
+      have Hab': get_coord n B a b.
+        by rewrite /get_coord /B' !tnth_mktuple Hmin in Hab.
+      apply/andP.
+      split.
+      apply/andP.
+      split.
+      by move: (correct n i' a b B HBcor Hab')=> [ltn_a _].
+      move: (correct n i' a b B HBcor Hab')=> [_ [ltn_b _]].
+      by apply (ltn_trans (n := i'))=> //.
+      apply/forallP=> j.
+      apply/forallP=> j'.
+      apply/implyP=> Hjj'.
+      apply/implyP=> Hjj'2.
+      case Hmin': ((j == min) && (j' == i')).
+      - (* (j == min) && (j' == i') *)
+        move/andP: Hmin'=> [/eqP Hj /eqP Hj'].
+        rewrite Hj Hj'.
+        move: (Hmincorr a b).
+        have ->: (min == a) = (a == min) by exact: eq_sym.
+        have ->: (i' == b) = (b == i') by exact: eq_sym.
+        rewrite Hmin /= Hab.
+        have ->: ((min + b != a + i') = (a + i' != min + b)) by rewrite eq_sym.
+        have ->: ((a + b != min + i') = (min + i' != a + b)) by rewrite eq_sym.
+        move=> Hcorr.
+        by apply Hcorr.
+      - (* j <> min || j' <> i' *)
+        have Hjj'3: get_coord n B j j'.
+          by rewrite /get_coord /B' !tnth_mktuple Hmin' in Hjj'2.
+        move: (correct n i' a b B HBcor Hab')=> [_ [_ Hcorr]].
+        move: (Hcorr j j')=> Hcorr1.
+        by rewrite Hjj' Hjj'3 /= in Hcorr1.
     (* is_complete i'.+1 B' *)
     rewrite /is_complete.
     apply/forallP=> j.
