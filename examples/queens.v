@@ -78,16 +78,46 @@ Definition board_possible n (P: {set ordinal_finType BitsRepr.wordsize}) B' i' :
 
 Set Printing Implicit.
 
-Lemma size_full (n: nat) :
+Lemma size_full (n: nat) : n < BitsRepr.wordsize ->
   n = #|[set x : 'I_BitsRepr.wordsize | x < n]|.
 Proof.
-  admit.
-Admitted.
-
-Lemma eq_repr: forall i i' E E', native_repr i E -> native_repr i' E' -> (BitsRepr.leq i i') = (E == E').
-Proof.
-  admit.
-Admitted.
+  elim: n=> [|n IHn] ltn_n.
+  + (* n = 0 *)
+    have ->: [set x : 'I_BitsRepr.wordsize | x < 0] = set0.
+      rewrite -setP /eq_mem=> i.
+      by rewrite in_set //.
+    by rewrite cards0.
+  + (* n ~ n.+1 *)
+    have ltn'_n: n < BitsRepr.wordsize.
+      by apply (ltn_trans (n := n.+1)).
+    have ->: [set x : 'I_BitsRepr.wordsize | x < n.+1] = (inord n) |: [set x : 'I_BitsRepr.wordsize | x < n].
+      rewrite -setP /eq_mem=> i.
+      rewrite !in_set.
+      rewrite ltnS leq_eqVlt.
+      have ->: (i == @inord BitsRepr.wordsize.-1 n) = (nat_of_ord i == n).
+        case H: (nat_of_ord i == n).
+        + (* i == n *)
+          move/eqP: H=> H.
+          apply/eqP.
+          apply ord_inj.
+          by rewrite inordK.
+        + (* i <> n *)
+          apply negbTE.
+          apply/negP.
+          move=> Habs.
+          have Habs': nat_of_ord i == n.
+            move/eqP: Habs=> Habs.
+            apply/eqP.
+            by rewrite Habs inordK.
+          by rewrite Habs' in H.
+        rewrite //.
+    rewrite cardsU1.
+    rewrite -IHn=> //.
+    have ->: (@inord 62 n \notin [set x : 'I_BitsRepr.wordsize | x < n]).
+      rewrite in_set inordK => //.
+      by rewrite ltnn.
+    by rewrite -add1n.
+Qed.
 
 Lemma correct: forall n cur i i' B, is_correct cur n B -> get_coord n B i i' ->
     (i < n) /\ (i' < cur) /\
@@ -843,7 +873,7 @@ Proof.
     have Hi'2: n = i'.
       rewrite /repr_col in Hcol.
       rewrite Hi'.
-      rewrite {1}(size_full n).
+      rewrite {1}(size_full n)=> //.
       have ->: (make_col n B) = [set x : 'I_BitsRepr.wordsize | x < n].
         apply/eqP.
         rewrite -(eq_repr col full (make_col n B) [set x : 'I_BitsRepr.wordsize | x < n ])=> //.
@@ -992,7 +1022,7 @@ Proof.
     rewrite //.
     rewrite -(leq_add2r 1) !addn1 -Hfuel' Hfuel //.
     rewrite (eq_repr _ _ (make_col n B) [set x : 'I_BitsRepr.wordsize | x < n]) in Hend=> //.
-    rewrite Hi' {2}(size_full n).
+    rewrite Hi' {2}(size_full n)=> //.
     have Hprop: make_col n B \proper [set x0 : 'I_BitsRepr.wordsize | x0 < n].
       rewrite properEneq.
       have ->: make_col n B \subset [set x0 : 'I_BitsRepr.wordsize | x0 < n].
