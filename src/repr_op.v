@@ -153,6 +153,40 @@ Definition toInt63 (n: nat): BitsRepr.Int63
 Definition fromInt63 (n: BitsRepr.Int63): nat
   := toNat (BitsRepr.fromInt63 n).
 
+(** ** Equality *)
+Lemma eq_repr: forall i i' E E', native_repr i E -> native_repr i' E' -> (BitsRepr.leq i i') = (E == E').
+Proof.
+  admit.
+Admitted.
+
+(** ** Zero *)
+
+Lemma zero_repr:
+  native_repr BitsRepr.zero set0.
+Proof.
+  exists (zero BitsRepr.wordsize).
+  split.
+  rewrite -fromNat0.
+  apply BitsRepr.zero_repr.
+  exact: empty_repr.
+Qed.
+
+(** ** Left & right shift *)
+
+Lemma sl_repr:
+  forall i E, native_repr i E ->
+    native_repr (BitsRepr.lsl i 1) [set i : 'I_BitsRepr.wordsize | 0 < i & @inord BitsRepr.wordsize.-1 i.-1 \in E].
+Proof.
+  admit.
+Admitted.
+
+Lemma sr_repr:
+  forall i E, native_repr i E ->
+    native_repr (BitsRepr.lsr i 1) [set i : 'I_BitsRepr.wordsize | i < BitsRepr.wordsize.-1 & @inord BitsRepr.wordsize.-1 i.+1 \in E].
+Proof.
+  admit.
+Admitted.
+
 (** ** Complement *)
 
 Definition compl (bs: BitsRepr.Int63): BitsRepr.Int63
@@ -196,19 +230,16 @@ Lemma get_repr:
   forall i E (k: 'I_BitsRepr.wordsize), native_repr i E ->
     get i k = (k \in E).
 Proof.
-Admitted.
-(* TODO: Update 
   move=> i E k H.
   rewrite /get.
-  rewrite (leq_repr _ _ (andB (shrBn (toBs i) k) #1) #1).
-  apply get.get_repr.
-  apply repr_ax=> //.
-  apply land_repr.
-  apply lsr_repr.
-  apply native_repr_ax.
-  apply toInt63_repr.
-  by apply toInt63_repr.
-Qed. *)
+  move: H=> [bv [Hbv1 Hbv2]].
+  rewrite (BitsRepr.leq_repr _ _ (andB (shrBn bv k) #1) #1).
+  apply get.get_repr=> //.
+  apply BitsRepr.land_repr.
+  apply BitsRepr.lsr_repr=> //.
+  apply BitsRepr.toInt63_repr.
+  by apply BitsRepr.toInt63_repr.
+Qed.
 
 (** ** Intersection *)
 
@@ -219,18 +250,15 @@ Lemma inter_repr:
   forall i i' E E', native_repr i E -> native_repr i' E' ->
     native_repr (inter i i') (E :&: E').
 Proof.
-Admitted.
-(* TODO: Update
   move=> i i' E E' H H'.
-  apply (native_repr_ax (inter i i') (inter.inter (toBs i) (toBs i'))).
-  apply land_repr.
-  apply native_repr_ax.
-  apply native_repr_ax.
-  apply inter.inter_repr.
-  apply repr_ax=> //.
-  by apply repr_ax.
-Qed. *)
-
+  rewrite /native_repr.
+  move: H=> [bv [Hbv1 Hbv2]].
+  move: H'=> [bv' [Hbv'1 Hbv'2]].
+  exists (inter.inter bv bv').
+  split.
+  apply BitsRepr.land_repr=> //.
+  by apply (inter.inter_repr _ bv bv').
+Qed.
 
 (** ** Minimal element *)
 
@@ -241,17 +269,14 @@ Lemma keep_min_repr:
   forall i E x, native_repr i E -> x \in E ->
     native_repr (keep_min i) [set [arg min_(k < x in E) k]].
 Proof.
-Admitted.
-(* TODO: Update 
   move=> i E x H Hx.
-  apply (native_repr_ax (keep_min i) (keep_min.keep_min (toBs i))).
-  apply land_repr.
-  apply native_repr_ax.
-  apply lneg_repr.
-  apply native_repr_ax.
-  apply keep_min.keep_min_repr=> //.
-  by apply repr_ax=> //.
-Qed.*)
+  move: H=> [bv [Hbv1 Hbv2]].
+  exists (keep_min.keep_min bv).
+  split.
+  apply BitsRepr.land_repr=> //.
+  apply BitsRepr.lneg_repr=> //.
+  by apply keep_min.keep_min_repr.
+Qed.
 
 (** ** Insertion *)
 
@@ -265,24 +290,20 @@ Lemma set_repr:
   forall i (k: 'I_BitsRepr.wordsize) (b: bool) E, native_repr i E ->
     native_repr (set i k b) (if b then (k |: E) else (E :\ k)).
 Proof.
-Admitted.
-(* TODO: Update
-  move=> i k b E H.
-  apply (native_repr_ax (set i k b) (set.set (toBs i) k b)).
+  move=> i k b E [bv [Hbv1 Hbv2]].
+  exists (set.set bv k b).
+  split.
   rewrite /set /set.set.
   case: b.
-    apply lor_repr.
-    apply native_repr_ax.
-    apply lsl_repr.
-    apply toInt63_repr.
-    apply land_repr.
-    apply native_repr_ax.
-    apply lnot_repr.
-    apply lsl_repr.
-    apply toInt63_repr.
-  apply set.set_repr.
-  by apply repr_ax=> //.
-Qed. *)
+    apply BitsRepr.lor_repr=> //.
+    apply BitsRepr.lsl_repr=> //.
+    apply BitsRepr.toInt63_repr.
+    apply BitsRepr.land_repr=> //.
+    apply BitsRepr.lnot_repr=> //.
+    apply BitsRepr.lsl_repr=> //.
+    apply BitsRepr.toInt63_repr=> //.
+  by apply set.set_repr.
+Qed.
 
 (** ** Symmetrical difference *)
 
@@ -293,17 +314,12 @@ Lemma symdiff_repr:
   forall i i' E E', native_repr i E -> native_repr i' E' ->
     native_repr (symdiff i i') ((E :\: E') :|: (E' :\: E)).
 Proof.
-Admitted.
-(* TODO: Update
-  move=> i i' E E' H H'.
-  apply (native_repr_ax (symdiff i i') (symdiff.symdiff (toBs i) (toBs i'))).
-  apply lxor_repr.
-  apply native_repr_ax.
-  apply native_repr_ax.
-  apply symdiff.symdiff_repr.
-  apply repr_ax=> //.
-  by apply repr_ax.
-Qed. *)
+  move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
+  exists (symdiff.symdiff bv bv').
+  split.
+  apply BitsRepr.lxor_repr=> //.
+  by apply symdiff.symdiff_repr.
+Qed.
 
 (** ** Union *)
 
@@ -314,17 +330,12 @@ Lemma union_repr:
   forall i i' E E', native_repr i E -> native_repr i' E' ->
     native_repr (union i i') (E :|: E').
 Proof.
-Admitted.
-(* TODO: Update 
-  move=> i i' E E' H H'.
-  apply (native_repr_ax (union i i') (union.union (toBs i) (toBs i'))).
-  apply lor_repr.
-  apply native_repr_ax.
-  apply native_repr_ax.
-  apply union.union_repr.
-  apply repr_ax=> //.
-  by apply repr_ax.
-Qed. *)
+  move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
+  exists (union.union bv bv').
+  split.
+  apply BitsRepr.lor_repr=> //.
+  by apply union.union_repr.
+Qed.
 
 (** ** Cardinality *)
 
@@ -373,7 +384,6 @@ Proof.
   rewrite (pop_elem_repr _ bs) //. 
   rewrite IH //.
 Qed.
-  
 
 Definition cardinal  (bs: BitsRepr.Int63): nat
   := Eval compute in popAux bs 21.
@@ -390,7 +400,6 @@ Proof.
   rewrite (popAux_repr _ bv) //.
 Qed.
 
-
 (* TODO: what do we use this one for? *)
 
 Definition ntz (bs: BitsRepr.Int63): nat
@@ -400,21 +409,17 @@ Lemma ntz_repr:
   forall (bs: BitsRepr.Int63) x E, native_repr bs E -> x \in E ->
     ntz bs = [arg min_(k < x in E) k].
 Proof.
-Admitted.
-(* TODO: Update
-  move=> bs x E HE Hx.
-  rewrite -(min.ntz_repr _ (toBs bs) 3)=> //.
+  move=> bs x E [bv [Hbv1 Hbv2]] Hx.
+  rewrite -(min.ntz_repr _ bv 3)=> //.
   rewrite /ntz /min.ntz.
-  set E' := [ set x : 'I_BitsRepr.wordsize | getBit (min.fill_ntz (toBs bs)) x ].
-  have H: repr (orB (toBs bs) (negB (toBs bs))) E'.
+  set E' := [ set x : 'I_BitsRepr.wordsize | getBit (min.fill_ntz bv) x ].
+  have H: repr (orB bv (negB bv)) E'.
     rewrite /repr -setP /eq_mem=> i.
-    rewrite !in_set min.fill_ntz_repr //.
+    by rewrite !in_set min.fill_ntz_repr.
   rewrite (cardinal_repr _ E').
-  rewrite (cardinal.cardinal_repr _ _ _ E')=> //.
-  apply (native_repr_ax _ (orB (toBs bs) (negB (toBs bs))))=> //.
-  apply lor_repr.
-  apply native_repr_ax.
-  apply lneg_repr.
-  apply native_repr_ax.
-  by apply repr_ax=> //.
-Qed. *)
+  rewrite (cardinal.cardinal_repr _ _ _ E') //.
+  exists (orB bv (negB bv)).
+  split=> //.
+  apply BitsRepr.lor_repr=> //.
+  by apply BitsRepr.lneg_repr.
+Qed.
