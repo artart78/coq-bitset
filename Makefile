@@ -19,7 +19,6 @@
 
 .DEFAULT_GOAL := all
 
-# 
 # This Makefile may take arguments passed as environment variables:
 # COQBIN to specify the directory where Coq binaries resides;
 # TIMECMD set a command to log .v compilation time;
@@ -97,6 +96,7 @@ endif
 
 VFILES:=src/ops/union.v\
   src/ops/symdiff.v\
+  src/ops/shift.v\
   src/ops/set.v\
   src/ops/min.v\
   src/ops/keep_min.v\
@@ -112,7 +112,14 @@ VFILES:=src/ops/union.v\
   src/spec.v\
   src/bitset.v
 
+ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
 -include $(addsuffix .d,$(VFILES))
+else
+ifeq ($(MAKECMDGOALS),)
+-include $(addsuffix .d,$(VFILES))
+endif
+endif
+
 .SECONDARY: $(addsuffix .d,$(VFILES))
 
 VO=vo
@@ -176,7 +183,7 @@ beautify: $(VFILES:=.beautified)
 	@echo 'Do not do "make clean" until you are sure that everything went well!'
 	@echo 'If there were a problem, execute "for file in $$(find . -name \*.v.old -print); do mv $${file} $${file%.old}; done" in your shell/'
 
-.PHONY: all archclean beautify byte clean gallina gallinahtml html install install-doc install-natdynlink install-toploop opt printenv quick uninstall userinstall validate vio2vo
+.PHONY: all archclean beautify byte clean cleanall gallina gallinahtml html install install-doc install-natdynlink install-toploop opt printenv quick uninstall userinstall validate vio2vo
 
 ####################
 #                  #
@@ -206,7 +213,7 @@ install-doc:
 	done
 
 uninstall_me.sh: Makefile
-	echo '#!/bin/sh' > $@ 
+	echo '#!/bin/sh' > $@
 	printf 'cd "$${DSTROOT}"$(COQLIBINSTALL)/Bitset && rm -f $(NATIVEFILES1) $(GLOBFILES1) $(VFILES1) $(VOFILES1) && find . -type d -and -empty -delete\ncd "$${DSTROOT}"$(COQLIBINSTALL) && find "Bitset" -maxdepth 0 -and -empty -exec rmdir -p \{\} \;\n' >> "$@"
 	printf 'cd "$${DSTROOT}"$(COQDOCINSTALL)/Bitset \\\n' >> "$@"
 	printf '&& rm -f $(shell find "html" -maxdepth 1 -and -type f -print)\n' >> "$@"
@@ -218,9 +225,13 @@ uninstall: uninstall_me.sh
 
 clean::
 	rm -f $(OBJFILES) $(OBJFILES:.o=.native) $(NATIVEFILES)
+	find . -name .coq-native -type d -empty -delete
 	rm -f $(VOFILES) $(VOFILES:.vo=.vio) $(GFILES) $(VFILES:.v=.v.d) $(VFILES:=.beautified) $(VFILES:=.old)
 	rm -f all.ps all-gal.ps all.pdf all-gal.pdf all.glob $(VFILES:.v=.glob) $(VFILES:.v=.tex) $(VFILES:.v=.g.tex) all-mli.tex
 	- rm -rf html mlihtml uninstall_me.sh
+
+cleanall:: clean
+	rm -f $(patsubst %.v,.%.aux,$(VFILES))
 
 archclean::
 	rm -f *.cmx *.o

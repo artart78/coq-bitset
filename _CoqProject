@@ -13,5 +13,6 @@ src/ops/inter.v
 src/ops/keep_min.v
 src/ops/min.v
 src/ops/set.v
+src/ops/shift.v
 src/ops/symdiff.v
 src/ops/union.v

@@ -19,6 +19,33 @@ Proof.
   by auto with arith.
 Qed.
 
+Lemma eq_repr:
+  forall n (bs: BITS n) (bs': BITS n) E E', repr bs E -> repr bs' E' ->
+    (bs == bs') = (E == E').
+Proof.
+  move=> n bs bs' E E' H H'.
+  rewrite /repr in H.
+  rewrite /repr in H'.
+  case Heq: (E == E').
+  + (* E == E' *)
+    apply/eqP.
+    apply allBitsEq=> i ltn_i.
+    move/eqP: Heq=> Heq.
+    move/setP: Heq=> Heq.
+    move: (Heq (Ordinal ltn_i))=> Heqi.
+    rewrite H H' !in_set in Heqi.
+    by apply Heqi.
+  + (* E <> E' *)
+    case Hbs: (bs == bs')=> //.
+    move/eqP: Hbs=> Hbs.
+    have Habs: E == E'.
+      apply/eqP.
+      rewrite -setP /eq_mem=> i.
+      rewrite H H' !in_set.
+      by rewrite Hbs.
+    by rewrite Habs in Heq.
+Qed.
+
 Lemma empty_repr:
   forall n, repr (zero n) set0.
 Proof.

@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
      Require Import bits.
-Require Import bitset spec.
+Require Import bitset props.bineqs spec.
 
 (** * An axiomatization of OCaml native integers *)
 
@@ -115,6 +115,7 @@ Axiom one_repr: native_repr one #1.
 
 (* TODO: this one won't be easy *)
 Lemma toInt63_repr: forall bs, native_repr (toInt63 bs) bs.
+  admit.
 Admitted.
 
 (* TODO: this one won't be easy *)
@@ -156,8 +157,10 @@ Definition fromInt63 (n: BitsRepr.Int63): nat
 (** ** Equality *)
 Lemma eq_repr: forall i i' E E', native_repr i E -> native_repr i' E' -> (BitsRepr.leq i i') = (E == E').
 Proof.
-  admit.
-Admitted.
+  move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
+  rewrite (BitsRepr.leq_repr _ _ bv bv')=> //.
+  by rewrite (spec.eq_repr _ _ _ E E').
+Qed.
 
 (** ** Zero *)
 
@@ -177,15 +180,39 @@ Lemma sl_repr:
   forall i E, native_repr i E ->
     native_repr (BitsRepr.lsl i 1) [set i : 'I_BitsRepr.wordsize | 0 < i & @inord BitsRepr.wordsize.-1 i.-1 \in E].
 Proof.
-  admit.
-Admitted.
+  move=> i E [bv [r_native r_set]].
+  exists (shlBn bv 1); split.
+  * exact: BitsRepr.lsl_repr.
+  * have H: BitsRepr.wordsize = BitsRepr.wordsize.-1.+1 by compute.
+    have ->: [set i0 : 'I_BitsRepr.wordsize | 0 < i0 & inord i0.-1 \in E]
+           = [set i0 : 'I_BitsRepr.wordsize | 0 < i0 & cast_ord H (inord i0.-1) \in E].
+      rewrite -setP /eq_mem=> x.
+      rewrite !in_set.
+      have ->: cast_ord H (inord x.-1) = inord x.-1.
+        apply ord_inj.
+        by rewrite nat_cast_ord.
+      by rewrite //.
+    by apply shift.sl_repr.
+Qed.
 
 Lemma sr_repr:
   forall i E, native_repr i E ->
     native_repr (BitsRepr.lsr i 1) [set i : 'I_BitsRepr.wordsize | i < BitsRepr.wordsize.-1 & @inord BitsRepr.wordsize.-1 i.+1 \in E].
 Proof.
-  admit.
-Admitted.
+  move=> i E [bv [r_native r_set]].
+  exists (shrBn bv 1); split.
+  * exact: BitsRepr.lsr_repr.
+  * have H: BitsRepr.wordsize = BitsRepr.wordsize.-1.+1 by compute.
+    have ->: [set i0 : 'I_BitsRepr.wordsize | i0 < BitsRepr.wordsize.-1 & inord i0.+1 \in E]
+           = [set i0 : 'I_BitsRepr.wordsize | i0 < BitsRepr.wordsize.-1 & cast_ord H (inord i0.+1) \in E].
+      rewrite -setP /eq_mem=> x.
+      rewrite !in_set.
+      have ->: cast_ord H (inord x.+1) = inord x.+1.
+        apply ord_inj.
+        by rewrite nat_cast_ord.
+      by rewrite //.
+    by apply shift.sr_repr.
+Qed.
 
 (** ** Complement *)
 

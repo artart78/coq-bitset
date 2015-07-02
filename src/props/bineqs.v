@@ -16,6 +16,16 @@ Proof.
 Qed.
 
 
+
+(* TODO: there are 3 lemmas similar to this. Are they really needed? *)
+
+Lemma nat_cast_ord:
+  forall n m (H: n = m) (i: 'I_n), nat_of_ord (cast_ord H i) = i.
+Proof.
+  move=> n m H i.
+  by case: m / H.
+Qed.
+
 (* TODO: merge makeOnes & makeOnes2? *)
 Lemma makeOnes:
   forall n,
