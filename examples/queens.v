@@ -84,7 +84,7 @@ Proof.
   admit.
 Admitted.
 
-Lemma eq_repr: forall i i' bs bs', native_repr i bs -> native_repr i' bs' -> (BitsRepr.leq i i') = (bs == bs').
+Lemma eq_repr: forall i i' E E', native_repr i E -> native_repr i' E' -> (BitsRepr.leq i i') = (E == E').
 Proof.
   admit.
 Admitted.
@@ -148,9 +148,17 @@ Proof.
   rewrite /countNQueensEachPos.
   rewrite -/countNQueensAux.
   rewrite -/countNQueensEachPos.
-  case: (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero).
+  case Hend: (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero).
   + (* (poss & full) == 0 *)
-    have H1: forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n by admit. (* Representation... *)
+    rewrite (eq_repr _ _ [set x in P | x < n] set0) in Hend.
+    move/eqP: Hend=> Hend.
+    have H1: forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n.
+      move=> x Hx.
+      case ltn_x: (n <= x)=> //.
+      apply negbT in ltn_x.
+      rewrite -ltnNge in ltn_x.
+      have: x \in [set x in P | x < n] by rewrite in_set Hx ltn_x.
+      by rewrite Hend in_set0.
     have ->: [set B' in valid_pos n | board_included n B B' & board_possible n P B' i'] = set0.
       rewrite -setP /eq_mem=> B0.
       rewrite in_set in_set0.
@@ -174,10 +182,25 @@ Proof.
       rewrite ltnNge in Habs2.
       by rewrite Habsi // in Habs2.
     by rewrite cards0 add0n.
+    rewrite setIdE.
+    apply (inter_repr _ _ P [set x : 'I_BitsRepr.wordsize | x < n])=> //.
+    apply zero_repr.
   + (* (poss & full) != 0 *)
+    rewrite (eq_repr _ _ [set x in P | x < n] set0) in Hend.
+    move/eqP: Hend=> Hend.
     set bit := (BitsRepr.land poss (BitsRepr.lneg poss)).
-    have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit. (* Representation... *)
-    move=> [x [ltn_x Hx]].
+    have: [exists x : 'I_BitsRepr.wordsize, (x < n) && (x \in P)].
+      case Habs: [exists x : 'I_BitsRepr.wordsize, (x < n) && (x \in P)]=> //.
+      apply negbT in Habs.
+      rewrite negb_exists in Habs.
+      move/forallP: Habs=> Habs.
+      have Habs': [set x in P | x < n] = set0.
+        rewrite -setP /eq_mem=> i.
+        rewrite in_set in_set0 andbC.
+        apply negbTE.
+        by rewrite (Habs i).
+      by rewrite Habs' in Hend.
+    move/existsP=> [x /andP [ltn_x Hx]].
     set min := [arg min_(k < x in P) k].
     have HminP: min \in P.
       rewrite /min /arg_min.
@@ -600,7 +623,57 @@ Proof.
           rewrite -(leq_add2r 1) !addn1 /= in ltn'_i.
           by rewrite leqNgt ltn'_i.
         by rewrite (Habs Hi).
-    admit. (* Representation of lsr *)
+    apply sr_repr.
+    have ->: make_ld n B' i' = (make_ld n B i') :|: [set min].
+      rewrite /make_ld -setP /eq_mem=> i.
+      rewrite in_setU !in_set.
+      case Hi: (i == min).
+      + (* i == min *)
+        rewrite orbT.
+        apply/existsP.
+        exists min.
+        apply/existsP.
+        exists i'.
+        rewrite /B' /get_coord !tnth_mktuple.
+        have ->: min == min by trivial.
+        have ->: i' == i' by trivial.
+        move/eqP: Hi ->.
+        by rewrite /=.
+      + (* i <> min *)
+        rewrite orbF.
+        case Hi'0: [exists j, exists j', get_coord n B j j' && (i + i' == j + j')].
+        + (* true *)
+          move/existsP: Hi'0=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+          apply/existsP.
+          exists j.
+          apply/existsP.
+          exists j'.
+          rewrite /get_coord in Hjj'1.
+          by rewrite /B' /get_coord !tnth_mktuple Hjj'1 if_same Hjj'2.
+        + (* false *)
+          apply negbTE.
+          rewrite negb_exists.
+          apply/forallP=> j.
+          rewrite negb_exists.
+          apply/forallP=> j'.
+          apply negbT in Hi'0.
+          rewrite negb_exists in Hi'0.
+          move/forallP: Hi'0=> Hi'0.
+          move: (Hi'0 j)=> Hi'1.
+          rewrite negb_exists in Hi'1.
+          move/forallP: Hi'1=> Hi'1.
+          move: (Hi'1 j')=> Hi'2.
+          rewrite /B' /get_coord !tnth_mktuple.
+          case Hjj': ((j == min) && (j' == i')).
+          + (* j = min & j' = i' *)
+            rewrite andbC andbT.
+            move/andP: Hjj'=> [/eqP Hj /eqP Hj'].
+            rewrite Hj Hj' eqn_add2r.
+            by apply negbT in Hi.
+          + (* j <> min || j' <> i' *)
+            by rewrite /get_coord in Hi'2.
+    apply union_repr=> //.
+    apply keep_min_repr=> //.
     (* rd' *)
     rewrite /repr_rd.
     have ->: (make_rd n B' (Ordinal ltn_Si')) = [set i : 'I_BitsRepr.wordsize | ((i > 0) && (inord i.-1 \in (make_rd n B' i')))].
@@ -668,7 +741,57 @@ Proof.
             apply Hj'.
           by rewrite /=.
       rewrite //.
-    admit. (* Representation of lsl *)
+    apply sl_repr.
+    have ->: make_rd n B' i' = (make_rd n B i') :|: [set min].
+      rewrite /make_rd -setP /eq_mem=> i.
+      rewrite in_setU !in_set.
+      case Hi: (i == min).
+      + (* i == min *)
+        rewrite orbT.
+        apply/existsP.
+        exists min.
+        apply/existsP.
+        exists i'.
+        rewrite /B' /get_coord !tnth_mktuple.
+        have ->: min == min by trivial.
+        have ->: i' == i' by trivial.
+        move/eqP: Hi ->.
+        by rewrite /=.
+      + (* i <> min *)
+        rewrite orbF.
+        case Hi'0: [exists j, exists j', get_coord n B j j' && (i + j' == j + i')].
+        + (* true *)
+          move/existsP: Hi'0=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+          apply/existsP.
+          exists j.
+          apply/existsP.
+          exists j'.
+          rewrite /get_coord in Hjj'1.
+          by rewrite /B' /get_coord !tnth_mktuple Hjj'1 if_same Hjj'2.
+        + (* false *)
+          apply negbTE.
+          rewrite negb_exists.
+          apply/forallP=> j.
+          rewrite negb_exists.
+          apply/forallP=> j'.
+          apply negbT in Hi'0.
+          rewrite negb_exists in Hi'0.
+          move/forallP: Hi'0=> Hi'0.
+          move: (Hi'0 j)=> Hi'1.
+          rewrite negb_exists in Hi'1.
+          move/forallP: Hi'1=> Hi'1.
+          move: (Hi'1 j')=> Hi'2.
+          rewrite /B' /get_coord !tnth_mktuple.
+          case Hjj': ((j == min) && (j' == i')).
+          + (* j = min & j' = i' *)
+            rewrite andbC andbT.
+            move/andP: Hjj'=> [/eqP Hj /eqP Hj'].
+            rewrite Hj Hj' eqn_add2r.
+            by apply negbT in Hi.
+          + (* j <> min || j' <> i' *)
+            by rewrite /get_coord in Hi'2.
+    apply union_repr=> //.
+    by apply keep_min_repr=> //.
     (* col' *)
     rewrite /repr_col.
     have ->: make_col n B' = (make_col n B) :|: [set min].
@@ -701,7 +824,9 @@ Proof.
           by apply (Hi'0 y).
     apply union_repr=> //.
     apply keep_min_repr=> //.
-
+  rewrite setIdE.
+  apply inter_repr=> //.
+  by apply zero_repr.
   (****************************************************)
 
   move=> ltn_n.
@@ -866,11 +991,10 @@ Proof.
         by rewrite andbC andbF.
     rewrite //.
     rewrite -(leq_add2r 1) !addn1 -Hfuel' Hfuel //.
-    have: exists x : 'I_BitsRepr.wordsize, x < n /\ x \in P by admit. (* Representation... *)
-    move=> [x [ltn_x Hx]].
+    rewrite (eq_repr _ _ (make_col n B) [set x : 'I_BitsRepr.wordsize | x < n]) in Hend=> //.
     rewrite Hi' {2}(size_full n).
     have Hprop: make_col n B \proper [set x0 : 'I_BitsRepr.wordsize | x0 < n].
-      rewrite /proper.
+      rewrite properEneq.
       have ->: make_col n B \subset [set x0 : 'I_BitsRepr.wordsize | x0 < n].
         apply/subsetP.
         rewrite /sub_mem=> i Hi.
@@ -878,18 +1002,7 @@ Proof.
         move/existsP: Hi=> [j Hj].
         rewrite in_set.
         by move: (correct n i' i j B HBcorr Hj)=> [res _].
-      have ->: ([set x0 : 'I_BitsRepr.wordsize | x0 < n] \subset (make_col n B)) = false.
-        apply negbTE.
-        apply/subsetPn.
-        exists x.
-        rewrite in_set ltn_x //.
-        apply/negP.
-        move=> Habs.
-        have Habs': x \in (make_ld n B i' :|: make_rd n B i' :|: make_col n B).
-          by rewrite in_setU Habs orbT.
-        rewrite in_setC in Hx.
-        by rewrite Habs' in Hx.
-      by trivial.
+      by rewrite Hend.
     by apply proper_card.
     apply compl_repr.
     apply union_repr=> //.
