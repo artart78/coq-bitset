@@ -27,7 +27,7 @@ with countNQueensAux (ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int6
          let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
          countNQueensEachPos poss ld col rd 0 full n'
        )
-     end.       
+     end.
 
 Definition countNQueens (n: nat) (fuel: nat)
   := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one n)) fuel.
@@ -76,20 +76,6 @@ Definition empty_board := [tuple [tuple false | i < BitsRepr.wordsize] | i < Bit
 
 Definition board_possible n (P: {set ordinal_finType BitsRepr.wordsize}) B' i' := [forall i, get_coord n B' i i' ==> (i \in P)].
 
-(*
-  forall poss ld col rd full B (i': 'I_BitsRepr.wordsize) curCount,
-    curLine < n ->
-    repr_queen n B curLine ld rd col full ->
-      repr_poss n B curLine poss ->
-      countNQueensEachPos poss ld col rd curCount full fuel =
-        #|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' i']| + curCount
-with queensAux_correct (n: nat) : n < BitsRepr.wordsize -> exists f, forall fuel, fuel >= f ->
-  forall ld col rd full B (i': 'I_BitsRepr.wordsize),
-    repr_queen n B curLine ld rd col full ->
-        countNQueensAux ld col rd full fuel =
-          #|[set B' in (valid_pos n) | board_included n B B']|.
-*)
-
 Record repr_queen {n B} {curLine: 'I_BitsRepr.wordsize} {ld rd col full} :=
   { line_val: nat_of_ord curLine = #|make_col n B|;
     correct: is_correct curLine n B;
@@ -105,17 +91,38 @@ Record repr_poss {n B curLine P poss} :=
     poss_rd: P \subset (~: make_rd n B curLine);
     poss_col: P \subset (~: make_col n B) }.
 
-(*
-Definition queensOrder {n} (cur1 cur2: nat) := n - cur1 < n - cur2.
+Inductive queensOrder ld1 ld2 : Prop :=
+| queensOrder_cons: forall n B1 B2 curLine1 curLine2,
+    repr_ld n B1 curLine1 ld1 -> repr_ld n B2 curLine2 ld2 ->
+    n - #|make_ld n B1 curLine1| < n - #|make_ld n B2 curLine2| ->
+    queensOrder ld1 ld2.
 
-Lemma queensOrder_wf (n: nat): well_founded (@queensOrder n).
+Lemma queensOrder_wf': forall len ld n B curLine,
+  repr_ld n B curLine ld ->
+  n - #|make_ld n B curLine| <= len ->
+  Acc queensOrder ld.
 Proof.
 Admitted.
 
-Definition countNQueensEachPos: BitsRepr.Int63 -> BitsRepr.Int63 -> BitsRepr.Int63 -> BitsRepr.Int63 -> nat -> BitsRepr.Int63 -> nat.
+Lemma queensOrder_wf:
+  well_founded queensOrder.
+Proof.
+  rewrite /well_founded=> a.
+  eapply queensOrder_wf'.
+Admitted.
+
+(* (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(curCount: nat)(full: BitsRepr.Int63) *)
+(*
+Definition countNQueensEachPos: BitsRepr.Int63 -> BitsRepr.Int63 -> BitsRepr.Int63 -> BitsRepr.Int63 -> BitsRepr.Int63 -> nat -> nat.
+  move=> poss ld col rd curCount full.
+  move: ld.
   refine (Fix queensOrder_wf (fun _ => nat)
-    (fun poss ld col rd nat full
-     (countNQueensEachPos : forall i' : nat, queensOrder i' i -> list A) =>
+    (fun (ld: BitsRepr.Int63)
+      (countNQueensEachPos : forall ld',
+        queensOrder ld' ld -> nat)
+      (countNQueensAux : forall ld',
+        queensOrder ld' ld -> nat) =>
+
        if (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero) then
          curCount
        else (
@@ -123,13 +130,18 @@ Definition countNQueensEachPos: BitsRepr.Int63 -> BitsRepr.Int63 -> BitsRepr.Int
          let count := countNQueensAux (BitsRepr.lsr (BitsRepr.lor ld bit) 1) (BitsRepr.lor col bit) (BitsRepr.lsl (BitsRepr.lor rd bit) 1) full in
          countNQueensEachPos (BitsRepr.land poss (BitsRepr.lnot bit)) ld col rd (curCount + count) full
        ))).
+     end
 with countNQueensAux (ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(full: BitsRepr.Int63)(fuel: nat)
-  := if (BitsRepr.leq col full) then
+  := match fuel with
+     | 0 => 0
+     | n'.+1 =>
+       if (BitsRepr.leq col full) then
          1
        else (
          let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
-         countNQueensEachPos poss ld col rd 0 full
-       ).
+         countNQueensEachPos poss ld col rd 0 full n'
+       )
+     end.
 *)
 
 Lemma size_full (n: nat) : n < BitsRepr.wordsize ->
