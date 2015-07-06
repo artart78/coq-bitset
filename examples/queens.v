@@ -164,25 +164,24 @@ Qed.
 
 Set Printing Projections.
 
-Lemma queensEachPos_correct (n: nat) : n < BitsRepr.wordsize -> forall fuel,
+Lemma queensEachPos_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize -> forall fuel,
   forall poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
     curLine < n ->
     fuel > 0 ->
     (forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P -> fuel >= (2 * n * (n - curLine) - [arg min_(k < x in P) k]).+1) ->
-    (*((forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n) -> fuel >= (2 * n * (n - curLine.+1)).+1) ->*)
-    ((forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n) -> fuel.-1 > 0) ->
+    ((*(forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n) -> *)fuel.-1 > 0) ->
     @repr_queen n B curLine ld rd col full ->
     @repr_poss n B curLine P poss ->
       countNQueensEachPos poss ld col rd curCount full fuel =
         #|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + curCount
-with queensAux_correct (n: nat) : n < BitsRepr.wordsize -> forall fuel,
+with queensAux_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize -> forall fuel,
   forall ld col rd full B (curLine: 'I_BitsRepr.wordsize),
     fuel >= (2 * n * (n - curLine) + 1).+1 ->
     @repr_queen n B curLine ld rd col full ->
       countNQueensAux ld col rd full fuel =
         #|[set B' in (valid_pos n) | board_included n B B']|.
 Proof.
-  move=> ltn_n fuel poss ld col rd full B curLine curCount P ltn_curLine Hfuel1 Hfuel2 Hfuel3 Hqueen HP.
+  move=> gtz_n ltn_n fuel poss ld col rd full B curLine curCount P ltn_curLine Hfuel1 Hfuel2 Hfuel3 Hqueen HP.
   have Hfuel': fuel = fuel.-1.+1 by rewrite prednK.
   rewrite Hfuel'.
   rewrite /countNQueensEachPos.
@@ -375,8 +374,8 @@ Proof.
         move: (from_correct n curLine a b B (correct Hqueen) Hab')=> [_ [_ Hcorr]].
         move: (Hcorr j j')=> Hcorr1.
         by rewrite Hjj' Hjj'3 /= in Hcorr1.
-    rewrite (queensAux_correct n ltn_n _ _ _ _ _ B' (Ordinal ltn_ScurLine))=> //.
-    rewrite (queensEachPos_correct n ltn_n _ _ _ _ _ _ B curLine _ P')=> //.
+    rewrite (queensAux_correct n gtz_n ltn_n _ _ _ _ _ B' (Ordinal ltn_ScurLine))=> //.
+    rewrite (queensEachPos_correct n gtz_n ltn_n _ _ _ _ _ _ B curLine _ P')=> //.
     rewrite [curCount + _]addnC addnA.
     set setA := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P' B'0 curLine].
     set setB := [set B'0 in valid_pos n | board_included n B' B'0].
@@ -533,22 +532,26 @@ Proof.
       + (* B' not included in i *)
         by rewrite !andbF.
     rewrite cards0 subn0 //.
-    (* Hfuel1 *)
-    apply Hfuel3.
-    admit. (* Only one of two cases *)
     (* Hfuel3 *)
-    move=> HP'.
     have Hfuel3': 1 < 2 * n * (n - curLine) - [arg min_(k < x in P) k].
       apply (leq_ltn_trans (n := n))=> //.
-      apply (leq_ltn_trans (n := curLine))=> //.
-      have {1}->: n = 2 * n - n by admit.
+      have {1}->: n = 2 * n - n.
+        by rewrite -{1}[n]mul1n -{3}[n]mul1n -mulnBl.
       apply (leq_ltn_trans (n := 2 * n * (n - curLine) - n)).
       apply leq_sub2r.
-      have {1}->: 2 * n = 2 * n * 1 by admit.
+      have {1}->: 2 * n = 2 * n * 1 by rewrite muln1.
       rewrite leq_mul2l.
       rewrite subn_gt0 ltn_curLine orbT //.
       apply ltn_sub2l.
+      apply (leq_trans (n := n)).
       admit.
+      apply (leq_trans (n := 2 * n)).
+      rewrite -{1}[n]mul1n leq_mul2r.
+      have ->: 0 < 2 by trivial.
+      rewrite orbT //.
+      rewrite -{1}[2 * n]muln1.
+      rewrite leq_mul2l.
+      rewrite subn_gt0 ltn_curLine orbT //.
       admit.
     rewrite -(leq_add2r (1 + 1)) !addnA !addn1 prednK.
     rewrite prednK.
@@ -592,7 +595,31 @@ Proof.
     rewrite /=.
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
     apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
-    admit. (* Thanks to [arg min_(k < x in P) k] < 2n - 1 *)
+    have ->: (2 * n * (n - curLine.+1)).+1 = 2 * n * (n - curLine) - (2 * n - 1).
+      by admit.
+    apply ltn_sub2l.
+    (* TODO: this has already be shown above *)
+    apply (leq_trans (n := n)).
+    admit.
+    apply (leq_trans (n := 2 * n)).
+    rewrite -{1}[n]mul1n leq_mul2r.
+    have ->: 0 < 2 by trivial.
+    rewrite orbT //.
+    rewrite -{1}[2 * n]muln1.
+    rewrite leq_mul2l.
+    rewrite subn_gt0 ltn_curLine orbT //.
+    apply (leq_trans (n := n)).
+    admit.
+    rewrite subn1 -ltnS prednK.
+    rewrite -{1}[n]mul1n ltn_mul2r.
+    have ->: 1 < 2 by trivial.
+    rewrite andbT.
+    apply (leq_ltn_trans (n := curLine))=> //.
+    apply (leq_trans (n := n)).
+    apply (leq_ltn_trans (n := curLine))=> //.
+    rewrite -{1}[n]mul1n leq_mul2r.
+    have ->: 0 < 2 by trivial.
+    rewrite orbT //.
     apply (Hfuel2 x).
     by rewrite ltn_x Hx.
     split.
@@ -925,7 +952,7 @@ Proof.
   by apply zero_repr.
   (****************************************************)
 
-  move=> ltn_n fuel ld col rd full B curLine Hfuel HB.
+  move=> gtz_n ltn_n fuel ld col rd full B curLine Hfuel HB.
   have Hfuel': fuel = fuel.-1.+1.
     by rewrite prednK //; apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
   rewrite Hfuel'.
@@ -1042,7 +1069,7 @@ Proof.
       by apply proper_card.
       apply HB.
       apply HB.
-    rewrite (queensEachPos_correct n ltn_n _ _ _ _ _ _ B curLine _ P)=> //.
+    rewrite (queensEachPos_correct n gtz_n ltn_n _ _ _ _ _ _ B curLine _ P)=> //.
     rewrite addn0.
     have ->: [set B' in valid_pos n | board_included n B B' & board_possible n P B' curLine]
            = [set B' in valid_pos n | board_included n B B'].
@@ -1104,7 +1131,10 @@ Proof.
     rewrite //.
     (* Hfuel1 *)
     apply (ltn_trans (n := 2 * n * (n - curLine))).
-    admit. (* Easy thanks to ltn_curLine *)
+    rewrite !muln_gt0.
+    have ->: 0 < 2 by trivial.
+    rewrite gtz_n.
+    rewrite subn_gt0 ltn_curLine //.
     rewrite -(ltn_add2r 1) [2 * n * (n - curLine) + 1]addn1 [fuel.-1 + 1]addn1 -Hfuel' -addn1=> //.
     (* Hfuel2 *)
     move=> x [ltn_x Hx].
@@ -1115,8 +1145,20 @@ Proof.
     rewrite addn1 //.
     apply Hfuel.
     apply (leq_ltn_trans (n := (2 * n * (n - curLine) + 1)))=> //.
-    move=> HP.
-    admit.
+    rewrite -(ltn_add2r (1 + 1)) !addnA !addn1 !prednK.
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
+    rewrite -{1}[1]add0n.
+    rewrite ltn_add2r.
+    rewrite !muln_gt0.
+    have ->: 0 < 2 by trivial.
+    rewrite gtz_n.
+    rewrite subn_gt0 ltn_curLine //.
+    apply Hfuel.
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
+    rewrite -(ltn_add2r 1) !addn1 prednK.
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
+    rewrite addn1 ltn0Sn //.
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
     split.
     apply compl_repr.
     apply union_repr=> //.
