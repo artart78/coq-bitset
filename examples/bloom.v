@@ -16,3 +16,20 @@ Definition bloomCheck n (T: BitsRepr.Int63) (H: n.-tuple (P -> 'I_n)) (check: P)
                         BitsRepr.lor cur (BitsRepr.lsl BitsRepr.one ((tnth H x) check)))
                         BitsRepr.zero (ord_enum n) in
   BitsRepr.leq (BitsRepr.land sig T) sig.
+
+Lemma bloom_correct: forall n T H add check,
+ (~ bloomCheck n (bloomAdd n T H add) H check) -> (~ bloomCheck n T H check) /\ (add <> check).
+Proof.
+  move=> n T H add check Hyp.
+  split.
+  * move=> Habs.
+    have Habs': bloomCheck n (bloomAdd n T H add) H check.
+      rewrite /bloomCheck.
+      admit.
+    by rewrite Habs' in Hyp.
+  * move=> Habs.
+    rewrite Habs in Hyp.
+    have Habs': bloomCheck n (bloomAdd n T H check) H check.
+      admit.
+    by rewrite Habs' in Hyp.
+Admitted.
