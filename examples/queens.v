@@ -169,6 +169,8 @@ Lemma queensEachPos_correct (n: nat) : n < BitsRepr.wordsize -> forall fuel,
     curLine < n ->
     fuel > 0 ->
     (forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P -> fuel >= (2 * n * (n - curLine) - [arg min_(k < x in P) k]).+1) ->
+    (*((forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n) -> fuel >= (2 * n * (n - curLine.+1)).+1) ->*)
+    ((forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n) -> fuel.-1 > 0) ->
     @repr_queen n B curLine ld rd col full ->
     @repr_poss n B curLine P poss ->
       countNQueensEachPos poss ld col rd curCount full fuel =
@@ -180,7 +182,7 @@ with queensAux_correct (n: nat) : n < BitsRepr.wordsize -> forall fuel,
       countNQueensAux ld col rd full fuel =
         #|[set B' in (valid_pos n) | board_included n B B']|.
 Proof.
-  move=> ltn_n fuel poss ld col rd full B curLine curCount P ltn_curLine Hfuel1 Hfuel2 Hqueen HP.
+  move=> ltn_n fuel poss ld col rd full B curLine curCount P ltn_curLine Hfuel1 Hfuel2 Hfuel3 Hqueen HP.
   have Hfuel': fuel = fuel.-1.+1 by rewrite prednK.
   rewrite Hfuel'.
   rewrite /countNQueensEachPos.
@@ -252,6 +254,15 @@ Proof.
     set B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize].
     set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
     set P' := P :\ min.
+    have Hfuel2': forall x0 : 'I_BitsRepr.wordsize, x0 < n /\ x0 \in P' -> 2 * n * (n - curLine) - [arg min_(k < x0 in P') k] < fuel.-1.
+      move=> x0 [ltn_x0 Hx0].
+      apply (leq_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
+      apply ltn_sub2l.
+      admit. (* Trivial *)
+      admit. (* Harder, but definitely true *)
+      rewrite -(leq_add2r 1) !addn1 prednK=> //.
+      apply (Hfuel2 x).
+      by rewrite ltn_x Hx //.
     have ltn_ScurLine: curLine.+1 < BitsRepr.wordsize.
       by apply (leq_ltn_trans (n := n))=> //.
     have HB'cor: is_correct (@Ordinal BitsRepr.wordsize curLine.+1 ltn_ScurLine) n B'.
@@ -523,11 +534,35 @@ Proof.
         by rewrite !andbF.
     rewrite cards0 subn0 //.
     (* Hfuel1 *)
-    rewrite (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P') k])) //.
-    admit. (* Thanks to Hfuel2 below *)
-    (* Hfuel2 *)
-    move=> x' [ltn_x' Hx'].
-    admit. (* 2 * n * (n - curLine) - [arg min_(k < x' in P') k] < fuel.-1 because the minimum in P' is > to the minimum in P *)
+    apply Hfuel3.
+    admit. (* Only one of two cases *)
+    (* Hfuel3 *)
+    move=> HP'.
+    have Hfuel3': 1 < 2 * n * (n - curLine) - [arg min_(k < x in P) k].
+      apply (leq_ltn_trans (n := n))=> //.
+      apply (leq_ltn_trans (n := curLine))=> //.
+      have {1}->: n = 2 * n - n by admit.
+      apply (leq_ltn_trans (n := 2 * n * (n - curLine) - n)).
+      apply leq_sub2r.
+      have {1}->: 2 * n = 2 * n * 1 by admit.
+      rewrite leq_mul2l.
+      rewrite subn_gt0 ltn_curLine orbT //.
+      apply ltn_sub2l.
+      admit.
+      admit.
+    rewrite -(leq_add2r (1 + 1)) !addnA !addn1 prednK.
+    rewrite prednK.
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
+    apply Hfuel3'.
+    apply (Hfuel2 x).
+    rewrite ltn_x Hx=> //.
+    apply Hfuel1.
+    rewrite -(leq_add2r 1) !addn1 prednK.
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
+    apply (ltn_trans (n := 1))=> //.
+    apply (Hfuel2 x).
+    rewrite ltn_x Hx //.
+    apply Hfuel1.
     split.
     (* P' *)
     rewrite /P'.
@@ -553,7 +588,7 @@ Proof.
     apply (subset_trans (B := pred_of_set P))=> //.
     by rewrite subD1set.
     by apply HP.
-    (* n * (n + 1 - curLine.+1) <= fuel.-1 *)
+    (* 2 * n * (n - curLine.+1) + 1 < fuel.-1 *)
     rewrite /=.
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
     apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
@@ -1073,6 +1108,14 @@ Proof.
     rewrite -(ltn_add2r 1) [2 * n * (n - curLine) + 1]addn1 [fuel.-1 + 1]addn1 -Hfuel' -addn1=> //.
     (* Hfuel2 *)
     move=> x [ltn_x Hx].
+    rewrite -(ltn_add2r 1) !addn1 prednK.
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine))).
+    apply leq_subr.
+    rewrite addn1 //.
+    apply Hfuel.
+    apply (leq_ltn_trans (n := (2 * n * (n - curLine) + 1)))=> //.
+    move=> HP.
     admit.
     split.
     apply compl_repr.
