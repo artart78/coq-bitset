@@ -247,6 +247,22 @@ Proof.
       rewrite /min /arg_min.
       case: pickP=> y //=.
       by move/andP => [H1 _].
+    have Hminn: min < n.
+      rewrite /min.
+      case: arg_minP=> //.
+      move=> i Hi Hj.
+      apply (leq_ltn_trans (n := x))=> //.
+      by apply (Hj x)=> //.
+    have Hminn': min < 2 * n * (n - curLine).
+      apply (leq_trans (n := n)).
+      apply Hminn.
+      apply (leq_trans (n := 2 * n)).
+      rewrite -{1}[n]mul1n leq_mul2r.
+      have ->: 0 < 2 by trivial.
+      rewrite orbT //.
+      rewrite -{1}[2 * n]muln1.
+      rewrite leq_mul2l.
+      by rewrite subn_gt0 ltn_curLine orbT.
     set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) 1).
     set col' := (BitsRepr.lor col bit).
     set rd' := (BitsRepr.lsl (BitsRepr.lor rd bit) 1).
@@ -257,8 +273,19 @@ Proof.
       move=> x0 [ltn_x0 Hx0].
       apply (leq_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
       apply ltn_sub2l.
-      admit. (* Trivial *)
-      admit. (* Harder, but definitely true *)
+      apply Hminn'.
+      rewrite -/min.
+      case: [arg min_(k < x0 in P') k] / arg_minP=> //.
+      move=> i Hi Hj.
+      rewrite !in_set in Hi.
+      rewrite ltn_neqAle.
+      move/andP: Hi=> [Hi1 Hi2].
+      rewrite eq_sym in Hi1.
+      rewrite Hi1 andbC andbT.
+      rewrite /min.
+      case: arg_minP=> //.
+      move=> i' Hi' Hj'.
+      apply (Hj' i)=> //.
       rewrite -(leq_add2r 1) !addn1 prednK=> //.
       apply (Hfuel2 x).
       by rewrite ltn_x Hx //.
@@ -544,7 +571,7 @@ Proof.
       rewrite subn_gt0 ltn_curLine orbT //.
       apply ltn_sub2l.
       apply (leq_trans (n := n)).
-      admit.
+      apply Hminn.
       apply (leq_trans (n := 2 * n)).
       rewrite -{1}[n]mul1n leq_mul2r.
       have ->: 0 < 2 by trivial.
@@ -552,7 +579,7 @@ Proof.
       rewrite -{1}[2 * n]muln1.
       rewrite leq_mul2l.
       rewrite subn_gt0 ltn_curLine orbT //.
-      admit.
+      apply Hminn.
     rewrite -(leq_add2r (1 + 1)) !addnA !addn1 prednK.
     rewrite prednK.
     apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
@@ -596,20 +623,17 @@ Proof.
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
     apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
     have ->: (2 * n * (n - curLine.+1)).+1 = 2 * n * (n - curLine) - (2 * n - 1).
-      by admit.
+      rewrite -[curLine.+1]addn1 subnDA mulnBr -addn1 [2 * n * 1]muln1.
+      rewrite subnBA.
+      rewrite addnC.
+      rewrite [2 * n * (n - curLine) + 1]addnC addnBA //.
+      rewrite -{1}[2 * n]muln1.
+      rewrite leq_mul2l subn_gt0 ltn_curLine orbT //.
+      by rewrite muln_gt0 gtz_n.
     apply ltn_sub2l.
-    (* TODO: this has already be shown above *)
+    apply Hminn'.
     apply (leq_trans (n := n)).
-    admit.
-    apply (leq_trans (n := 2 * n)).
-    rewrite -{1}[n]mul1n leq_mul2r.
-    have ->: 0 < 2 by trivial.
-    rewrite orbT //.
-    rewrite -{1}[2 * n]muln1.
-    rewrite leq_mul2l.
-    rewrite subn_gt0 ltn_curLine orbT //.
-    apply (leq_trans (n := n)).
-    admit.
+    apply Hminn.
     rewrite subn1 -ltnS prednK.
     rewrite -{1}[n]mul1n ltn_mul2r.
     have ->: 1 < 2 by trivial.
@@ -1169,7 +1193,7 @@ Proof.
     by rewrite /P !setCU -setIA subsetIl.
     by rewrite /P !setCU -setIAC subsetIr.
     by rewrite /P !setCU subsetIr.
-Admitted.
+Qed.
 
 Theorem queens_correct: forall n, n > 0 -> n < BitsRepr.wordsize -> countNQueens n (2 * n * n + 2) = #|valid_pos n|.
 Proof.
