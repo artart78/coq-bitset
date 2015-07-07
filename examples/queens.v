@@ -414,6 +414,295 @@ Proof.
   by apply HP.
 Qed.
 
+Lemma nextLine_ld n B (curLine: 'I_BitsRepr.wordsize) ld rd col full poss (P: {set 'I_BitsRepr.wordsize}) x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
+  let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+  let min := [arg min_(k < x in P) k] in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  let ld' := BitsRepr.lsr (BitsRepr.lor ld bit) 1 in
+  n < BitsRepr.wordsize ->
+  x \in P ->
+  @repr_queen n B curLine ld rd col full ->
+  @repr_poss n B curLine P poss ->
+  is_correct (Ordinal ltn_ScurLine) n B' ->
+  repr_ld n B' (Ordinal ltn_ScurLine) ld'.
+Proof.
+  move=> bit min B' ld' ltn_n Hx HB HP HB'cor.
+  rewrite /repr_ld.
+  have ->: (make_ld n B' (Ordinal ltn_ScurLine)) = [set i : 'I_BitsRepr.wordsize | (i < BitsRepr.wordsize.-1) && (inord i.+1 \in (make_ld n B' curLine))].
+    rewrite /make_ld -setP /eq_mem=> i.
+    rewrite !in_set.
+    have Habs: i.+1 >= n -> [exists j, exists j', get_coord n B' j j' && (i + curLine.+1 == j + j')] = false.
+      move=> leq_n.
+      apply negbTE.
+      rewrite negb_exists.
+      apply/forallP=> j.
+      rewrite negb_exists.
+      apply/forallP=> j'.
+      rewrite negb_and.
+      rewrite neq_ltn.
+      case Hjj': (get_coord n B' j j')=> //.
+      have ->: j + j' < i + curLine.+1.
+        rewrite -[curLine.+1]add1n addnA addn1.
+        move/forallP: HB'cor=>HB'cor.
+        move: (HB'cor j)=> HB'corj.
+        move/forallP: HB'corj=>HB'corj.
+        move: (HB'corj j')=> /implyP HB'corjj'.
+        move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
+        apply (leq_trans (n := n + curLine)).
+        apply (leq_ltn_trans (n := j + curLine)).
+        rewrite leq_add2l=> //.
+        rewrite ltn_add2r=> //.
+        rewrite leq_add2r=> //.
+      by rewrite orbT orbT.
+    case ltn'_i: (i < BitsRepr.wordsize .-1).
+    + (* i < BitsRepr.wordsize .-1 *)
+      rewrite inordK.
+      have ->: i + curLine.+1 = i.+1 + curLine.
+        by rewrite -add1n addnA addn1 //.
+      rewrite //=.
+      rewrite -[i.+1]addn1 -[63]addn1 ltn_add2r.
+      by apply ltn'_i.
+    + (* i >= BitsRepr.wordsize .-1 *)
+      have Hi: i.+1 >= n.
+        apply (leq_trans (n := BitsRepr.wordsize))=> //.
+        rewrite leq_eqVlt ltn_n orbT //.
+        rewrite -(leq_add2r 1) !addn1 /= in ltn'_i.
+        by rewrite leqNgt ltn'_i.
+      by rewrite (Habs Hi).
+  apply sr_repr.
+  have ->: make_ld n B' curLine = (make_ld n B curLine) :|: [set min].
+    rewrite /make_ld -setP /eq_mem=> i.
+    rewrite in_setU !in_set.
+    case Hi: (i == min).
+    + (* i == min *)
+      rewrite orbT.
+      apply/existsP.
+      exists min.
+      apply/existsP.
+      exists curLine.
+      rewrite /B' /get_coord !tnth_mktuple.
+      have ->: min == min by trivial.
+      have ->: curLine == curLine by trivial.
+      move/eqP: Hi ->.
+      by rewrite /=.
+    + (* i <> min *)
+      rewrite orbF.
+      case HcurLine0: [exists j, exists j', get_coord n B j j' && (i + curLine == j + j')].
+      + (* true *)
+        move/existsP: HcurLine0=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+        apply/existsP.
+        exists j.
+        apply/existsP.
+        exists j'.
+        rewrite /get_coord in Hjj'1.
+        by rewrite /B' /get_coord !tnth_mktuple Hjj'1 if_same Hjj'2.
+      + (* false *)
+        apply negbTE.
+        rewrite negb_exists.
+        apply/forallP=> j.
+        rewrite negb_exists.
+        apply/forallP=> j'.
+        apply negbT in HcurLine0.
+        rewrite negb_exists in HcurLine0.
+        move/forallP: HcurLine0=> HcurLine0.
+        move: (HcurLine0 j)=> HcurLine1.
+        rewrite negb_exists in HcurLine1.
+        move/forallP: HcurLine1=> HcurLine1.
+        move: (HcurLine1 j')=> HcurLine2.
+        rewrite /B' /get_coord !tnth_mktuple.
+        case Hjj': ((j == min) && (j' == curLine)).
+        + (* j = min & j' = curLine *)
+          rewrite andbC andbT.
+          move/andP: Hjj'=> [/eqP Hj /eqP Hj'].
+          rewrite Hj Hj' eqn_add2r.
+          by apply negbT in Hi.
+        + (* j <> min || j' <> curLine *)
+          by rewrite /get_coord in HcurLine2.
+  apply union_repr=> //.
+  apply HB.
+  apply keep_min_repr=> //.
+  apply HP.
+Qed.
+
+Lemma nextLine_rd n B (curLine: 'I_BitsRepr.wordsize) ld rd col full poss (P: {set 'I_BitsRepr.wordsize}) x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
+  let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+  let min := [arg min_(k < x in P) k] in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  let rd' := BitsRepr.lsl (BitsRepr.lor rd bit) 1 in
+  x \in P ->
+  @repr_queen n B curLine ld rd col full ->
+  @repr_poss n B curLine P poss ->
+  is_correct (Ordinal ltn_ScurLine) n B' ->
+  repr_rd n B' (Ordinal ltn_ScurLine) rd'.
+Proof.
+  move=> bit min B' rd' Hx HB HP HB'cor.
+  rewrite /repr_rd.
+  have ->: (make_rd n B' (Ordinal ltn_ScurLine)) = [set i : 'I_BitsRepr.wordsize | ((i > 0) && (inord i.-1 \in (make_rd n B' curLine)))].
+    rewrite /make_rd -setP /eq_mem=> i.
+    rewrite !in_set.
+    case Hi: (i > 0)=> /=.
+    + (* i > 0 *)
+      rewrite inordK.
+      have Heq: forall j j', (i.-1 + j' == j + curLine) = (i + j' == j + curLine.+1).
+        move=> j j'.
+        rewrite -(eqn_add2r 1).
+        rewrite addnC addnA -subn1 subnKC=> //.
+        by rewrite -addnA addn1.
+      case Hex: [exists j, exists j', get_coord n B' j j' && (i + j' == j + curLine.+1)].
+      + (* true *)
+        move/existsP: Hex=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+        symmetry.
+        apply/existsP.
+        exists j.
+        apply/existsP.
+        exists j'.
+        rewrite Hjj'1.
+        by rewrite (Heq j j').
+      + (* false *)
+        symmetry.
+        apply negbTE.
+        rewrite negb_exists.
+        apply/forallP => j.
+        rewrite negb_exists.
+        apply/forallP=> j'.
+        rewrite (Heq j j').
+        apply negbT in Hex.
+        rewrite negb_exists in Hex.
+        move/forallP: Hex=> Hex.
+        move: (Hex j)=> Hexj.
+        rewrite negb_exists in Hexj.
+        move/forallP: Hexj=> Hexj.
+        by move: (Hexj j')=> Hexjj'.
+      apply (ltn_trans (n := i)).
+      rewrite prednK // => //.
+      apply ltn_ord.
+    + (* i <= 0 *)
+      apply negbTE.
+      rewrite negb_exists.
+      apply/forallP=> j.
+      rewrite negb_exists.
+      apply/forallP=> j'.
+      rewrite negb_and.
+      case Hjj': (get_coord n B' j j')=> //=.
+      have ->: i + j' != j + curLine.+1.
+        rewrite neq_ltn.
+        have ->: i + j' < j + curLine.+1.
+          have ->: i = ord0.
+            apply negbT in Hi.
+            rewrite -eqn0Ngt in Hi.
+            move/eqP: Hi=> Hi.
+            apply ord_inj.
+            by rewrite Hi.
+          have ->: ord0 (n' := BitsRepr.wordsize.-1) + j' = j' by trivial.
+          rewrite ltn_addl //.
+          move/forallP: HB'cor=>HB'cor.
+          move: (HB'cor j)=> /forallP HB'corj.
+          move: (HB'corj j')=> /implyP HB'corjj'.
+          move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
+          apply Hj'.
+      by rewrite /=.
+    rewrite //.
+  apply sl_repr.
+  have ->: make_rd n B' curLine = (make_rd n B curLine) :|: [set min].
+    rewrite /make_rd -setP /eq_mem=> i.
+    rewrite in_setU !in_set.
+    case Hi: (i == min).
+    + (* i == min *)
+      rewrite orbT.
+      apply/existsP.
+      exists min.
+      apply/existsP.
+      exists curLine.
+      rewrite /B' /get_coord !tnth_mktuple.
+      have ->: min == min by trivial.
+      have ->: curLine == curLine by trivial.
+      move/eqP: Hi ->.
+      by rewrite /=.
+    + (* i <> min *)
+      rewrite orbF.
+      case HcurLine0: [exists j, exists j', get_coord n B j j' && (i + j' == j + curLine)].
+      + (* true *)
+        move/existsP: HcurLine0=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+        apply/existsP.
+        exists j.
+        apply/existsP.
+        exists j'.
+        rewrite /get_coord in Hjj'1.
+        by rewrite /B' /get_coord !tnth_mktuple Hjj'1 if_same Hjj'2.
+      + (* false *)
+        apply negbTE.
+        rewrite negb_exists.
+        apply/forallP=> j.
+        rewrite negb_exists.
+        apply/forallP=> j'.
+        apply negbT in HcurLine0.
+        rewrite negb_exists in HcurLine0.
+        move/forallP: HcurLine0=> HcurLine0.
+        move: (HcurLine0 j)=> HcurLine1.
+        rewrite negb_exists in HcurLine1.
+        move/forallP: HcurLine1=> HcurLine1.
+        move: (HcurLine1 j')=> HcurLine2.
+        rewrite /B' /get_coord !tnth_mktuple.
+        case Hjj': ((j == min) && (j' == curLine)).
+        + (* j = min & j' = curLine *)
+          rewrite andbC andbT.
+          move/andP: Hjj'=> [/eqP Hj /eqP Hj'].
+          rewrite Hj Hj' eqn_add2r.
+          by apply negbT in Hi.
+        + (* j <> min || j' <> curLine *)
+          by rewrite /get_coord in HcurLine2.
+  apply union_repr=> //.
+  apply HB.
+  apply keep_min_repr=> //.
+  by apply HP.
+Qed.
+
+Lemma nextLine_col n B curLine ld rd col full poss (P: {set 'I_BitsRepr.wordsize}) (x: 'I_BitsRepr.wordsize):
+  let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+  let min := [arg min_(k < x in P) k] in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  let col' := BitsRepr.lor col bit in
+  x \in P ->
+  @repr_queen n B curLine ld rd col full ->
+  @repr_poss n B curLine P poss ->
+  repr_col n B' col'.
+Proof.
+  move=> bit min B' col' Hx HB HP.
+  rewrite /repr_col.
+  have ->: make_col n B' = (make_col n B) :|: [set min].
+    rewrite /make_col -setP /eq_mem=> i.
+    rewrite in_setU !in_set.
+    case Hi: (i == min).
+    + (* i == min *)
+      rewrite orbT.
+      apply/existsP.
+      exists curLine.
+      rewrite /B' /get_coord !tnth_mktuple Hi /=.
+      by have ->: curLine == curLine by trivial.
+    + (* i <> min *)
+      rewrite orbF.
+      rewrite /B' {1}/get_coord !tnth_mktuple Hi /=.
+      case HcurLine0: [exists curLine0, get_coord n B i curLine0].
+      + (* [exists curLine0, get_coord n B i curLine0] *)
+        move/existsP: HcurLine0=> [y Hy].
+        apply/existsP.
+        exists y.
+        by rewrite tnth_mktuple.
+      + (* ~~ [exists curLine0, get_coord n B i curLine0] *)
+        apply negbT in HcurLine0.
+        rewrite negb_exists in HcurLine0.
+        move/forallP: HcurLine0=>HcurLine0.
+        apply negbTE.
+        rewrite negb_exists.
+        apply/forallP=> y.
+        rewrite tnth_mktuple.
+        by apply (HcurLine0 y).
+  apply union_repr=> //.
+  apply HB.
+  apply keep_min_repr=> //.
+  by apply HP.
+Qed.
+
 Lemma queensEachPos_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
   forall fuel poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
     curLine < n ->
@@ -781,262 +1070,16 @@ Proof.
       by rewrite cards0 subn0 -(line_val Hqueen) cards1 addn1.
     apply HB'cor.
     apply (nextLine_complete n B curLine ld rd col full)=> //.
-    (* ld' *)
-    rewrite /repr_ld.
-    have ->: (make_ld n B' (Ordinal ltn_ScurLine)) = [set i : 'I_BitsRepr.wordsize | (i < BitsRepr.wordsize.-1) && (inord i.+1 \in (make_ld n B' curLine))].
-      rewrite /make_ld -setP /eq_mem=> i.
-      rewrite !in_set.
-      have Habs: i.+1 >= n -> [exists j, exists j', get_coord n B' j j' && (i + curLine.+1 == j + j')] = false.
-        move=> leq_n.
-        apply negbTE.
-        rewrite negb_exists.
-        apply/forallP=> j.
-        rewrite negb_exists.
-        apply/forallP=> j'.
-        rewrite negb_and.
-        rewrite neq_ltn.
-        case Hjj': (get_coord n B' j j')=> //.
-        have ->: j + j' < i + curLine.+1.
-          rewrite -[curLine.+1]add1n addnA addn1.
-          move/forallP: HB'cor=>HB'cor.
-          move: (HB'cor j)=> HB'corj.
-          move/forallP: HB'corj=>HB'corj.
-          move: (HB'corj j')=> /implyP HB'corjj'.
-          move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
-          apply (leq_trans (n := n + curLine)).
-          apply (leq_ltn_trans (n := j + curLine)).
-          rewrite leq_add2l=> //.
-          rewrite ltn_add2r=> //.
-          rewrite leq_add2r=> //.
-        by rewrite orbT orbT.
-      case ltn'_i: (i < BitsRepr.wordsize .-1).
-      + (* i < BitsRepr.wordsize .-1 *)
-        rewrite inordK.
-        have ->: i + curLine.+1 = i.+1 + curLine.
-          by rewrite -add1n addnA addn1 //.
-        rewrite //=.
-        rewrite -[i.+1]addn1 -[63]addn1 ltn_add2r.
-        by apply ltn'_i.
-      + (* i >= BitsRepr.wordsize .-1 *)
-        have Hi: i.+1 >= n.
-          apply (leq_trans (n := BitsRepr.wordsize))=> //.
-          rewrite leq_eqVlt ltn_n orbT //.
-          rewrite -(leq_add2r 1) !addn1 /= in ltn'_i.
-          by rewrite leqNgt ltn'_i.
-        by rewrite (Habs Hi).
-    apply sr_repr.
-    have ->: make_ld n B' curLine = (make_ld n B curLine) :|: [set min].
-      rewrite /make_ld -setP /eq_mem=> i.
-      rewrite in_setU !in_set.
-      case Hi: (i == min).
-      + (* i == min *)
-        rewrite orbT.
-        apply/existsP.
-        exists min.
-        apply/existsP.
-        exists curLine.
-        rewrite /B' /get_coord !tnth_mktuple.
-        have ->: min == min by trivial.
-        have ->: curLine == curLine by trivial.
-        move/eqP: Hi ->.
-        by rewrite /=.
-      + (* i <> min *)
-        rewrite orbF.
-        case HcurLine0: [exists j, exists j', get_coord n B j j' && (i + curLine == j + j')].
-        + (* true *)
-          move/existsP: HcurLine0=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
-          apply/existsP.
-          exists j.
-          apply/existsP.
-          exists j'.
-          rewrite /get_coord in Hjj'1.
-          by rewrite /B' /get_coord !tnth_mktuple Hjj'1 if_same Hjj'2.
-        + (* false *)
-          apply negbTE.
-          rewrite negb_exists.
-          apply/forallP=> j.
-          rewrite negb_exists.
-          apply/forallP=> j'.
-          apply negbT in HcurLine0.
-          rewrite negb_exists in HcurLine0.
-          move/forallP: HcurLine0=> HcurLine0.
-          move: (HcurLine0 j)=> HcurLine1.
-          rewrite negb_exists in HcurLine1.
-          move/forallP: HcurLine1=> HcurLine1.
-          move: (HcurLine1 j')=> HcurLine2.
-          rewrite /B' /get_coord !tnth_mktuple.
-          case Hjj': ((j == min) && (j' == curLine)).
-          + (* j = min & j' = curLine *)
-            rewrite andbC andbT.
-            move/andP: Hjj'=> [/eqP Hj /eqP Hj'].
-            rewrite Hj Hj' eqn_add2r.
-            by apply negbT in Hi.
-          + (* j <> min || j' <> curLine *)
-            by rewrite /get_coord in HcurLine2.
-    apply union_repr=> //.
+    apply (nextLine_ld n B curLine ld rd col full poss P x ltn_ScurLine)=> //.
+    apply (nextLine_rd n B curLine ld rd col full poss P x ltn_ScurLine)=> //.
+    apply (nextLine_col n B curLine ld rd col full poss)=> //.
+    (* full *)
     apply Hqueen.
-    apply keep_min_repr=> //.
+    rewrite setIdE.
+    apply inter_repr=> //.
     apply HP.
-    (* rd' *)
-    rewrite /repr_rd.
-    have ->: (make_rd n B' (Ordinal ltn_ScurLine)) = [set i : 'I_BitsRepr.wordsize | ((i > 0) && (inord i.-1 \in (make_rd n B' curLine)))].
-      rewrite /make_rd -setP /eq_mem=> i.
-      rewrite !in_set.
-      case Hi: (i > 0)=> /=.
-      + (* i > 0 *)
-        rewrite inordK.
-        have Heq: forall j j', (i.-1 + j' == j + curLine) = (i + j' == j + curLine.+1).
-          move=> j j'.
-          rewrite -(eqn_add2r 1).
-          rewrite addnC addnA -subn1 subnKC=> //.
-          by rewrite -addnA addn1.
-        case Hex: [exists j, exists j', get_coord n B' j j' && (i + j' == j + curLine.+1)].
-        + (* true *)
-          move/existsP: Hex=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
-          symmetry.
-          apply/existsP.
-          exists j.
-          apply/existsP.
-          exists j'.
-          rewrite Hjj'1.
-          by rewrite (Heq j j').
-        + (* false *)
-          symmetry.
-          apply negbTE.
-          rewrite negb_exists.
-          apply/forallP => j.
-          rewrite negb_exists.
-          apply/forallP=> j'.
-          rewrite (Heq j j').
-          apply negbT in Hex.
-          rewrite negb_exists in Hex.
-          move/forallP: Hex=> Hex.
-          move: (Hex j)=> Hexj.
-          rewrite negb_exists in Hexj.
-          move/forallP: Hexj=> Hexj.
-          by move: (Hexj j')=> Hexjj'.
-        apply (ltn_trans (n := i)).
-        rewrite prednK // => //.
-        apply ltn_ord.
-      + (* i <= 0 *)
-        apply negbTE.
-        rewrite negb_exists.
-        apply/forallP=> j.
-        rewrite negb_exists.
-        apply/forallP=> j'.
-        rewrite negb_and.
-        case Hjj': (get_coord n B' j j')=> //=.
-        have ->: i + j' != j + curLine.+1.
-          rewrite neq_ltn.
-          have ->: i + j' < j + curLine.+1.
-            have ->: i = ord0.
-              apply negbT in Hi.
-              rewrite -eqn0Ngt in Hi.
-              move/eqP: Hi=> Hi.
-              apply ord_inj.
-              by rewrite Hi.
-            have ->: ord0 (n' := BitsRepr.wordsize.-1) + j' = j' by trivial.
-            rewrite ltn_addl //.
-            move/forallP: HB'cor=>HB'cor.
-            move: (HB'cor j)=> /forallP HB'corj.
-            move: (HB'corj j')=> /implyP HB'corjj'.
-            move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
-            apply Hj'.
-          by rewrite /=.
-      rewrite //.
-    apply sl_repr.
-    have ->: make_rd n B' curLine = (make_rd n B curLine) :|: [set min].
-      rewrite /make_rd -setP /eq_mem=> i.
-      rewrite in_setU !in_set.
-      case Hi: (i == min).
-      + (* i == min *)
-        rewrite orbT.
-        apply/existsP.
-        exists min.
-        apply/existsP.
-        exists curLine.
-        rewrite /B' /get_coord !tnth_mktuple.
-        have ->: min == min by trivial.
-        have ->: curLine == curLine by trivial.
-        move/eqP: Hi ->.
-        by rewrite /=.
-      + (* i <> min *)
-        rewrite orbF.
-        case HcurLine0: [exists j, exists j', get_coord n B j j' && (i + j' == j + curLine)].
-        + (* true *)
-          move/existsP: HcurLine0=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
-          apply/existsP.
-          exists j.
-          apply/existsP.
-          exists j'.
-          rewrite /get_coord in Hjj'1.
-          by rewrite /B' /get_coord !tnth_mktuple Hjj'1 if_same Hjj'2.
-        + (* false *)
-          apply negbTE.
-          rewrite negb_exists.
-          apply/forallP=> j.
-          rewrite negb_exists.
-          apply/forallP=> j'.
-          apply negbT in HcurLine0.
-          rewrite negb_exists in HcurLine0.
-          move/forallP: HcurLine0=> HcurLine0.
-          move: (HcurLine0 j)=> HcurLine1.
-          rewrite negb_exists in HcurLine1.
-          move/forallP: HcurLine1=> HcurLine1.
-          move: (HcurLine1 j')=> HcurLine2.
-          rewrite /B' /get_coord !tnth_mktuple.
-          case Hjj': ((j == min) && (j' == curLine)).
-          + (* j = min & j' = curLine *)
-            rewrite andbC andbT.
-            move/andP: Hjj'=> [/eqP Hj /eqP Hj'].
-            rewrite Hj Hj' eqn_add2r.
-            by apply negbT in Hi.
-          + (* j <> min || j' <> curLine *)
-            by rewrite /get_coord in HcurLine2.
-    apply union_repr=> //.
     apply Hqueen.
-    apply keep_min_repr=> //.
-    by apply HP.
-    (* col' *)
-    rewrite /repr_col.
-    have ->: make_col n B' = (make_col n B) :|: [set min].
-      rewrite /make_col -setP /eq_mem=> i.
-      rewrite in_setU !in_set.
-      case Hi: (i == min).
-      + (* i == min *)
-        rewrite orbT.
-        apply/existsP.
-        exists curLine.
-        rewrite /B' /get_coord !tnth_mktuple Hi /=.
-        by have ->: curLine == curLine by trivial.
-      + (* i <> min *)
-        rewrite orbF.
-        rewrite /B' {1}/get_coord !tnth_mktuple Hi /=.
-        case HcurLine0: [exists curLine0, get_coord n B i curLine0].
-        + (* [exists curLine0, get_coord n B i curLine0] *)
-          move/existsP: HcurLine0=> [y Hy].
-          apply/existsP.
-          exists y.
-          by rewrite tnth_mktuple.
-        + (* ~~ [exists curLine0, get_coord n B i curLine0] *)
-          apply negbT in HcurLine0.
-          rewrite negb_exists in HcurLine0.
-          move/forallP: HcurLine0=>HcurLine0.
-          apply negbTE.
-          rewrite negb_exists.
-          apply/forallP=> y.
-          rewrite tnth_mktuple.
-          by apply (HcurLine0 y).
-  apply union_repr=> //.
-  apply Hqueen.
-  apply keep_min_repr=> //.
-  apply HP.
-  apply Hqueen.
-  rewrite setIdE.
-  apply inter_repr=> //.
-  apply HP.
-  apply Hqueen.
-  by apply zero_repr.
+    by apply zero_repr.
   (****************************************************)
 
   move=> gtz_n ltn_n fuel ld col rd full B curLine Hfuel HB.
@@ -1257,7 +1300,7 @@ Proof.
     by rewrite /P !setCU -setIA subsetIl.
     by rewrite /P !setCU -setIAC subsetIr.
     by rewrite /P !setCU subsetIr.
-Admitted.
+Qed.
 
 Theorem queens_correct: forall n, n > 0 -> n < BitsRepr.wordsize -> countNQueens n (2 * n * n + 2) = #|valid_pos n|.
 Proof.
