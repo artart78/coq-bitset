@@ -224,6 +224,127 @@ Proof.
   exact: (fuel_pos Hfuel).
 Qed.
 
+Lemma nextLine_correct n B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) poss ld rd col full x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
+  let min := [arg min_(k < x in P) k] in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  @repr_poss n B curLine P poss ->
+  @repr_queen n B curLine ld rd col full ->
+  x \in P ->
+  x < n ->
+  min \in P ->
+    is_correct (Ordinal ltn_ScurLine) n B'.
+Proof.
+  move=> min B' HP HB Hx ltn_x HminP.
+  rewrite /is_correct.
+  apply/forallP=> a.
+  apply/forallP=> b.
+  apply/implyP=> Hab.
+  have Hmincorr: forall j j', ~~ ((min == j) && (curLine == j')) -> get_coord n B' j j' ->
+    (min != j) && (curLine != j') && (min + j' != j + curLine) && (min + curLine != j + j').
+    move=> j j' Hjj'1 Hjj'2.
+    have Hjj'3: get_coord n B j j'.
+      rewrite /get_coord /B' !tnth_mktuple in Hjj'2.
+      have Hsym1: (j == min) = (min == j) by exact: eq_sym.
+      have Hsym2: (j' == curLine) = (curLine == j') by exact: eq_sym.
+      apply negbTE in Hjj'1.
+      rewrite Hsym1 Hsym2 in Hjj'2.
+      by rewrite Hjj'1 in Hjj'2.
+    apply/andP.
+    split.
+    apply/andP.
+    split.
+    apply/andP.
+    split.
+    (* Horizontal *)
+    have Hmincol: min \in (~: make_col n B).
+      move/subsetP: (poss_col HP)=> HPcol.
+      by apply: (HPcol min).
+    rewrite /make_col !in_set negb_exists in Hmincol.
+    move/forallP: Hmincol=> Hmincol.
+    case Hj: (min == j)=> //=.
+    move: (Hmincol j')=> Habs.
+    move/eqP: Hj=>Hj.
+    rewrite -Hj in Hjj'3.
+    by rewrite Hjj'3 in Habs.
+    (* Vertical *)
+    move: (from_correct n curLine j j' B (correct HB) Hjj'3)=> [_ [Hltn _]].
+    by rewrite neq_ltn Hltn orbT.
+    (* rd *)
+    have Hminrd: min \in (~: make_rd n B curLine).
+      move/subsetP: (poss_rd HP)=> HPrd.
+      by apply: (HPrd min).
+    rewrite /make_rd !in_set negb_exists in Hminrd.
+    move/forallP: Hminrd=> Hminrd.
+    move: (Hminrd j)=> Hminrd1.
+    rewrite negb_exists in Hminrd1.
+    move/forallP: Hminrd1=> Hminrd1.
+    move: (Hminrd1 j')=> Hminrd2.
+    by rewrite Hjj'3 andbC andbT in Hminrd2.
+    (* ld *)
+    have Hminld: min \in (~: make_ld n B curLine).
+      move/subsetP: (poss_ld HP)=> HPld.
+      by apply: (HPld min).
+    rewrite /make_ld !in_set negb_exists in Hminld.
+    move/forallP: Hminld=> Hminld.
+    move: (Hminld j)=> Hminld1.
+    rewrite negb_exists in Hminld1.
+    move/forallP: Hminld1=> Hminld1.
+    move: (Hminld1 j')=> Hminld2.
+    by rewrite Hjj'3 andbC andbT in Hminld2.
+
+  case Hmin: ((a == min) && (b == curLine)).
+  + (* (a == min) && (b == curLine) *)
+    move/andP: Hmin=> [/eqP Ha /eqP Hb].
+    rewrite !Ha !Hb.
+    apply/andP.
+    split.
+    apply/andP.
+    split.
+    rewrite /min.
+    case: arg_minP=> //.
+    move=> i iP le_i.
+    move: (le_i x Hx)=> Hi.
+    by apply (leq_ltn_trans (n := x)).
+    rewrite //.
+    apply/forallP=> j.
+    apply/forallP=> j'.
+    apply/implyP=> Hjj'.
+    apply/implyP=> Hjj'2.
+    exact: (Hmincorr j j' Hjj' Hjj'2).
+  + (* (a <> min) || (b <> curLine) *)
+    have Hab': get_coord n B a b.
+      by rewrite /get_coord /B' !tnth_mktuple Hmin in Hab.
+    apply/andP.
+    split.
+    apply/andP.
+    split.
+    by move: (from_correct n curLine a b B (correct HB) Hab')=> [ltn_a _].
+    move: (from_correct n curLine a b B (correct HB) Hab')=> [_ [ltn_b _]].
+    by apply (ltn_trans (n := curLine))=> //.
+    apply/forallP=> j.
+    apply/forallP=> j'.
+    apply/implyP=> Hjj'.
+    apply/implyP=> Hjj'2.
+    case Hmin': ((j == min) && (j' == curLine)).
+    - (* (j == min) && (j' == curLine) *)
+      move/andP: Hmin'=> [/eqP Hj /eqP Hj'].
+      rewrite Hj Hj'.
+      move: (Hmincorr a b).
+      have ->: (min == a) = (a == min) by exact: eq_sym.
+      have ->: (curLine == b) = (b == curLine) by exact: eq_sym.
+      rewrite Hmin /= Hab.
+      have ->: ((min + b != a + curLine) = (a + curLine != min + b)) by rewrite eq_sym.
+      have ->: ((a + b != min + curLine) = (min + curLine != a + b)) by rewrite eq_sym.
+      move=> Hcorr.
+      by apply Hcorr.
+    - (* j <> min || j' <> curLine *)
+      have Hjj'3: get_coord n B j j'.
+        by rewrite /get_coord /B' !tnth_mktuple Hmin' in Hjj'2.
+      move: (from_correct n curLine a b B (correct HB) Hab')=> [_ [_ Hcorr]].
+      move: (Hcorr j j')=> Hcorr1.
+      by rewrite Hjj' Hjj'3 /= in Hcorr1.
+Qed.
+
 Lemma queensEachPos_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
   forall fuel poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
     curLine < n ->
@@ -319,116 +440,7 @@ Proof.
     move: (nextLine_fuel2 n fuel curLine P x)=> Hfuel2'.
     have ltn_ScurLine: curLine.+1 < BitsRepr.wordsize.
       by apply (leq_ltn_trans (n := n))=> //.
-    have HB'cor: is_correct (Ordinal ltn_ScurLine) n B'.
-    (* is_correct B' *)
-    rewrite /is_correct.
-    apply/forallP=> a.
-    apply/forallP=> b.
-    apply/implyP=> Hab.
-    have Hmincorr: forall j j', ~~ ((min == j) && (curLine == j')) -> get_coord n B' j j' ->
-      (min != j) && (curLine != j') && (min + j' != j + curLine) && (min + curLine != j + j').
-      move=> j j' Hjj'1 Hjj'2.
-      have Hjj'3: get_coord n B j j'.
-        rewrite /get_coord /B' !tnth_mktuple in Hjj'2.
-        have Hsym1: (j == min) = (min == j) by exact: eq_sym.
-        have Hsym2: (j' == curLine) = (curLine == j') by exact: eq_sym.
-        apply negbTE in Hjj'1.
-        rewrite Hsym1 Hsym2 in Hjj'2.
-        by rewrite Hjj'1 in Hjj'2.
-      apply/andP.
-      split.
-      apply/andP.
-      split.
-      apply/andP.
-      split.
-      (* Horizontal *)
-      have Hmincol: min \in (~: make_col n B).
-        move/subsetP: (poss_col HP)=> HPcol.
-        by apply: (HPcol min).
-      rewrite /make_col !in_set negb_exists in Hmincol.
-      move/forallP: Hmincol=> Hmincol.
-      case Hj: (min == j)=> //=.
-      move: (Hmincol j')=> Habs.
-      move/eqP: Hj=>Hj.
-      rewrite -Hj in Hjj'3.
-      by rewrite Hjj'3 in Habs.
-      (* Vertical *)
-      move: (from_correct n curLine j j' B (correct Hqueen) Hjj'3)=> [_ [Hltn _]].
-      by rewrite neq_ltn Hltn orbT.
-      (* rd *)
-      have Hminrd: min \in (~: make_rd n B curLine).
-        move/subsetP: (poss_rd HP)=> HPrd.
-        by apply: (HPrd min).
-      rewrite /make_rd !in_set negb_exists in Hminrd.
-      move/forallP: Hminrd=> Hminrd.
-      move: (Hminrd j)=> Hminrd1.
-      rewrite negb_exists in Hminrd1.
-      move/forallP: Hminrd1=> Hminrd1.
-      move: (Hminrd1 j')=> Hminrd2.
-      by rewrite Hjj'3 andbC andbT in Hminrd2.
-      (* ld *)
-      have Hminld: min \in (~: make_ld n B curLine).
-        move/subsetP: (poss_ld HP)=> HPld.
-        by apply: (HPld min).
-      rewrite /make_ld !in_set negb_exists in Hminld.
-      move/forallP: Hminld=> Hminld.
-      move: (Hminld j)=> Hminld1.
-      rewrite negb_exists in Hminld1.
-      move/forallP: Hminld1=> Hminld1.
-      move: (Hminld1 j')=> Hminld2.
-      by rewrite Hjj'3 andbC andbT in Hminld2.
-
-    case Hmin: ((a == min) && (b == curLine)).
-    + (* (a == min) && (b == curLine) *)
-      move/andP: Hmin=> [/eqP Ha /eqP Hb].
-      rewrite !Ha !Hb.
-      apply/andP.
-      split.
-      apply/andP.
-      split.
-      rewrite /min.
-      case: arg_minP=> //.
-      move=> i iP le_i.
-      move: (le_i x Hx)=> Hi.
-      by apply (leq_ltn_trans (n := x)).
-      rewrite //.
-      apply/forallP=> j.
-      apply/forallP=> j'.
-      apply/implyP=> Hjj'.
-      apply/implyP=> Hjj'2.
-      exact: (Hmincorr j j' Hjj' Hjj'2).
-    + (* (a <> min) || (b <> curLine) *)
-      have Hab': get_coord n B a b.
-        by rewrite /get_coord /B' !tnth_mktuple Hmin in Hab.
-      apply/andP.
-      split.
-      apply/andP.
-      split.
-      by move: (from_correct n curLine a b B (correct Hqueen) Hab')=> [ltn_a _].
-      move: (from_correct n curLine a b B (correct Hqueen) Hab')=> [_ [ltn_b _]].
-      by apply (ltn_trans (n := curLine))=> //.
-      apply/forallP=> j.
-      apply/forallP=> j'.
-      apply/implyP=> Hjj'.
-      apply/implyP=> Hjj'2.
-      case Hmin': ((j == min) && (j' == curLine)).
-      - (* (j == min) && (j' == curLine) *)
-        move/andP: Hmin'=> [/eqP Hj /eqP Hj'].
-        rewrite Hj Hj'.
-        move: (Hmincorr a b).
-        have ->: (min == a) = (a == min) by exact: eq_sym.
-        have ->: (curLine == b) = (b == curLine) by exact: eq_sym.
-        rewrite Hmin /= Hab.
-        have ->: ((min + b != a + curLine) = (a + curLine != min + b)) by rewrite eq_sym.
-        have ->: ((a + b != min + curLine) = (min + curLine != a + b)) by rewrite eq_sym.
-        move=> Hcorr.
-        by apply Hcorr.
-      - (* j <> min || j' <> curLine *)
-        have Hjj'3: get_coord n B j j'.
-          by rewrite /get_coord /B' !tnth_mktuple Hmin' in Hjj'2.
-        move: (from_correct n curLine a b B (correct Hqueen) Hab')=> [_ [_ Hcorr]].
-        move: (Hcorr j j')=> Hcorr1.
-        by rewrite Hjj' Hjj'3 /= in Hcorr1.
+    move: (nextLine_correct n B curLine P poss ld rd col full x ltn_ScurLine HP Hqueen Hx ltn_x HminP)=> HB'cor.
     rewrite (queensAux_correct n gtz_n ltn_n _ _ _ _ _ B' (Ordinal ltn_ScurLine))=> //.
     rewrite (queensEachPos_correct n gtz_n ltn_n _ _ _ _ _ _ B curLine _ P')=> //.
     rewrite [curCount + _]addnC addnA.
