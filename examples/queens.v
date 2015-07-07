@@ -159,6 +159,19 @@ Lemma from_correct: forall n cur i i' B, is_correct cur n B -> get_coord n B i i
   by exact: (HcorrCj j').
 Qed.
 
+Lemma from_complete: forall n B, is_complete n B ->
+  forall (k: 'I_BitsRepr.wordsize), k < n -> exists k', get_coord n B k' k.
+Proof.
+  move=> n B Hcompl k ltn_k.
+  rewrite /is_complete in Hcompl.
+  move/forallP: Hcompl=> Hcompl.
+  move: (Hcompl k)=> Hcomplk.
+  rewrite ltn_k implyTb in Hcomplk.
+  move/existsP: Hcomplk=> [k' /eqP Hk'].
+  exists k'.
+  by rewrite Hk'.
+Qed.
+
 Lemma from_included: forall n B i j j', board_included n B i -> get_coord n B j j' -> get_coord n i j j'.
   move=> n B i j j' Hincl Hjj'.
   rewrite /board_included in Hincl.
@@ -168,17 +181,33 @@ Lemma from_included: forall n B i j j', board_included n B i -> get_coord n B j 
   by rewrite Hjj' /= in Hincljj'.
 Qed.
 
-(*
-Lemma nextLine_fuel2 n fuel curLine (P': {set 'I_BitsRepr.wordsize}) :
-  forall (x0 : 'I_BitsRepr.wordsize), x0 < n /\ x0 \in P' ->
-    2 * n * (n - curLine) - [arg min_(k < x0 in P') k] < fuel.-1.
+Lemma from_possible: forall n (P: {set 'I_BitsRepr.wordsize}) B' i', board_possible n P B' i' ->
+  forall i, get_coord n B' i i' -> i \in P.
 Proof.
+  move=> n P B' i' Hposs i Hii'.
+  rewrite /board_possible in Hposs.
+  move/forallP: Hposs=> Hposs.
+  move: (Hposs i)=> Hpossi.
+  by rewrite Hii' implyTb in Hpossi.
+Qed.
+
+Lemma nextLine_fuel2 n fuel curLine (P: {set 'I_BitsRepr.wordsize}) (x: 'I_BitsRepr.wordsize):
+  let min := [arg min_(k < x in P) k] in
+  let P' := P :\ min in
+  x < n ->
+  x \in P ->
+  min < 2 * n * (n - curLine) ->
+  @fuel_correct n curLine P fuel ->
+  forall (x0 : 'I_BitsRepr.wordsize), x0 < n /\ x0 \in (P :\ min) ->
+    2 * n * (n - curLine) - [arg min_(k < x0 in (P :\ min)) k] < fuel.-1.
+Proof.
+  move=> min P' ltn_x Hx Hminn' Hfuel.
   move=> x0 [ltn_x0 Hx0].
-  apply (leq_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
+  apply (leq_trans (n := 2 * n * (n - curLine) - min)).
   apply ltn_sub2l.
   apply Hminn'.
   rewrite -/min.
-  case: [arg min_(k < x0 in P') k] / arg_minP=> //.
+  case: [arg min_(k < x0 in (P :\ min)) k] / arg_minP=> //.
   move=> i Hi Hj.
   rewrite !in_set in Hi.
   rewrite ltn_neqAle.
@@ -190,9 +219,10 @@ Proof.
   move=> i' Hi' Hj'.
   apply (Hj' i)=> //.
   rewrite -(leq_add2r 1) !addn1 prednK=> //.
-  apply (Hfuel2 x).
-  by rewrite ltn_x Hx //.
-*)
+  apply (fuel_inLine Hfuel x).
+  rewrite ltn_x Hx //.
+  exact: (fuel_pos Hfuel).
+Qed.
 
 Lemma queensEachPos_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
   forall fuel poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
@@ -228,24 +258,13 @@ Proof.
       by rewrite Hend in_set0.
     have ->: [set B' in valid_pos n | board_included n B B' & board_possible n P B' curLine] = set0.
       rewrite -setP /eq_mem=> B0.
-      rewrite in_set in_set0.
-      rewrite /board_possible.
-      rewrite /valid_pos /is_complete.
-      rewrite in_set.
+      rewrite in_set in_set0 /board_possible /valid_pos in_set.
       apply/andP.
-      move=> [/andP[/forallP Hcompl Hcor] /andP[_ /forallP Hposs]].
-      move: (Hcompl curLine)=> Honeset.
-      rewrite ltn_curLine implyTb in Honeset.
-      move/existsP: Honeset=>[i /eqP Hi].
-      move: (Hposs i)=> Hpossi.
-      rewrite Hi in Hpossi.
-      rewrite implyTb in Hpossi.
+      move=> [/andP[Hcompl Hcor] /andP[_ Hposs]].
+      move: (from_complete _ _ Hcompl curLine ltn_curLine)=> [i Hi].
+      move: (from_possible _ _ _ _ Hposs i Hi)=> Hpossi.
       move: (H1 i Hpossi)=> Habsi.
-      rewrite /is_correct in Hcor.
-      move/forallP: Hcor=>Hcor.
-      move: (Hcor i)=> /forallP Hcori.
-      move: (Hcori curLine)=> /implyP HcoricurLine.
-      move: (HcoricurLine Hi)=> /andP [/andP [Habs2 _] _].
+      move: (from_correct _ _ i curLine _ Hcor Hi)=> [Habs2 _].
       rewrite ltnNge in Habs2.
       by rewrite Habsi // in Habs2.
     by rewrite cards0 add0n.
@@ -297,30 +316,10 @@ Proof.
     set B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize].
     set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
     set P' := P :\ min.
-    have Hfuel2': forall x0 : 'I_BitsRepr.wordsize, x0 < n /\ x0 \in P' -> 2 * n * (n - curLine) - [arg min_(k < x0 in P') k] < fuel.-1.
-      move=> x0 [ltn_x0 Hx0].
-      apply (leq_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
-      apply ltn_sub2l.
-      apply Hminn'.
-      rewrite -/min.
-      case: [arg min_(k < x0 in P') k] / arg_minP=> //.
-      move=> i Hi Hj.
-      rewrite !in_set in Hi.
-      rewrite ltn_neqAle.
-      move/andP: Hi=> [Hi1 Hi2].
-      rewrite eq_sym in Hi1.
-      rewrite Hi1 andbC andbT.
-      rewrite /min.
-      case: arg_minP=> //.
-      move=> i' Hi' Hj'.
-      apply (Hj' i)=> //.
-      rewrite -(leq_add2r 1) !addn1 prednK=> //.
-      apply (fuel_inLine Hfuel x).
-      by rewrite ltn_x Hx //.
-    apply (fuel_pos Hfuel).
+    move: (nextLine_fuel2 n fuel curLine P x)=> Hfuel2'.
     have ltn_ScurLine: curLine.+1 < BitsRepr.wordsize.
       by apply (leq_ltn_trans (n := n))=> //.
-    have HB'cor: is_correct (@Ordinal BitsRepr.wordsize curLine.+1 ltn_ScurLine) n B'.
+    have HB'cor: is_correct (Ordinal ltn_ScurLine) n B'.
     (* is_correct B' *)
     rewrite /is_correct.
     apply/forallP=> a.
@@ -611,7 +610,7 @@ Proof.
       apply Hminn.
     split.
     apply (fuel_gt1 Hfuel).
-    apply Hfuel2'.
+    apply Hfuel2'=> //.
     rewrite -(leq_add2r (1 + 1)) !addnA !addn1 prednK.
     rewrite prednK.
     apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
