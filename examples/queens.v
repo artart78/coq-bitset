@@ -224,6 +224,125 @@ Proof.
   exact: (fuel_pos Hfuel).
 Qed.
 
+Lemma nextLine_fuel3 (n: nat) fuel (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) (x: 'I_BitsRepr.wordsize) (ltn_curLine: curLine < n):
+  let min := [arg min_(k < x in P) k] in
+  n > 0 ->
+  min < n ->
+  x < n ->
+  x \in P ->
+  @fuel_correct n curLine P fuel ->
+  fuel.-2 > 0.
+Proof.
+  move=> min gtz_n Hminn ltn_x Hx Hfuel.
+  set P' := P :\ min.
+  have Hfuel3': 1 < 2 * n * (n - curLine) - min.
+    apply (leq_ltn_trans (n := n))=> //.
+    have {1}->: n = 2 * n - n.
+      by rewrite -{1}[n]mul1n -{3}[n]mul1n -mulnBl.
+    apply (leq_ltn_trans (n := 2 * n * (n - curLine) - n)).
+    apply leq_sub2r.
+    have {1}->: 2 * n = 2 * n * 1 by rewrite muln1.
+    rewrite leq_mul2l.
+    rewrite subn_gt0 ltn_curLine orbT //.
+    apply ltn_sub2l.
+    apply (leq_trans (n := n)).
+    apply Hminn.
+    apply (leq_trans (n := 2 * n)).
+    rewrite -{1}[n]mul1n leq_mul2r.
+    have ->: 0 < 2 by trivial.
+    rewrite orbT //.
+    rewrite -{1}[2 * n]muln1.
+    rewrite leq_mul2l.
+    rewrite subn_gt0 ltn_curLine orbT //.
+    by apply Hminn.
+  rewrite -(leq_add2r (1 + 1)) !addnA !addn1 prednK.
+  rewrite prednK.
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
+  apply Hfuel3'.
+  apply (fuel_inLine Hfuel x).
+  rewrite ltn_x Hx=> //.
+  apply (fuel_pos Hfuel).
+  rewrite -(leq_add2r 1) !addn1 prednK.
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
+  apply (ltn_trans (n := 1))=> //.
+  apply (fuel_inLine Hfuel x).
+  rewrite ltn_x Hx //.
+  apply (fuel_pos Hfuel).
+Qed.
+
+Lemma nextLine_fuel4 n curLine fuel (x: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) (gtz_n: n > 0) (ltn_curLine: curLine < n) (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize) (Hfuel': fuel = fuel.-1.+1) (ltn_x: x < n) (Hx: x \in P):
+  let min := [arg min_(k < x in P) k] in
+  min < n ->
+  min < 2 * n * (n - curLine) ->
+  @fuel_correct n curLine P fuel ->
+  2 * n * (n - Ordinal (n:=BitsRepr.wordsize) (m:=curLine.+1) ltn_ScurLine) + 1 < fuel.-1.
+Proof.
+  move=> min Hminn Hminn' Hfuel.
+  rewrite /=.
+  rewrite -(leq_add2r 1) !addn1 -Hfuel'.
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine) - min)).
+  have ->: (2 * n * (n - curLine.+1)).+1 = 2 * n * (n - curLine) - (2 * n - 1).
+    rewrite -[curLine.+1]addn1 subnDA mulnBr -addn1 [2 * n * 1]muln1.
+    rewrite subnBA.
+    rewrite addnC.
+    rewrite [2 * n * (n - curLine) + 1]addnC addnBA //.
+    rewrite -{1}[2 * n]muln1.
+    rewrite leq_mul2l subn_gt0 ltn_curLine orbT //.
+    by rewrite muln_gt0 gtz_n.
+  apply ltn_sub2l.
+  apply Hminn'.
+  apply (leq_trans (n := n)).
+  apply Hminn.
+  rewrite subn1 -ltnS prednK.
+  rewrite -{1}[n]mul1n ltn_mul2r.
+  have ->: 1 < 2 by trivial.
+  rewrite andbT.
+  apply (leq_ltn_trans (n := curLine))=> //.
+  apply (leq_trans (n := n)).
+  apply (leq_ltn_trans (n := curLine))=> //.
+  rewrite -{1}[n]mul1n leq_mul2r.
+  have ->: 0 < 2 by trivial.
+  rewrite orbT //.
+  apply (fuel_inLine Hfuel x).
+  by rewrite ltn_x Hx.
+Qed.
+
+Lemma nextLine_fuel2' n curLine (P: {set 'I_BitsRepr.wordsize}) fuel:
+  fuel >= (2 * n * (n - curLine) + 1).+1 ->
+  forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P ->
+   2 * n * (n - curLine) - [arg min_(k < x in P) k] < fuel.-1.
+Proof.
+  move=> Hfuel.
+  move=> x [ltn_x Hx].
+  rewrite -(ltn_add2r 1) !addn1 prednK.
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine))).
+  apply leq_subr.
+  rewrite addn1 //.
+  apply Hfuel.
+  apply (leq_ltn_trans (n := (2 * n * (n - curLine) + 1)))=> //.
+Qed.
+
+Lemma nextLine_fuel3' n curLine fuel (gtz_n: n > 0) (ltn_curLine: curLine < n):
+  fuel >= (2 * n * (n - curLine) + 1).+1 ->
+  fuel.-2 > 0.
+Proof.
+  move=> Hfuel.
+  rewrite -(ltn_add2r (1 + 1)) !addnA !addn1 !prednK.
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
+  rewrite -{1}[1]add0n.
+  rewrite ltn_add2r.
+  rewrite !muln_gt0 /=.
+  rewrite gtz_n.
+  rewrite subn_gt0 ltn_curLine //.
+  apply Hfuel.
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
+  rewrite -(ltn_add2r 1) !addn1 prednK.
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
+  rewrite addn1 ltn0Sn //.
+  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
+Qed.
+
 Lemma nextLine_correct n B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) poss ld rd col full x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
   let min := [arg min_(k < x in P) k] in
   let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
@@ -703,6 +822,372 @@ Proof.
   by apply HP.
 Qed.
 
+Lemma nextLine_numCol n B (curLine: 'I_BitsRepr.wordsize) ld rd col full min (P: {set 'I_BitsRepr.wordsize}) poss (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize) (HminP: min \in P):
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  @repr_queen n B curLine ld rd col full ->
+  @repr_poss n B curLine P poss ->
+  #|make_col n B'| = Ordinal ltn_ScurLine.
+Proof.
+  move=> B' HB HP.
+  have ->: make_col n B' = (make_col n B) :|: [set min].
+    rewrite -setP /eq_mem=> i.
+    rewrite /make_col in_setU !in_set.
+    case Hi: (i == min).
+    + (* i == min *)
+      rewrite orbT.
+      apply/existsP.
+      exists curLine.
+      rewrite /get_coord /B' !tnth_mktuple Hi /=.
+      have ->: curLine == curLine by trivial.
+      trivial.
+    + (* i <> min *)
+      rewrite orbF.
+      case Hex: [exists curLine0, get_coord n B i curLine0].
+      - (* exists curLine0, get_coord n B i curLine0 *)
+        move/existsP: Hex=> [y Hy].
+        apply/existsP.
+        exists y.
+        by rewrite /get_coord /B' !tnth_mktuple Hi andbC andbF Hy.
+      - (* ~ exists curLine0, get_coord n B i curLine0 *)
+        apply negbT in Hex.
+        rewrite negb_exists in Hex.
+        move/forallP: Hex=> Hex.
+        apply negbTE.
+        rewrite negb_exists.
+        apply/forallP=> y.
+        rewrite /get_coord /B' !tnth_mktuple Hi andbC andbF.
+        by apply (Hex y).
+  rewrite cardsU.
+  have ->: make_col n B :&: [set min] = set0.
+    rewrite -setP /eq_mem=> i.
+    rewrite in_setI in_set1 in_set0.
+    case Hi: (i == min).
+    + (* i == min *)
+      rewrite andbT.
+      move/eqP: Hi ->.
+      apply negbTE.
+      rewrite -in_setC.
+      move/subsetP: (poss_col HP)=> HPcol.
+      by apply (HPcol min).
+    + (* i <> min *)
+      by rewrite andbF.
+  by rewrite cards0 subn0 -(line_val HB) cards1 addn1.
+Qed.
+
+Lemma nextLine_splitCase n B curLine P min:
+  let P' := P :\ min in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  let setA := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P' B'0 curLine] in
+  let setB := [set B'0 in valid_pos n | board_included n B' B'0] in
+  let setC := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P B'0 curLine] in
+  min \in P ->
+  setC = setA :|: setB /\ setA :&: setB = set0.
+Proof.
+  move=> P' B' setA setB setC HminP.
+  split.
+  rewrite -setP /eq_mem=> i.
+  rewrite in_setU !in_set.
+  rewrite -Bool.andb_orb_distrib_r.
+  case Hicorr: (is_correct n n i).
+  have ->: board_included n B i && board_possible n P i curLine
+         = board_included n B i && board_possible n P' i curLine || board_included n B' i.
+    have ->: board_included n B' i = board_included n B i && board_included n B' i.
+      rewrite andb_idl // => Hi.
+      rewrite /board_included.
+      apply/forallP=> j.
+      apply/forallP=> j'.
+      apply/implyP=> Hjj'.
+      rewrite /board_included in Hi.
+      move/forallP: Hi=>Hi.
+      move: (Hi j)=> /forallP Hij.
+      move: (Hij j')=> /implyP Hijj'.
+      have Hjj'1: get_coord n B' j j'.
+        rewrite /B' /get_coord !tnth_mktuple.
+        rewrite /get_coord in Hjj'.
+        by rewrite Hjj' if_same.
+      by rewrite (Hijj' Hjj'1).
+    rewrite -Bool.andb_orb_distrib_r.
+    case HBi: (board_included n B i)=> //=.
+    have ->: board_possible n P i curLine = board_possible n P' i curLine || board_included n B' i.
+      case HiP: (board_possible n P i curLine).
+      + (* board_possible n P i curLine = true *)
+        case HiP': (board_possible n P' i curLine)=> //=.
+        rewrite /board_included.
+        symmetry.
+        apply/forallP=> x0.
+        apply/forallP=> y0.
+        apply/implyP=> HinB'.
+        case Hmin: ((x0 == min) && (y0 == curLine)).
+        + (* x0 == min && y0 == curLine is true *)
+          move/existsP: HiP'=>[x' Hx'].
+          rewrite negb_imply in Hx'.
+          move/andP: Hx'=>[Hx1 Hx2].
+          move/forallP: HiP=>HiP.
+          move: (HiP x')=> /implyP HxP.
+          have Hx': x' = min.
+            apply/eqP.
+            rewrite -in_set1.
+            have ->: [set min] = P :\: P'.
+            rewrite setDDr setDv set0U.
+            symmetry.
+            apply /setIidPr.
+            by rewrite sub1set.
+          rewrite in_setD Hx2 (HxP Hx1) //.
+          move/andP: Hmin=>[/eqP Hmin1 /eqP Hmin2].
+          by rewrite Hmin1 Hmin2 -Hx' Hx1.
+        + (* x0 == min && y0 == curLine is false *)
+          rewrite /B' /get_coord in HinB'.
+          rewrite !tnth_mktuple in HinB'.
+          rewrite Hmin in HinB'.
+          rewrite /board_included in HBi.
+          move/forallP: HBi=>HBi.
+          move: (HBi x0)=> HBix.
+          move/forallP: HBix=>HBix.
+          move: (HBix y0)=> HBixy.
+          by move/implyP: HBixy ->=> //.
+      + (* board_possible n P i curLine = false *)
+        case HiP': (board_possible n P' i curLine).
+        + (* board_possible n P' i curLine = true *)
+          rewrite orbC orbT.
+          have: board_possible n P i curLine = true.
+            rewrite /board_possible.
+            apply/forallP.
+            move=> y.
+            apply/implyP=> Hy.
+            rewrite /board_possible in HiP'.
+            move/forallP: HiP'=>HiP'.
+            move: (HiP' y)=> /implyP HiP'y.
+            rewrite in_setD in HiP'y.
+            move: (HiP'y Hy)=> /andP [_ HyP] //.
+          by rewrite HiP.
+        + (* board_possible n P' i curLine = false *)
+          have: board_included n B' i = false.
+            rewrite /board_included.
+            apply/forallP/forallP.
+            rewrite negb_forall.
+            apply/existsP.
+            exists min.
+            rewrite negb_forall.
+            apply/existsP.
+            exists curLine.
+            rewrite negb_imply.
+            rewrite {1}/get_coord /B' !tnth_mktuple.
+            have ->: (min == min) by trivial.
+            have ->: (curLine == curLine) by trivial.
+            rewrite andbT andbC andbT.
+            rewrite /board_possible in HiP.
+            move/forallP: HiP=> /forallP HiP.
+            rewrite negb_forall in HiP.
+            move/existsP: HiP=> [j Hj].
+            rewrite negb_imply in Hj.
+            move: Hj=> /andP [Hj HjP].
+            case Habs: (j == min).
+            - (* j == min *)
+              move/eqP: Habs=>Habs.
+              rewrite Habs in HjP.
+              exfalso.
+              by rewrite HminP in HjP.
+            - (* j <> min *)
+              apply/negP=> Hmin.
+              rewrite /is_correct in Hicorr.
+              move/forallP: Hicorr=> Hicorr.
+              move: (Hicorr j)=> /forallP Hicorr1.
+              move: (Hicorr1 curLine)=> Hicorr2.
+              rewrite Hj implyTb in Hicorr2.
+              move: Hicorr2 => /andP [_ /forallP Hicorr3].
+              move: (Hicorr3 min)=> /forallP Hicorr4.
+              move: (Hicorr4 curLine)=> Hicorr5.
+              rewrite Hmin implyTb in Hicorr5.
+              rewrite Habs andbC andbF /= in Hicorr5.
+              move: Hicorr5=> /andP [/andP [Habs' _] _].
+              by move/eqP: Habs'.
+          by rewrite //.
+    by rewrite //.
+  by rewrite //.
+  by rewrite andbF andbC andbF andbC andbF.
+  (* setA :&: setB = set0 *)
+  rewrite -setP /eq_mem=> i.
+  rewrite in_setI !in_set.
+  case Hinc: (board_included n B' i) setB=> setB.
+  + (* B' included in i *)
+    case Hpos: (board_possible n P' i curLine).
+    - (* (x, curLine) in i => x in P' *)
+      exfalso.
+      have Hmin: get_coord n i min curLine.
+        rewrite /board_included in Hinc.
+        move/forallP: Hinc=> Hinc.
+        move: (Hinc min)=> /forallP Hinc2.
+        move: (Hinc2 curLine)=> Hinc3.
+        have Hmin: get_coord n B' min curLine.
+          rewrite /B' /get_coord !tnth_mktuple.
+          have ->: (min == min) by trivial.
+          by have ->: (curLine == curLine) by trivial.
+        by rewrite Hmin implyTb in Hinc3.
+      rewrite /board_possible in Hpos.
+      move/forallP: Hpos=> Hpos.
+      move: (Hpos min)=> Hpos2.
+      rewrite Hmin implyTb in_setD in Hpos2.
+      move/andP: Hpos2=> [Habs _].
+      rewrite in_set1 in Habs.
+      by move/eqP: Habs.
+    - (* board_possible n P' i curLine = false *)
+      by rewrite andbF andbF andbC andbF.
+  + (* B' not included in i *)
+    by rewrite !andbF.
+Qed.
+
+Lemma nextLine_end (n: nat) B (curLine: 'I_BitsRepr.wordsize) ld rd col full (HcurLine2: n = curLine):
+  @repr_queen n B curLine ld rd col full ->
+  1 = #|[set B' in valid_pos n | board_included n B B']|.
+Proof.
+  move=> HB.
+  have ->: [set B' in valid_pos n | board_included n B B'] = [set B].
+    rewrite -setP /eq_mem=> B'.
+    rewrite !in_set.
+    case HB': (B' == B).
+    + (* B' = B *)
+      move/eqP: HB' ->.
+      have ->: is_complete n B.
+        by rewrite HcurLine2; apply HB.
+      rewrite {1}HcurLine2.
+      rewrite (correct HB).
+      have ->: board_included n B B = true.
+        rewrite /board_included.
+        apply/forallP=> x.
+        apply/forallP=> y.
+        by rewrite implybb.
+      by rewrite /=.
+    + (* B' <> B *)
+      apply/andP/andP.
+      apply/negP=> H'.
+      move: H'=> /andP [/andP[H1 H2] H3].
+      have Habs: B' = B.
+        apply eq_from_tnth.
+        rewrite /eqfun=> x.
+        apply eq_from_tnth.
+        rewrite /eqfun=> y.
+        case Hxy: (tnth (tnth B x) y).
+        - (* tnth (tnth B x) y = true *)
+          rewrite /board_included in H3.
+          move/forallP: H3=> H3.
+          move: (H3 x)=> H3x.
+          move/forallP: H3x=> H3x.
+          move: (H3x y)=> /implyP H3xy.
+          rewrite /get_coord in H3xy.
+          by rewrite H3xy.
+        - (* tnth (tnth B x) y = false *)
+          case Hy: (y < curLine).
+          + (* y < curLine *)
+            move: (complete HB)=> HBcompl.
+            rewrite /is_complete in HBcompl.
+            move/forallP: HBcompl=> HBcompl.
+            move: (HBcompl y)=> HBcompl2.
+            rewrite Hy /= in HBcompl2.
+            move/existsP: HBcompl2=> [k' /eqP Hk'].
+            rewrite -HcurLine2 in Hk'.
+            have Hk'1: get_coord n B' k' y.
+              rewrite /board_included in H3.
+              move/forallP: H3=> H3.
+              move: (H3 k')=> /forallP H3'.
+              move: (H3' y)=> H3''.
+              by rewrite Hk' /= in H3''.
+            rewrite /is_correct in H2.
+            move/forallP: H2=>H2'.
+            move: (H2' k')=> /forallP H2''.
+            move: (H2'' y)=> H2'''.
+            rewrite Hk'1 /= in H2'''.
+            move: H2'''=> /andP [_ /forallP Hcorr'].
+            move: (Hcorr' x)=> /forallP Hcorr''.
+            move: (Hcorr'' y)=> Hcorr'''.
+            have Htrivial: y == y by trivial.
+            rewrite Htrivial /= andbT andbF andbC in Hcorr'''.
+            case Hk'x: (k' != x).
+            + (* k' != x *)
+              rewrite Hk'x /= andbF /get_coord implybF in Hcorr'''.
+              by apply negbTE.
+            + (* k' == x *)
+              apply negbT in Hk'x.
+              move/negPn: Hk'x=> /eqP Hk'x.
+              rewrite Hk'x in Hk'.
+              rewrite /get_coord in Hk'.
+              by rewrite Hxy in Hk'.
+          + (* y >= curLine *)
+            rewrite /is_correct in H2.
+            move/forallP: H2=>H2.
+            move: (H2 x)=> /forallP H2'.
+            move: (H2' y)=> H2''.
+            rewrite {3}HcurLine2 Hy andbF andbC andbF implybF /get_coord in H2''.
+            by apply negbTE.
+      rewrite Habs in HB'.
+      move/eqP: HB'=>HB'.
+      by rewrite //.
+  by rewrite cards1.
+Qed.
+
+Lemma nextLine_oneCase n B (curLine: 'I_BitsRepr.wordsize) ld rd col full:
+  let P := (~: (((make_ld n B curLine) :|: (make_rd n B curLine)) :|: (make_col n B))) in
+  @repr_queen n B curLine ld rd col full ->
+  [set B' in valid_pos n | board_included n B B' & board_possible n P B' curLine]
+  = [set B' in valid_pos n | board_included n B B'].
+Proof.
+  move=> P HB.
+  rewrite -setP /eq_mem=> i.
+  rewrite !in_set.
+  rewrite andbA.
+  case Hi: (is_complete n i && is_correct n n i && board_included n B i).
+  + (* is_complete n i && is_correct n n i && board_included n B i *)
+    rewrite andbC andbT.
+    move/andP: Hi=> [/andP[Hicompl Hicorr] HBi].
+    rewrite /board_possible.
+    apply/forallP=> x.
+    apply/implyP=> HxcurLine.
+    rewrite in_setC !in_setU.
+    rewrite !negb_or.
+    have ->: x \notin make_ld n B curLine.
+      apply/negP=> Habs.
+      rewrite /make_ld in_set in Habs.
+      move/existsP: Habs=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+      move: (from_correct n n x curLine i Hicorr HxcurLine)=> [_ [_ Hicorr2]].
+      move: (Hicorr2 j j')=> Hicorr2'.
+      move: (from_correct n curLine j j' B (correct HB) Hjj'1)=> [_ [Hj' _]].
+      have Hj'2: (curLine == j') = false.
+        apply negbTE.
+        by rewrite neq_ltn Hj' orbT.
+      move: (from_included n B i j j' HBi Hjj'1)=> HjB.
+      rewrite Hj'2 andbF /= HjB /= in Hicorr2'.
+      by rewrite Hjj'2 /= andbF in Hicorr2'.
+    have ->: x \notin make_rd n B curLine.
+      apply/negP=> Habs.
+      rewrite /make_rd in_set in Habs.
+      move/existsP: Habs=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
+      move: (from_correct n n x curLine i Hicorr HxcurLine)=> [_ [_ Hicorr2]].
+      move: (Hicorr2 j j')=> Hicorr2'.
+      move: (from_correct n curLine j j' B (correct HB) Hjj'1)=> [_ [Hj' _]].
+      have Hj'2: (curLine == j') = false.
+        apply negbTE.
+        by rewrite neq_ltn Hj' orbT.
+      move: (from_included n B i j j' HBi Hjj'1)=> HjB.
+      rewrite Hj'2 andbF /= HjB /= in Hicorr2'.
+      by rewrite Hjj'2 /= andbF in Hicorr2'.
+    have ->: x \notin make_col n B.
+      apply/negP=> Habs.
+      rewrite /make_col in_set in Habs.
+      move/existsP: Habs=> [j Hj].
+      move: (from_correct n n x curLine i Hicorr HxcurLine)=> [_ [_ Hicorr2]].
+      move: (Hicorr2 x j)=> Hicorr2'.
+      move: (from_correct n curLine x j B (correct HB) Hj)=> [_ [Hj2 _]].
+      have Hx: x == x by trivial.
+      rewrite Hx /= in Hicorr2'.
+      rewrite (from_included n B i x j HBi Hj) /= in Hicorr2'.
+      have Hj2': (curLine == j) = false.
+        apply negbTE.
+        by rewrite neq_ltn Hj2 orbT.
+      by rewrite Hj2' /= in Hicorr2'.
+    by rewrite /=.
+  + (* ~~ (is_complete n i && is_correct n n i && board_included n B i ) *)
+    by rewrite andbC andbF.
+Qed.
+
 Lemma queensEachPos_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
   forall fuel poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
     curLine < n ->
@@ -802,272 +1287,16 @@ Proof.
     rewrite (queensAux_correct n gtz_n ltn_n _ _ _ _ _ B' (Ordinal ltn_ScurLine))=> //.
     rewrite (queensEachPos_correct n gtz_n ltn_n _ _ _ _ _ _ B curLine _ P')=> //.
     rewrite [curCount + _]addnC addnA.
-    set setA := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P' B'0 curLine].
-    set setB := [set B'0 in valid_pos n | board_included n B' B'0].
-    set setC := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P B'0 curLine].
-    have ->: setC = setA :|: setB.
-      rewrite -setP /eq_mem=> i.
-      rewrite in_setU !in_set.
-      rewrite -Bool.andb_orb_distrib_r.
-      case Hicorr: (is_correct n n i).
-      have ->: board_included n B i && board_possible n P i curLine
-             = board_included n B i && board_possible n P' i curLine || board_included n B' i.
-        have ->: board_included n B' i = board_included n B i && board_included n B' i.
-          rewrite andb_idl // => Hi.
-          rewrite /board_included.
-          apply/forallP=> j.
-          apply/forallP=> j'.
-          apply/implyP=> Hjj'.
-          rewrite /board_included in Hi.
-          move/forallP: Hi=>Hi.
-          move: (Hi j)=> /forallP Hij.
-          move: (Hij j')=> /implyP Hijj'.
-          have Hjj'1: get_coord n B' j j'.
-            rewrite /B' /get_coord !tnth_mktuple.
-            rewrite /get_coord in Hjj'.
-            by rewrite Hjj' if_same.
-          by rewrite (Hijj' Hjj'1).
-        rewrite -Bool.andb_orb_distrib_r.
-        case HBi: (board_included n B i)=> //=.
-        have ->: board_possible n P i curLine = board_possible n P' i curLine || board_included n B' i.
-          case HiP: (board_possible n P i curLine).
-          + (* board_possible n P i curLine = true *)
-            case HiP': (board_possible n P' i curLine)=> //=.
-            rewrite /board_included.
-            symmetry.
-            apply/forallP=> x0.
-            apply/forallP=> y0.
-            apply/implyP=> HinB'.
-            case Hmin: ((x0 == min) && (y0 == curLine)).
-            + (* x0 == min && y0 == curLine is true *)
-              move/existsP: HiP'=>[x' Hx'].
-              rewrite negb_imply in Hx'.
-              move/andP: Hx'=>[Hx1 Hx2].
-              move/forallP: HiP=>HiP.
-              move: (HiP x')=> /implyP HxP.
-              have Hx': x' = min.
-                apply/eqP.
-                rewrite -in_set1.
-                have ->: [set min] = P :\: P'.
-                rewrite setDDr setDv set0U.
-                symmetry.
-                apply /setIidPr.
-                by rewrite sub1set.
-              rewrite in_setD Hx2 (HxP Hx1) //.
-              move/andP: Hmin=>[/eqP Hmin1 /eqP Hmin2].
-              by rewrite Hmin1 Hmin2 -Hx' Hx1.
-            + (* x0 == min && y0 == curLine is false *)
-              rewrite /B' /get_coord in HinB'.
-              rewrite !tnth_mktuple in HinB'.
-              rewrite Hmin in HinB'.
-              rewrite /board_included in HBi.
-              move/forallP: HBi=>HBi.
-              move: (HBi x0)=> HBix.
-              move/forallP: HBix=>HBix.
-              move: (HBix y0)=> HBixy.
-              by move/implyP: HBixy ->=> //.
-          + (* board_possible n P i curLine = false *)
-            case HiP': (board_possible n P' i curLine).
-            + (* board_possible n P' i curLine = true *)
-              rewrite orbC orbT.
-              have: board_possible n P i curLine = true.
-                rewrite /board_possible.
-                apply/forallP.
-                move=> y.
-                apply/implyP=> Hy.
-                rewrite /board_possible in HiP'.
-                move/forallP: HiP'=>HiP'.
-                move: (HiP' y)=> /implyP HiP'y.
-                rewrite in_setD in HiP'y.
-                move: (HiP'y Hy)=> /andP [_ HyP] //.
-              by rewrite HiP.
-            + (* board_possible n P' i curLine = false *)
-              have: board_included n B' i = false.
-                rewrite /board_included.
-                apply/forallP/forallP.
-                rewrite negb_forall.
-                apply/existsP.
-                exists min.
-                rewrite negb_forall.
-                apply/existsP.
-                exists curLine.
-                rewrite negb_imply.
-                rewrite {1}/get_coord /B' !tnth_mktuple.
-                have ->: (min == min) by trivial.
-                have ->: (curLine == curLine) by trivial.
-                rewrite andbT andbC andbT.
-                rewrite /board_possible in HiP.
-                move/forallP: HiP=> /forallP HiP.
-                rewrite negb_forall in HiP.
-                move/existsP: HiP=> [j Hj].
-                rewrite negb_imply in Hj.
-                move: Hj=> /andP [Hj HjP].
-                case Habs: (j == min).
-                - (* j == min *)
-                  move/eqP: Habs=>Habs.
-                  rewrite Habs in HjP.
-                  exfalso.
-                  by rewrite HminP in HjP.
-                - (* j <> min *)
-                  apply/negP=> Hmin.
-                  rewrite /is_correct in Hicorr.
-                  move/forallP: Hicorr=> Hicorr.
-                  move: (Hicorr j)=> /forallP Hicorr1.
-                  move: (Hicorr1 curLine)=> Hicorr2.
-                  rewrite Hj implyTb in Hicorr2.
-                  move: Hicorr2 => /andP [_ /forallP Hicorr3].
-                  move: (Hicorr3 min)=> /forallP Hicorr4.
-                  move: (Hicorr4 curLine)=> Hicorr5.
-                  rewrite Hmin implyTb in Hicorr5.
-                  rewrite Habs andbC andbF /= in Hicorr5.
-                  move: Hicorr5=> /andP [/andP [Habs' _] _].
-                  by move/eqP: Habs'.
-              by rewrite //.
-        by rewrite //.
-      by rewrite //.
-      by rewrite andbF andbC andbF andbC andbF.
-    rewrite cardsU.
-    have ->: setA :&: setB = set0.
-      rewrite -setP /eq_mem=> i.
-      rewrite in_setI !in_set.
-      case Hinc: (board_included n B' i) setB=> setB.
-      + (* B' included in i *)
-        case Hpos: (board_possible n P' i curLine).
-        - (* (x, curLine) in i => x in P' *)
-          exfalso.
-          have Hmin: get_coord n i min curLine.
-            rewrite /board_included in Hinc.
-            move/forallP: Hinc=> Hinc.
-            move: (Hinc min)=> /forallP Hinc2.
-            move: (Hinc2 curLine)=> Hinc3.
-            have Hmin: get_coord n B' min curLine.
-              rewrite /B' /get_coord !tnth_mktuple.
-              have ->: (min == min) by trivial.
-              by have ->: (curLine == curLine) by trivial.
-            by rewrite Hmin implyTb in Hinc3.
-          rewrite /board_possible in Hpos.
-          move/forallP: Hpos=> Hpos.
-          move: (Hpos min)=> Hpos2.
-          rewrite Hmin implyTb in_setD in Hpos2.
-          move/andP: Hpos2=> [Habs _].
-          rewrite in_set1 in Habs.
-          by move/eqP: Habs.
-        - (* board_possible n P' i curLine = false *)
-          by rewrite andbF andbF andbC andbF.
-      + (* B' not included in i *)
-        by rewrite !andbF.
-    rewrite cards0 subn0 //.
-    (* Hfuel3 *)
-    have Hfuel3': 1 < 2 * n * (n - curLine) - [arg min_(k < x in P) k].
-      apply (leq_ltn_trans (n := n))=> //.
-      have {1}->: n = 2 * n - n.
-        by rewrite -{1}[n]mul1n -{3}[n]mul1n -mulnBl.
-      apply (leq_ltn_trans (n := 2 * n * (n - curLine) - n)).
-      apply leq_sub2r.
-      have {1}->: 2 * n = 2 * n * 1 by rewrite muln1.
-      rewrite leq_mul2l.
-      rewrite subn_gt0 ltn_curLine orbT //.
-      apply ltn_sub2l.
-      apply (leq_trans (n := n)).
-      apply Hminn.
-      apply (leq_trans (n := 2 * n)).
-      rewrite -{1}[n]mul1n leq_mul2r.
-      have ->: 0 < 2 by trivial.
-      rewrite orbT //.
-      rewrite -{1}[2 * n]muln1.
-      rewrite leq_mul2l.
-      rewrite subn_gt0 ltn_curLine orbT //.
-      apply Hminn.
+    move: (nextLine_splitCase n B curLine P min HminP)=> [Hu Hi].
+    rewrite Hu cardsU Hi cards0 subn0 //.
     split.
     apply (fuel_gt1 Hfuel).
     apply Hfuel2'=> //.
-    rewrite -(leq_add2r (1 + 1)) !addnA !addn1 prednK.
-    rewrite prednK.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
-    apply Hfuel3'.
-    apply (fuel_inLine Hfuel x).
-    rewrite ltn_x Hx=> //.
-    apply (fuel_pos Hfuel).
-    rewrite -(leq_add2r 1) !addn1 prednK.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
-    apply (ltn_trans (n := 1))=> //.
-    apply (fuel_inLine Hfuel x).
-    rewrite ltn_x Hx //.
-    apply (fuel_pos Hfuel).
+    apply (nextLine_fuel3 n fuel curLine P x)=> //.
     apply nextLine_P=> //.
-    (* 2 * n * (n - curLine.+1) + 1 < fuel.-1 *)
-    rewrite /=.
-    rewrite -(leq_add2r 1) !addn1 -Hfuel'.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
-    have ->: (2 * n * (n - curLine.+1)).+1 = 2 * n * (n - curLine) - (2 * n - 1).
-      rewrite -[curLine.+1]addn1 subnDA mulnBr -addn1 [2 * n * 1]muln1.
-      rewrite subnBA.
-      rewrite addnC.
-      rewrite [2 * n * (n - curLine) + 1]addnC addnBA //.
-      rewrite -{1}[2 * n]muln1.
-      rewrite leq_mul2l subn_gt0 ltn_curLine orbT //.
-      by rewrite muln_gt0 gtz_n.
-    apply ltn_sub2l.
-    apply Hminn'.
-    apply (leq_trans (n := n)).
-    apply Hminn.
-    rewrite subn1 -ltnS prednK.
-    rewrite -{1}[n]mul1n ltn_mul2r.
-    have ->: 1 < 2 by trivial.
-    rewrite andbT.
-    apply (leq_ltn_trans (n := curLine))=> //.
-    apply (leq_trans (n := n)).
-    apply (leq_ltn_trans (n := curLine))=> //.
-    rewrite -{1}[n]mul1n leq_mul2r.
-    have ->: 0 < 2 by trivial.
-    rewrite orbT //.
-    apply (fuel_inLine Hfuel x).
-    by rewrite ltn_x Hx.
+    apply (nextLine_fuel4 n curLine fuel x P)=> //.
     split.
-    (* curLine.+1 = #|make_col n B'| *)
-    have ->: make_col n B' = (make_col n B) :|: [set min].
-      rewrite -setP /eq_mem=> i.
-      rewrite /make_col in_setU !in_set.
-      case Hi: (i == min).
-      + (* i == min *)
-        rewrite orbT.
-        apply/existsP.
-        exists curLine.
-        rewrite /get_coord /B' !tnth_mktuple Hi /=.
-        have ->: curLine == curLine by trivial.
-        trivial.
-      + (* i <> min *)
-        rewrite orbF.
-        case Hex: [exists curLine0, get_coord n B i curLine0].
-        - (* exists curLine0, get_coord n B i curLine0 *)
-          move/existsP: Hex=> [y Hy].
-          apply/existsP.
-          exists y.
-          by rewrite /get_coord /B' !tnth_mktuple Hi andbC andbF Hy.
-        - (* ~ exists curLine0, get_coord n B i curLine0 *)
-          apply negbT in Hex.
-          rewrite negb_exists in Hex.
-          move/forallP: Hex=> Hex.
-          apply negbTE.
-          rewrite negb_exists.
-          apply/forallP=> y.
-          rewrite /get_coord /B' !tnth_mktuple Hi andbC andbF.
-          by apply (Hex y).
-      rewrite cardsU.
-      have ->: make_col n B :&: [set min] = set0.
-        rewrite -setP /eq_mem=> i.
-        rewrite in_setI in_set1 in_set0.
-        case Hi: (i == min).
-        + (* i == min *)
-          rewrite andbT.
-          move/eqP: Hi ->.
-          apply negbTE.
-          rewrite -in_setC.
-          move/subsetP: (poss_col HP)=> HPcol.
-          by apply (HPcol min).
-        + (* i <> min *)
-          by rewrite andbF.
-      by rewrite cards0 subn0 -(line_val Hqueen) cards1 addn1.
+    rewrite (nextLine_numCol n B curLine ld rd col full min P poss) //.
     apply HB'cor.
     apply (nextLine_complete n B curLine ld rd col full)=> //.
     apply (nextLine_ld n B curLine ld rd col full poss P x ltn_ScurLine)=> //.
@@ -1100,87 +1329,7 @@ Proof.
         rewrite -(eq_repr col full (make_col n B) [set x : 'I_BitsRepr.wordsize | x < n ])=> //.
       apply HB.
       by trivial.
-    have ->: [set B' in valid_pos n | board_included n B B'] = [set B].
-      rewrite -setP /eq_mem=> B'.
-      rewrite !in_set.
-      case HB': (B' == B).
-      + (* B' = B *)
-        move/eqP: HB' ->.
-        have ->: is_complete n B.
-          by rewrite HcurLine2; apply HB.
-        rewrite {1}HcurLine2.
-        rewrite (correct HB).
-        have ->: board_included n B B = true.
-          rewrite /board_included.
-          apply/forallP=> x.
-          apply/forallP=> y.
-          by rewrite implybb.
-        by rewrite /=.
-      + (* B' <> B *)
-        apply/andP/andP.
-        apply/negP=> H'.
-        move: H'=> /andP [/andP[H1 H2] H3].
-        have Habs: B' = B.
-          apply eq_from_tnth.
-          rewrite /eqfun=> x.
-          apply eq_from_tnth.
-          rewrite /eqfun=> y.
-          case Hxy: (tnth (tnth B x) y).
-          - (* tnth (tnth B x) y = true *)
-            rewrite /board_included in H3.
-            move/forallP: H3=> H3.
-            move: (H3 x)=> H3x.
-            move/forallP: H3x=> H3x.
-            move: (H3x y)=> /implyP H3xy.
-            rewrite /get_coord in H3xy.
-            by rewrite H3xy.
-          - (* tnth (tnth B x) y = false *)
-            case Hy: (y < curLine).
-            + (* y < curLine *)
-              move: (complete HB)=> HBcompl.
-              rewrite /is_complete in HBcompl.
-              move/forallP: HBcompl=> HBcompl.
-              move: (HBcompl y)=> HBcompl2.
-              rewrite Hy /= in HBcompl2.
-              move/existsP: HBcompl2=> [k' /eqP Hk'].
-              rewrite -HcurLine2 in Hk'.
-              have Hk'1: get_coord n B' k' y.
-                rewrite /board_included in H3.
-                move/forallP: H3=> H3.
-                move: (H3 k')=> /forallP H3'.
-                move: (H3' y)=> H3''.
-                by rewrite Hk' /= in H3''.
-              rewrite /is_correct in H2.
-              move/forallP: H2=>H2'.
-              move: (H2' k')=> /forallP H2''.
-              move: (H2'' y)=> H2'''.
-              rewrite Hk'1 /= in H2'''.
-              move: H2'''=> /andP [_ /forallP Hcorr'].
-              move: (Hcorr' x)=> /forallP Hcorr''.
-              move: (Hcorr'' y)=> Hcorr'''.
-              have Htrivial: y == y by trivial.
-              rewrite Htrivial /= andbT andbF andbC in Hcorr'''.
-              case Hk'x: (k' != x).
-              + (* k' != x *)
-                rewrite Hk'x /= andbF /get_coord implybF in Hcorr'''.
-                by apply negbTE.
-              + (* k' == x *)
-                apply negbT in Hk'x.
-                move/negPn: Hk'x=> /eqP Hk'x.
-                rewrite Hk'x in Hk'.
-                rewrite /get_coord in Hk'.
-                by rewrite Hxy in Hk'.
-            + (* y >= curLine *)
-              rewrite /is_correct in H2.
-              move/forallP: H2=>H2.
-              move: (H2 x)=> /forallP H2'.
-              move: (H2' y)=> H2''.
-              rewrite {3}HcurLine2 Hy andbF andbC andbF implybF /get_coord in H2''.
-              by apply negbTE.
-        rewrite Habs in HB'.
-        move/eqP: HB'=>HB'.
-        by rewrite //.
-    by rewrite cards1.
+    apply (nextLine_end n B curLine ld rd col full)=> //.
   + (* col != full *)
     set P := (~: (((make_ld n B curLine) :|: (make_rd n B curLine)) :|: (make_col n B))).
     have ltn_curLine: curLine < n.
@@ -1201,95 +1350,17 @@ Proof.
       apply HB.
     rewrite (queensEachPos_correct n gtz_n ltn_n _ _ _ _ _ _ B curLine _ P)=> //.
     rewrite addn0.
-    have ->: [set B' in valid_pos n | board_included n B B' & board_possible n P B' curLine]
-           = [set B' in valid_pos n | board_included n B B'].
-      rewrite -setP /eq_mem=> i.
-      rewrite !in_set.
-      rewrite andbA.
-      case Hi: (is_complete n i && is_correct n n i && board_included n B i).
-      + (* is_complete n i && is_correct n n i && board_included n B i *)
-        rewrite andbC andbT.
-        move/andP: Hi=> [/andP[Hicompl Hicorr] HBi].
-        rewrite /board_possible.
-        apply/forallP=> x.
-        apply/implyP=> HxcurLine.
-        rewrite in_setC !in_setU.
-        rewrite !negb_or.
-        have ->: x \notin make_ld n B curLine.
-          apply/negP=> Habs.
-          rewrite /make_ld in_set in Habs.
-          move/existsP: Habs=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
-          move: (from_correct n n x curLine i Hicorr HxcurLine)=> [_ [_ Hicorr2]].
-          move: (Hicorr2 j j')=> Hicorr2'.
-          move: (from_correct n curLine j j' B (correct HB) Hjj'1)=> [_ [Hj' _]].
-          have Hj'2: (curLine == j') = false.
-            apply negbTE.
-            by rewrite neq_ltn Hj' orbT.
-          move: (from_included n B i j j' HBi Hjj'1)=> HjB.
-          rewrite Hj'2 andbF /= HjB /= in Hicorr2'.
-          by rewrite Hjj'2 /= andbF in Hicorr2'.
-        have ->: x \notin make_rd n B curLine.
-          apply/negP=> Habs.
-          rewrite /make_rd in_set in Habs.
-          move/existsP: Habs=> [j /existsP [j' /andP [Hjj'1 Hjj'2]]].
-          move: (from_correct n n x curLine i Hicorr HxcurLine)=> [_ [_ Hicorr2]].
-          move: (Hicorr2 j j')=> Hicorr2'.
-          move: (from_correct n curLine j j' B (correct HB) Hjj'1)=> [_ [Hj' _]].
-          have Hj'2: (curLine == j') = false.
-            apply negbTE.
-            by rewrite neq_ltn Hj' orbT.
-          move: (from_included n B i j j' HBi Hjj'1)=> HjB.
-          rewrite Hj'2 andbF /= HjB /= in Hicorr2'.
-          by rewrite Hjj'2 /= andbF in Hicorr2'.
-        have ->: x \notin make_col n B.
-          apply/negP=> Habs.
-          rewrite /make_col in_set in Habs.
-          move/existsP: Habs=> [j Hj].
-          move: (from_correct n n x curLine i Hicorr HxcurLine)=> [_ [_ Hicorr2]].
-          move: (Hicorr2 x j)=> Hicorr2'.
-          move: (from_correct n curLine x j B (correct HB) Hj)=> [_ [Hj2 _]].
-          have Hx: x == x by trivial.
-          rewrite Hx /= in Hicorr2'.
-          rewrite (from_included n B i x j HBi Hj) /= in Hicorr2'.
-          have Hj2': (curLine == j) = false.
-            apply negbTE.
-            by rewrite neq_ltn Hj2 orbT.
-          by rewrite Hj2' /= in Hicorr2'.
-        by rewrite /=.
-      + (* ~~ (is_complete n i && is_correct n n i && board_included n B i ) *)
-        by rewrite andbC andbF.
-    rewrite //.
+    rewrite (nextLine_oneCase n B curLine ld rd col full) // => //.
     split.
     (* Hfuel1 *)
     apply (ltn_trans (n := 2 * n * (n - curLine))).
-    rewrite !muln_gt0.
-    have ->: 0 < 2 by trivial.
-    rewrite gtz_n.
+    rewrite !muln_gt0 /= gtz_n.
     rewrite subn_gt0 ltn_curLine //.
     rewrite -(ltn_add2r 1) [2 * n * (n - curLine) + 1]addn1 [fuel.-1 + 1]addn1 -Hfuel' -addn1=> //.
     (* Hfuel2 *)
-    move=> x [ltn_x Hx].
-    rewrite -(ltn_add2r 1) !addn1 prednK.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine))).
-    apply leq_subr.
-    rewrite addn1 //.
-    apply Hfuel.
-    apply (leq_ltn_trans (n := (2 * n * (n - curLine) + 1)))=> //.
-    rewrite -(ltn_add2r (1 + 1)) !addnA !addn1 !prednK.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
-    rewrite -{1}[1]add0n.
-    rewrite ltn_add2r.
-    rewrite !muln_gt0.
-    have ->: 0 < 2 by trivial.
-    rewrite gtz_n.
-    rewrite subn_gt0 ltn_curLine //.
-    apply Hfuel.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
-    rewrite -(ltn_add2r 1) !addn1 prednK.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
-    rewrite addn1 ltn0Sn //.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
+    apply nextLine_fuel2'=> //.
+    (* Hfuel3 *)
+    apply (nextLine_fuel3' n curLine)=> //.
     split.
     apply compl_repr.
     apply union_repr=> //.
@@ -1300,7 +1371,7 @@ Proof.
     by rewrite /P !setCU -setIA subsetIl.
     by rewrite /P !setCU -setIAC subsetIr.
     by rewrite /P !setCU subsetIr.
-Qed.
+Admitted.
 
 Theorem queens_correct: forall n, n > 0 -> n < BitsRepr.wordsize -> countNQueens n (2 * n * n + 2) = #|valid_pos n|.
 Proof.
