@@ -91,6 +91,12 @@ Record repr_poss {n B curLine P poss} :=
     poss_rd: P \subset (~: make_rd n B curLine);
     poss_col: P \subset (~: make_col n B) }.
 
+Record fuel_correct {n curLine} {P: {set 'I_BitsRepr.wordsize}} {fuel} :=
+  { fuel_pos: fuel > 0;
+    fuel_inLine: (forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P -> 
+                  fuel >= (2 * n * (n - curLine) - [arg min_(k < x in P) k]).+1);
+    fuel_gt1: fuel.-1 > 0 }.
+
 Lemma size_full (n: nat) : n < BitsRepr.wordsize ->
   n = #|[set x : 'I_BitsRepr.wordsize | x < n]|.
 Proof.
@@ -162,27 +168,49 @@ Lemma from_included: forall n B i j j', board_included n B i -> get_coord n B j 
   by rewrite Hjj' /= in Hincljj'.
 Qed.
 
-Set Printing Projections.
+(*
+Lemma nextLine_fuel2 n fuel curLine (P': {set 'I_BitsRepr.wordsize}) :
+  forall (x0 : 'I_BitsRepr.wordsize), x0 < n /\ x0 \in P' ->
+    2 * n * (n - curLine) - [arg min_(k < x0 in P') k] < fuel.-1.
+Proof.
+  move=> x0 [ltn_x0 Hx0].
+  apply (leq_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
+  apply ltn_sub2l.
+  apply Hminn'.
+  rewrite -/min.
+  case: [arg min_(k < x0 in P') k] / arg_minP=> //.
+  move=> i Hi Hj.
+  rewrite !in_set in Hi.
+  rewrite ltn_neqAle.
+  move/andP: Hi=> [Hi1 Hi2].
+  rewrite eq_sym in Hi1.
+  rewrite Hi1 andbC andbT.
+  rewrite /min.
+  case: arg_minP=> //.
+  move=> i' Hi' Hj'.
+  apply (Hj' i)=> //.
+  rewrite -(leq_add2r 1) !addn1 prednK=> //.
+  apply (Hfuel2 x).
+  by rewrite ltn_x Hx //.
+*)
 
-Lemma queensEachPos_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize -> forall fuel,
-  forall poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
+Lemma queensEachPos_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
+  forall fuel poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
     curLine < n ->
-    fuel > 0 ->
-    (forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P -> fuel >= (2 * n * (n - curLine) - [arg min_(k < x in P) k]).+1) ->
-    ((*(forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n) -> *)fuel.-1 > 0) ->
+    @fuel_correct n curLine P fuel ->
     @repr_queen n B curLine ld rd col full ->
     @repr_poss n B curLine P poss ->
       countNQueensEachPos poss ld col rd curCount full fuel =
         #|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + curCount
-with queensAux_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize -> forall fuel,
-  forall ld col rd full B (curLine: 'I_BitsRepr.wordsize),
+with queensAux_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
+  forall fuel ld col rd full B (curLine: 'I_BitsRepr.wordsize),
     fuel >= (2 * n * (n - curLine) + 1).+1 ->
     @repr_queen n B curLine ld rd col full ->
       countNQueensAux ld col rd full fuel =
         #|[set B' in (valid_pos n) | board_included n B B']|.
 Proof.
-  move=> gtz_n ltn_n fuel poss ld col rd full B curLine curCount P ltn_curLine Hfuel1 Hfuel2 Hfuel3 Hqueen HP.
-  have Hfuel': fuel = fuel.-1.+1 by rewrite prednK.
+  move=> gtz_n ltn_n fuel poss ld col rd full B curLine curCount P ltn_curLine Hfuel Hqueen HP.
+  have Hfuel': fuel = fuel.-1.+1 by rewrite prednK //; exact: (fuel_pos Hfuel).
   rewrite Hfuel'.
   rewrite /countNQueensEachPos.
   rewrite -/countNQueensAux.
@@ -287,8 +315,9 @@ Proof.
       move=> i' Hi' Hj'.
       apply (Hj' i)=> //.
       rewrite -(leq_add2r 1) !addn1 prednK=> //.
-      apply (Hfuel2 x).
+      apply (fuel_inLine Hfuel x).
       by rewrite ltn_x Hx //.
+    apply (fuel_pos Hfuel).
     have ltn_ScurLine: curLine.+1 < BitsRepr.wordsize.
       by apply (leq_ltn_trans (n := n))=> //.
     have HB'cor: is_correct (@Ordinal BitsRepr.wordsize curLine.+1 ltn_ScurLine) n B'.
@@ -580,19 +609,22 @@ Proof.
       rewrite leq_mul2l.
       rewrite subn_gt0 ltn_curLine orbT //.
       apply Hminn.
+    split.
+    apply (fuel_gt1 Hfuel).
+    apply Hfuel2'.
     rewrite -(leq_add2r (1 + 1)) !addnA !addn1 prednK.
     rewrite prednK.
     apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
     apply Hfuel3'.
-    apply (Hfuel2 x).
+    apply (fuel_inLine Hfuel x).
     rewrite ltn_x Hx=> //.
-    apply Hfuel1.
+    apply (fuel_pos Hfuel).
     rewrite -(leq_add2r 1) !addn1 prednK.
     apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
     apply (ltn_trans (n := 1))=> //.
-    apply (Hfuel2 x).
+    apply (fuel_inLine Hfuel x).
     rewrite ltn_x Hx //.
-    apply Hfuel1.
+    apply (fuel_pos Hfuel).
     split.
     (* P' *)
     rewrite /P'.
@@ -644,7 +676,7 @@ Proof.
     rewrite -{1}[n]mul1n leq_mul2r.
     have ->: 0 < 2 by trivial.
     rewrite orbT //.
-    apply (Hfuel2 x).
+    apply (fuel_inLine Hfuel x).
     by rewrite ltn_x Hx.
     split.
     (* curLine.+1 = #|make_col n B'| *)
@@ -1153,6 +1185,7 @@ Proof.
       + (* ~~ (is_complete n i && is_correct n n i && board_included n B i ) *)
         by rewrite andbC andbF.
     rewrite //.
+    split.
     (* Hfuel1 *)
     apply (ltn_trans (n := 2 * n * (n - curLine))).
     rewrite !muln_gt0.
@@ -1193,7 +1226,7 @@ Proof.
     by rewrite /P !setCU -setIA subsetIl.
     by rewrite /P !setCU -setIAC subsetIr.
     by rewrite /P !setCU subsetIr.
-Qed.
+Admitted.
 
 Theorem queens_correct: forall n, n > 0 -> n < BitsRepr.wordsize -> countNQueens n (2 * n * n + 2) = #|valid_pos n|.
 Proof.
@@ -1202,7 +1235,7 @@ Proof.
     move=> x y.
     by rewrite /get_coord !tnth_mktuple.
   rewrite /countNQueens.
-  rewrite (queensAux_correct n ltn_n _ _ _ _ _ empty_board ord0)=> //.
+  rewrite (queensAux_correct n gtz_n ltn_n _ _ _ _ _ empty_board ord0)=> //.
   have ->: [set B' in valid_pos n | board_included n empty_board B'] = valid_pos n.
     rewrite -setP /eq_mem=> i.
     rewrite in_set.
