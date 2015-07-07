@@ -345,6 +345,75 @@ Proof.
       by rewrite Hjj' Hjj'3 /= in Hcorr1.
 Qed.
 
+Lemma nextLine_complete n B curLine ld rd col full min:
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  @repr_queen n B curLine ld rd col full ->
+  is_complete curLine.+1 B'.
+Proof.
+  move=> B' HB.
+  rewrite /is_complete.
+  apply/forallP=> j.
+  apply/implyP=> ltn_j.
+  case Hj: (j == curLine).
+  + (* j == curLine *)
+    apply/existsP.
+    exists min.
+    rewrite /get_coord !tnth_mktuple Hj.
+    by have ->: min == min by trivial.
+  + (* j <> curLine *)
+    have Hj': j < curLine.
+      rewrite ltn_neqAle.
+      apply negbT in Hj.
+      rewrite Hj andbC andbT.
+      by rewrite -(leq_add2r 1) !addn1.
+    move: (complete HB)=> HBcompl.
+    rewrite /is_complete in HBcompl.
+    move/forallP: HBcompl=> HBcompl.
+    move: (HBcompl j)=> HBcomplj.
+    rewrite Hj' /= in HBcomplj.
+    move/existsP: HBcomplj=> [k' Hk'].
+    apply/existsP.
+    exists k'.
+    rewrite /get_coord /B'.
+    by rewrite !tnth_mktuple Hj andbF.
+Qed.
+
+Lemma nextLine_P n B curLine (P: {set 'I_BitsRepr.wordsize}) poss (x: 'I_BitsRepr.wordsize):
+  let min := [arg min_(k < x in P) k] in
+  let P' := P :\ min in
+  let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+  let poss' := BitsRepr.land poss (BitsRepr.lnot bit) in
+  x \in P ->
+  @repr_poss n B curLine P poss ->
+  @repr_poss n B curLine P' poss'.
+Proof.
+  move=> min P' bit poss' Hx HP.
+  split.
+  (* P' *)
+  rewrite /P' setDE.
+  apply inter_repr.
+  apply HP.
+  apply compl_repr.
+  apply keep_min_repr=> //.
+  apply HP.
+  (* TODO: factorize *)
+  (* P' \subset (~: make_ld n B curLine) *)
+  rewrite /P'.
+  apply (subset_trans (B := pred_of_set P))=> //.
+  by rewrite subD1set.
+  by apply HP.
+  (* P' \subset (~: make_rd n B curLine) *)
+  rewrite /P'.
+  apply (subset_trans (B := pred_of_set P))=> //.
+  by rewrite subD1set.
+  by apply HP.
+  (* P' \subset (~: make_col n B) *)
+  rewrite /P'.
+  apply (subset_trans (B := pred_of_set P))=> //.
+  by rewrite subD1set.
+  by apply HP.
+Qed.
+
 Lemma queensEachPos_correct (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
   forall fuel poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
     curLine < n ->
@@ -636,31 +705,7 @@ Proof.
     apply (fuel_inLine Hfuel x).
     rewrite ltn_x Hx //.
     apply (fuel_pos Hfuel).
-    split.
-    (* P' *)
-    rewrite /P'.
-    rewrite setDE.
-    apply inter_repr=> //.
-    apply HP.
-    apply compl_repr.
-    apply keep_min_repr=> //.
-    apply HP.
-    (* TODO: factorize *)
-    (* P' \subset (~: make_ld n B curLine) *)
-    rewrite /P'.
-    apply (subset_trans (B := pred_of_set P))=> //.
-    by rewrite subD1set.
-    by apply HP.
-    (* P' \subset (~: make_rd n B curLine) *)
-    rewrite /P'.
-    apply (subset_trans (B := pred_of_set P))=> //.
-    by rewrite subD1set.
-    by apply HP.
-    (* P' \subset (~: make_col n B) *)
-    rewrite /P'.
-    apply (subset_trans (B := pred_of_set P))=> //.
-    by rewrite subD1set.
-    by apply HP.
+    apply nextLine_P=> //.
     (* 2 * n * (n - curLine.+1) + 1 < fuel.-1 *)
     rewrite /=.
     rewrite -(leq_add2r 1) !addn1 -Hfuel'.
@@ -735,32 +780,7 @@ Proof.
           by rewrite andbF.
       by rewrite cards0 subn0 -(line_val Hqueen) cards1 addn1.
     apply HB'cor.
-    (* is_complete curLine.+1 B' *)
-    rewrite /is_complete.
-    apply/forallP=> j.
-    apply/implyP=> ltn_j.
-    case Hj: (j == curLine).
-    + (* j == curLine *)
-      apply/existsP.
-      exists min.
-      rewrite /get_coord !tnth_mktuple Hj.
-      by have ->: min == min by trivial.
-    + (* j <> curLine *)
-      have Hj': j < curLine.
-        rewrite ltn_neqAle.
-        apply negbT in Hj.
-        rewrite Hj andbC andbT.
-        by rewrite -(leq_add2r 1) !addn1.
-      move: (complete Hqueen)=> HBcompl.
-      rewrite /is_complete in HBcompl.
-      move/forallP: HBcompl=> HBcompl.
-      move: (HBcompl j)=> HBcomplj.
-      rewrite Hj' /= in HBcomplj.
-      move/existsP: HBcomplj=> [k' Hk'].
-      apply/existsP.
-      exists k'.
-      rewrite /get_coord /B'.
-      by rewrite !tnth_mktuple Hj andbF.
+    apply (nextLine_complete n B curLine ld rd col full)=> //.
     (* ld' *)
     rewrite /repr_ld.
     have ->: (make_ld n B' (Ordinal ltn_ScurLine)) = [set i : 'I_BitsRepr.wordsize | (i < BitsRepr.wordsize.-1) && (inord i.+1 \in (make_ld n B' curLine))].
