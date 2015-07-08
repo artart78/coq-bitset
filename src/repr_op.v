@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
      Require Import bits.
-Require Import bitset props.bineqs spec.
+Require Import bitset props.bineqs props.getbit spec.
 
 (** * An axiomatization of OCaml native integers *)
 
@@ -172,6 +172,21 @@ Proof.
   rewrite -fromNat0.
   apply BitsRepr.zero_repr.
   exact: empty_repr.
+Qed.
+
+(** ** Singleton *)
+
+Lemma singleton_repr:
+  forall (x: 'I_BitsRepr.wordsize),
+    native_repr (BitsRepr.lsl BitsRepr.one x) [set x].
+Proof.
+  move=> x.
+  exists (shlBn #1 x).
+  split.
+  * apply BitsRepr.lsl_repr.
+    apply BitsRepr.one_repr.
+  * rewrite getBit_shlBn=> //.
+    apply singleton_repr.
 Qed.
 
 (** ** Left & right shift *)
