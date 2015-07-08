@@ -18,7 +18,6 @@ Definition wordsize := 63.
 Axiom Int63: Type.
 Extract Inlined Constant Int63 => "int".
 
-
 (** We import the following operations from OCaml: *)
 
 Axiom leq: Int63 -> Int63 -> bool.
@@ -36,10 +35,10 @@ Extract Inlined Constant lor => "(lor)".
 Axiom lxor: Int63 -> Int63 -> Int63.
 Extract Inlined Constant lxor => "(lxor)".
 
-Axiom lsr: Int63 -> nat -> Int63.
+Axiom lsr: Int63 -> Int63 -> Int63.
 Extract Inlined Constant lsr => "(lsr)".
 
-Axiom lsl: Int63 -> nat -> Int63.
+Axiom lsl: Int63 -> Int63 -> Int63.
 Extract Inlined Constant lsl => "(lsl)".
 
 Axiom lneg: Int63 -> Int63.
@@ -58,23 +57,26 @@ Extract Inlined Constant zero => "0".
 Axiom one : Int63.
 Extract Inlined Constant one => "1".
 
-Fixpoint toInt (bs: seq bool)(k: nat): Int63 :=
+Axiom succ : Int63 -> Int63.
+Extract Inlined Constant succ => "(fun x -> x + 1)".
+
+Fixpoint toInt (bs: seq bool)(k: Int63): Int63 :=
   match bs with
     | [::] => zero
-    | [:: false & bs] => toInt bs (k.+1)
-    | [:: true & bs ] => land (lsr one k) (toInt bs (k.+1))
+    | [:: false & bs] => toInt bs (succ k)
+    | [:: true & bs ] => land (lsr one k) (toInt bs (succ k))
   end.
 
 (** Careful, this is painfully slow... Any workaround? *)
-Definition toInt63 (bs: BITS wordsize): Int63 
-  := toInt bs 0.
+Definition toInt63 (bs: BITS wordsize): Int63
+  := toInt bs zero. 
 
 
 Fixpoint fromInt (n: Int63)(k: nat): seq bool :=
   match k with 
     | 0 => [::]
     | k.+1 =>
-      [:: leq (land n (lsr one (63 - k.+1))) one &
+      [:: leq (land n (lsr one (toInt63 #(63 - k.+1)))) one &
           fromInt n k]
   end.
 
@@ -93,7 +95,11 @@ Canonical fromInt63 (n: Int63): BITS 63
 [bs : BITS 63] if they satisfy the axiom [repr_native]. Morally, it
 means that both represent the same number (ie. same 63 booleans). *)
 
-Axiom native_repr: Int63 -> (BITS wordsize) -> Prop.
+Axiom native_repr: Int63 -> BITS wordsize -> Prop.
+
+Definition natural_repr: Int63 -> nat -> Prop :=
+  fun i n =>
+    exists bs, native_repr i bs /\ # n = bs.
 
 (** We postulate that OCaml's operations are a refinement of the
     coq-bits ones. *)
@@ -102,8 +108,12 @@ Axiom lnot_repr: forall i bs, native_repr i bs -> native_repr (lnot i) (invB bs)
 Axiom land_repr: forall i i' bs bs', native_repr i bs -> native_repr i' bs' -> native_repr (land i i') (andB bs bs').
 Axiom lor_repr: forall i i' bs bs', native_repr i bs -> native_repr i' bs' -> native_repr (lor i i') (orB bs bs').
 Axiom lxor_repr: forall i i' bs bs', native_repr i bs -> native_repr i' bs' -> native_repr (lxor i i') (xorB bs bs').
-Axiom lsr_repr: forall i bs k, native_repr i bs -> native_repr (lsr i k) (shrBn bs k).
-Axiom lsl_repr: forall i bs k, native_repr i bs -> native_repr (lsl i k) (shlBn bs k).
+Axiom lsr_repr: forall i j bs k,
+                  native_repr i bs -> natural_repr j k ->
+                  native_repr (lsr i j) (shrBn bs k).
+Axiom lsl_repr: forall i j bs k,
+                  native_repr i bs -> natural_repr j k ->
+                  native_repr (lsl i j) (shlBn bs k).
 Axiom lneg_repr: forall i bs, native_repr i bs -> native_repr (lneg i) (negB bs).
 Axiom ldec_repr: forall i bs, native_repr i bs -> native_repr (ldec i) (decB bs).
 Axiom leq_repr: forall i i' bs bs', native_repr i bs -> native_repr i' bs' -> (leq i i') = (bs == bs').
@@ -146,13 +156,26 @@ Definition native_repr
   exists bv, BitsRepr.native_repr n bv /\ repr bv E.
 
 
-(** We go from Coq's [nat] to [Int63] through [BITS 63]. *)
+(** We go from Coq's [nat] to [Int63] by (brutally) collapsing [nat]
+    to [int]: *)
 
-Definition toInt63 (n: nat): BitsRepr.Int63
-  := BitsRepr.toInt63 #n.
+Extract Inductive nat => int [ "0" "succ" ]
+ "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 
-Definition fromInt63 (n: BitsRepr.Int63): nat
-  := toNat (BitsRepr.fromInt63 n).
+Axiom toInt63: nat -> BitsRepr.Int63.
+(*  := BitsRepr.toInt63 #n. *)
+
+Extract Inlined Constant toInt63 => "".
+
+Axiom toInt63_def : forall n, toInt63 n = BitsRepr.toInt63 (# n).
+
+
+Axiom fromInt63: BitsRepr.Int63 -> nat.
+(*  := toNat (BitsRepr.fromInt63 n). *)
+
+Extract Inlined Constant fromInt63 => "".
+
+Axiom fromInt63_def : forall n, fromInt63 n = toNat (BitsRepr.fromInt63 n).
 
 (** ** Equality *)
 Lemma eq_repr: forall i i' E E', native_repr i E -> native_repr i' E' -> (BitsRepr.leq i i') = (E == E').
@@ -178,11 +201,15 @@ Qed.
 
 Lemma sl_repr:
   forall i E, native_repr i E ->
-    native_repr (BitsRepr.lsl i 1) [set i : 'I_BitsRepr.wordsize | 0 < i & @inord BitsRepr.wordsize.-1 i.-1 \in E].
+    native_repr (BitsRepr.lsl i BitsRepr.one) [set i : 'I_BitsRepr.wordsize | 0 < i & @inord BitsRepr.wordsize.-1 i.-1 \in E].
 Proof.
   move=> i E [bv [r_native r_set]].
   exists (shlBn bv 1); split.
-  * exact: BitsRepr.lsl_repr.
+  * apply: BitsRepr.lsl_repr;
+      first by assumption.
+    eexists; split;
+      first by apply BitsRepr.one_repr.
+    done.
   * have H: BitsRepr.wordsize = BitsRepr.wordsize.-1.+1 by compute.
     have ->: [set i0 : 'I_BitsRepr.wordsize | 0 < i0 & inord i0.-1 \in E]
            = [set i0 : 'I_BitsRepr.wordsize | 0 < i0 & cast_ord H (inord i0.-1) \in E].
@@ -197,11 +224,15 @@ Qed.
 
 Lemma sr_repr:
   forall i E, native_repr i E ->
-    native_repr (BitsRepr.lsr i 1) [set i : 'I_BitsRepr.wordsize | i < BitsRepr.wordsize.-1 & @inord BitsRepr.wordsize.-1 i.+1 \in E].
+    native_repr (BitsRepr.lsr i BitsRepr.one) [set i : 'I_BitsRepr.wordsize | i < BitsRepr.wordsize.-1 & @inord BitsRepr.wordsize.-1 i.+1 \in E].
 Proof.
   move=> i E [bv [r_native r_set]].
   exists (shrBn bv 1); split.
-  * exact: BitsRepr.lsr_repr.
+  * apply: BitsRepr.lsr_repr; 
+      first by assumption.
+    eexists; split; 
+      first by apply BitsRepr.one_repr.
+    done.
   * have H: BitsRepr.wordsize = BitsRepr.wordsize.-1.+1 by compute.
     have ->: [set i0 : 'I_BitsRepr.wordsize | i0 < BitsRepr.wordsize.-1 & inord i0.+1 \in E]
            = [set i0 : 'I_BitsRepr.wordsize | i0 < BitsRepr.wordsize.-1 & cast_ord H (inord i0.+1) \in E].
@@ -242,16 +273,17 @@ Proof.
   * apply create.create_repr => //.
   * rewrite /create/create.create; case: b.
     + (* Case: b ~ true *)
-      by apply BitsRepr.ldec_repr;
+      apply BitsRepr.ldec_repr.
+      by rewrite toInt63_def;
          apply BitsRepr.toInt63_repr.
     + (* Case: b ~ false *)
-      by apply BitsRepr.toInt63_repr.
+      by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
 Qed.
 
 (** ** Querying *)
 
 Definition get (bs: BitsRepr.Int63) (k: 'I_BitsRepr.wordsize): bool
-  := BitsRepr.leq (BitsRepr.land (BitsRepr.lsr bs k) (toInt63 1)) (toInt63 1).
+  := BitsRepr.leq (BitsRepr.land (BitsRepr.lsr bs (toInt63 k)) BitsRepr.one) BitsRepr.one.
 
 Lemma get_repr:
   forall i E (k: 'I_BitsRepr.wordsize), native_repr i E ->
@@ -260,12 +292,14 @@ Proof.
   move=> i E k H.
   rewrite /get.
   move: H=> [bv [Hbv1 Hbv2]].
-  rewrite (BitsRepr.leq_repr _ _ (andB (shrBn bv k) #1) #1).
+  rewrite (BitsRepr.leq_repr _ _ (andB (shrBn bv k) #1) #1);
+    last by apply BitsRepr.one_repr.
   apply get.get_repr=> //.
-  apply BitsRepr.land_repr.
+  apply BitsRepr.land_repr;
+     last by apply BitsRepr.one_repr.
   apply BitsRepr.lsr_repr=> //.
-  apply BitsRepr.toInt63_repr.
-  by apply BitsRepr.toInt63_repr.
+  eexists; split => //;
+    first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
 Qed.
 
 (** ** Intersection *)
@@ -315,7 +349,7 @@ Definition set (bs: BitsRepr.Int63) k (b: bool): BitsRepr.Int63
 
 Lemma set_repr:
   forall i (k: 'I_BitsRepr.wordsize) (b: bool) E, native_repr i E ->
-    native_repr (set i k b) (if b then (k |: E) else (E :\ k)).
+    native_repr (set i (toInt63 k) b) (if b then (k |: E) else (E :\ k)).
 Proof.
   move=> i k b E [bv [Hbv1 Hbv2]].
   exists (set.set bv k b).
@@ -324,11 +358,13 @@ Proof.
   case: b.
     apply BitsRepr.lor_repr=> //.
     apply BitsRepr.lsl_repr=> //.
-    apply BitsRepr.toInt63_repr.
+    + by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
+    + by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
     apply BitsRepr.land_repr=> //.
     apply BitsRepr.lnot_repr=> //.
     apply BitsRepr.lsl_repr=> //.
-    apply BitsRepr.toInt63_repr=> //.
+    rewrite toInt63_def; apply BitsRepr.toInt63_repr=> //.
+    by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
   by apply set.set_repr.
 Qed.
 
@@ -369,8 +405,8 @@ Qed.
 Definition pop_table := cardinal.pop_table 3.
 
 Definition pop_elem (bs: BitsRepr.Int63)(i: nat): nat
-  := let x := BitsRepr.land (BitsRepr.lsr bs (i * 3)) 
-                            (BitsRepr.ldec (BitsRepr.lsl (toInt63 1) 3)) in
+  := let x := BitsRepr.land (BitsRepr.lsr bs (toInt63 (i * 3))) 
+                            (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 3))) in
      nth 0 pop_table (fromInt63 x).
 
 Lemma pop_elem_repr: 
@@ -382,17 +418,19 @@ Proof.
   rewrite /pop_elem/cardinal.pop_elem.
   suff ->:
        ((fromInt63
-          (BitsRepr.land (BitsRepr.lsr n (i * 3))
-                         (BitsRepr.ldec (BitsRepr.lsl (toInt63 1) 3)))) =
+          (BitsRepr.land (BitsRepr.lsr n (toInt63 (i * 3)))
+                         (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 3))))) =
        (toNat (andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3)))))
        by done.
-  rewrite /fromInt63; apply f_equal.
+  rewrite fromInt63_def; apply f_equal.
   apply BitsRepr.fromInt63_repr.
   apply BitsRepr.land_repr.
-  * by apply BitsRepr.lsr_repr=> //.
-  * by apply BitsRepr.ldec_repr;
-       apply BitsRepr.lsl_repr;
-       apply BitsRepr.toInt63_repr.
+  * by apply BitsRepr.lsr_repr=> //;
+    eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
+  * apply BitsRepr.ldec_repr;
+    apply BitsRepr.lsl_repr;
+       first by apply BitsRepr.one_repr.
+    by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
 Qed.
 
 Fixpoint popAux (bs: BitsRepr.Int63)(i: nat): nat :=
