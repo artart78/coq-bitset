@@ -155,6 +155,7 @@ Definition fromInt63 (n: BitsRepr.Int63): nat
   := toNat (BitsRepr.fromInt63 n).
 
 (** ** Equality *)
+
 Lemma eq_repr: forall i i' E E', native_repr i E -> native_repr i' E' -> (BitsRepr.leq i i') = (E == E').
 Proof.
   move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
@@ -377,6 +378,20 @@ Proof.
   split.
   apply BitsRepr.lor_repr=> //.
   by apply union.union_repr.
+Qed.
+
+(** ** Subset *)
+
+Lemma subset_repr: forall (bs bs': BitsRepr.Int63) E E',
+  native_repr bs E -> native_repr bs' E' ->
+    (BitsRepr.leq (BitsRepr.land bs bs') bs) =
+      (E \subset E').
+Proof.
+  move=> bs bs' E E' HE HE'.
+  rewrite (eq_repr _ _ (E :&: E') E)=> //.
+  apply/eqP.
+  case: setIidPl=> //=.
+  apply inter_repr=> //.
 Qed.
 
 (** ** Cardinality *)

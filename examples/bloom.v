@@ -36,14 +36,6 @@ Proof.
   apply singleton_repr.
 Qed.
 
-Lemma subset_repr: forall (bs bs': BitsRepr.Int63) E E',
-  native_repr bs E -> native_repr bs' E' ->
-    (BitsRepr.leq (BitsRepr.land bs bs') bs) =
-      (E \subset E').
-Proof.
-  admit.
-Admitted.
-
 Lemma bloom_correct1: forall H (T': {set 'I_BitsRepr.wordsize}) add,
   T' \subset bloomAdd_repr T' H add.
 Proof.
