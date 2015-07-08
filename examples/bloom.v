@@ -40,32 +40,31 @@ Proof.
   admit.
 Admitted.
 
+Lemma bloom_correct1: forall T T' H add, native_repr T T' ->
+  T' \subset bloomAdd_repr T' H add.
+Proof.
+  admit.
+Admitted.
+
+Lemma bloom_correct2: forall T H check,
+  bloomCheck (bloomAdd T H check) H check.
+Proof.
+  admit.
+Admitted.
+
 Lemma bloom_correct: forall T T' H add check, native_repr T T' ->
  (~ bloomCheck (bloomAdd T H add) H check) -> (~ bloomCheck T H check) /\ (add <> check).
 Proof.
-  move=> T T'.
-  elim.
-  + (* H ~ [::] *)
-  move=> add check Hrepr Hyp.
-  rewrite /bloomCheck /= in Hyp.
-  rewrite (eq_repr _ _ set0 set0) in Hyp=> //.
-  rewrite -(set0I (bloomAdd_repr T' [::] add)).
-  apply inter_repr.
-  apply zero_repr.
-  rewrite //=.
-  apply zero_repr.
-  + (* H ~ a :: l *)
-  move=> a l IH add check Hrepr Hyp.
+  move=> T T' H add check Hrepr Hyp.
   split.
   * move=> Habs.
-    have Habs': bloomCheck (bloomAdd T (a :: l) add) (a :: l) check.
+    have Habs': bloomCheck (bloomAdd T H add) H check.
       rewrite /bloomCheck in Habs.
-      rewrite (subset_repr _ _ (bloomAdd_repr set0 (a :: l) check) T') in Habs=> //.
+      rewrite (subset_repr _ _ (bloomAdd_repr set0 H check) T') in Habs=> //.
       rewrite /bloomCheck.
-      rewrite (subset_repr _ _ (bloomAdd_repr set0 (a :: l) check) (bloomAdd_repr T' (a :: l) add)).
+      rewrite (subset_repr _ _ (bloomAdd_repr set0 H check) (bloomAdd_repr T' H add)).
       rewrite (subset_trans (B := pred_of_set T')) //.
-      rewrite /bloomAdd_repr -/bloomAdd_repr.
-      admit.
+      apply (bloom_correct1 T)=> //.
       apply bloomAdd_isRepr=> //.
       apply zero_repr.
       apply bloomAdd_isRepr=> //.
@@ -74,7 +73,5 @@ Proof.
     by rewrite Habs' in Hyp.
   * move=> Habs.
     rewrite Habs in Hyp.
-    have Habs': bloomCheck (bloomAdd T (a :: l) check) (a :: l) check.
-      admit.
-    by rewrite Habs' in Hyp.
-Admitted.
+    by rewrite bloom_correct2 in Hyp.
+Qed.
