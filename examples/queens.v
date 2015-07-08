@@ -13,7 +13,7 @@ Fixpoint countNQueensEachPos (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: Bit
          curCount
        else (
          let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
-         let count := countNQueensAux (BitsRepr.lsr (BitsRepr.lor ld bit) 1) (BitsRepr.lor col bit) (BitsRepr.lsl (BitsRepr.lor rd bit) 1) full n' in
+         let count := countNQueensAux (BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one) (BitsRepr.lor col bit) (BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one) full n' in
          countNQueensEachPos (BitsRepr.land poss (BitsRepr.lnot bit)) ld col rd (curCount + count) full n'
        )
      end
@@ -30,7 +30,7 @@ with countNQueensAux (ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int6
      end.
 
 Definition countNQueens (n: nat) (fuel: nat)
-  := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one n)) fuel.
+  := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) fuel.
 
 Definition get_coord (n: nat) (B: BitsRepr.wordsize.-tuple (BitsRepr.wordsize.-tuple bool)) (x: 'I_BitsRepr.wordsize) (y: 'I_BitsRepr.wordsize) := tnth (tnth B x) y.
 
@@ -537,7 +537,7 @@ Lemma nextLine_ld n B (curLine: 'I_BitsRepr.wordsize) ld rd col full poss (P: {s
   let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
   let min := [arg min_(k < x in P) k] in
   let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
-  let ld' := BitsRepr.lsr (BitsRepr.lor ld bit) 1 in
+  let ld' := BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one in
   n < BitsRepr.wordsize ->
   x \in P ->
   @repr_queen n B curLine ld rd col full ->
@@ -647,7 +647,7 @@ Lemma nextLine_rd n B (curLine: 'I_BitsRepr.wordsize) ld rd col full poss (P: {s
   let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
   let min := [arg min_(k < x in P) k] in
   let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
-  let rd' := BitsRepr.lsl (BitsRepr.lor rd bit) 1 in
+  let rd' := BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one in
   x \in P ->
   @repr_queen n B curLine ld rd col full ->
   @repr_poss n B curLine P poss ->
@@ -1282,9 +1282,9 @@ Proof.
       rewrite -{1}[2 * n]muln1.
       rewrite leq_mul2l.
       by rewrite subn_gt0 ltn_curLine orbT.
-    set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) 1).
+    set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one).
     set col' := (BitsRepr.lor col bit).
-    set rd' := (BitsRepr.lsl (BitsRepr.lor rd bit) 1).
+    set rd' := (BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one).
     set B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize].
     set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
     set P' := P :\ min.
@@ -1477,10 +1477,13 @@ Proof.
   apply BitsRepr.ldec_repr.
   apply BitsRepr.lsl_repr.
   apply BitsRepr.one_repr.
+  by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
   apply spec.subset_repr.
   by rewrite leq_eqVlt ltn_n orbT.
 Qed.
 
 Cd "extraction".
+
+Require Import ExtrOcamlBasic.
 
 Separate Extraction countNQueens.
