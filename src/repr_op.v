@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
      Require Import bits.
-Require Import bitset props.bineqs spec.
+Require Import bitset props.bineqs props.getbit spec.
 
 (** * An axiomatization of OCaml native integers *)
 
@@ -178,6 +178,7 @@ Extract Inlined Constant fromInt63 => "".
 Axiom fromInt63_def : forall n, fromInt63 n = toNat (BitsRepr.fromInt63 n).
 
 (** ** Equality *)
+
 Lemma eq_repr: forall i i' E E', native_repr i E -> native_repr i' E' -> (BitsRepr.leq i i') = (E == E').
 Proof.
   move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
@@ -195,6 +196,21 @@ Proof.
   rewrite -fromNat0.
   apply BitsRepr.zero_repr.
   exact: empty_repr.
+Qed.
+
+(** ** Singleton *)
+
+Lemma singleton_repr:
+  forall (x: 'I_BitsRepr.wordsize),
+    native_repr (BitsRepr.lsl BitsRepr.one x) [set x].
+Proof.
+  move=> x.
+  exists (shlBn #1 x).
+  split.
+  * apply BitsRepr.lsl_repr.
+    apply BitsRepr.one_repr.
+  * rewrite getBit_shlBn=> //.
+    apply singleton_repr.
 Qed.
 
 (** ** Left & right shift *)
@@ -398,6 +414,20 @@ Proof.
   split.
   apply BitsRepr.lor_repr=> //.
   by apply union.union_repr.
+Qed.
+
+(** ** Subset *)
+
+Lemma subset_repr: forall (bs bs': BitsRepr.Int63) E E',
+  native_repr bs E -> native_repr bs' E' ->
+    (BitsRepr.leq (BitsRepr.land bs bs') bs) =
+      (E \subset E').
+Proof.
+  move=> bs bs' E E' HE HE'.
+  rewrite (eq_repr _ _ (E :&: E') E)=> //.
+  apply/eqP.
+  case: setIidPl=> //=.
+  apply inter_repr=> //.
 Qed.
 
 (** ** Cardinality *)
