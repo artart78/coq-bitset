@@ -160,7 +160,7 @@ Definition native_repr
     to [int]: *)
 
 Extract Inductive nat => int [ "0" "succ" ]
- "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
+                             "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 
 Axiom toInt63: nat -> BitsRepr.Int63.
 (*  := BitsRepr.toInt63 #n. *)
@@ -202,13 +202,14 @@ Qed.
 
 Lemma singleton_repr:
   forall (x: 'I_BitsRepr.wordsize),
-    native_repr (BitsRepr.lsl BitsRepr.one x) [set x].
+    native_repr (BitsRepr.lsl BitsRepr.one (toInt63 x)) [set x].
 Proof.
   move=> x.
   exists (shlBn #1 x).
   split.
   * apply BitsRepr.lsl_repr.
     apply BitsRepr.one_repr.
+    by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
   * rewrite getBit_shlBn=> //.
     apply singleton_repr.
 Qed.
