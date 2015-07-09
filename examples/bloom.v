@@ -11,7 +11,7 @@ Axiom P: Type.
 Fixpoint bloomAdd (T: BitsRepr.Int63) (H: seq (P -> 'I_BitsRepr.wordsize)) (add: P) : BitsRepr.Int63
  := match H with
    | [::] => T
-   | h :: t => bloomAdd (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (h add)) T) t add
+   | h :: t => bloomAdd (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (toInt63 (h add))) T) t add
    end.
 
 Definition bloomCheck (T: BitsRepr.Int63) (H: seq (P -> 'I_BitsRepr.wordsize)) (check: P) : bool
@@ -51,8 +51,8 @@ Lemma bloom_correct2': forall H S T S' T' check, native_repr T T' -> native_repr
 Proof.
   elim=> [//=|a l IH] S T S' T' check HT HS Hsubset.
   rewrite /bloomAdd_repr -/bloomAdd_repr.
-  apply (IH (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (a check)) S)
-            (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (a check)) T)).
+  apply (IH (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (toInt63 (a check))) S)
+            (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (toInt63 (a check))) T)).
   apply union_repr=> //.
   apply singleton_repr=> //.
   apply union_repr=> //.
@@ -97,3 +97,9 @@ Proof.
     rewrite Habs in Hyp.
     by rewrite (bloom_correct2 _ T') in Hyp.
 Qed.
+
+Cd "extraction".
+
+Require Import ExtrOcamlBasic.
+
+Separate Extraction bloomAdd bloomCheck.
