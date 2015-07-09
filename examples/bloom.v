@@ -5,9 +5,11 @@ From Bits
 
 Require Import bineqs repr_op.
 
+Section bloom.
+
 (* Definition *)
 
-Axiom P: Type.
+Variable P: Type.
 Fixpoint bloomAdd (T: BitsRepr.Int63) (H: seq (P -> 'I_BitsRepr.wordsize)) (add: P) : BitsRepr.Int63
  := match H with
    | [::] => T
@@ -98,8 +100,10 @@ Proof.
     by rewrite (bloom_correct2 _ T') in Hyp.
 Qed.
 
-Cd "extraction".
+End bloom.
+
+Cd "bloom".
 
 Require Import ExtrOcamlBasic.
 
-Separate Extraction bloomAdd bloomCheck.
+Extraction "bloom.ml" bloomAdd bloomCheck.
