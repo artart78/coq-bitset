@@ -93,7 +93,7 @@ Record repr_poss {n B curLine P poss} :=
 
 Record fuel_correct {n curLine} {P: {set 'I_BitsRepr.wordsize}} {fuel} :=
   { fuel_pos: fuel > 0;
-    fuel_inLine: (forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P -> 
+    fuel_inLine: (forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P ->
                   fuel >= (2 * n * (n - curLine) - [arg min_(k < x in P) k]).+1);
     fuel_gt1: fuel.-1 > 0 }.
 
@@ -295,8 +295,7 @@ Lemma nextLine_fuel2' n curLine (P: {set 'I_BitsRepr.wordsize}) fuel:
   forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P ->
    2 * n * (n - curLine) - [arg min_(k < x in P) k] < fuel.-1.
 Proof.
-  move=> Hfuel.
-  move=> x [ltn_x Hx].
+  move=> Hfuel x [ltn_x Hx].
   rewrite -(ltn_add2r 1) !addn1 prednK.
   apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
   apply (leq_ltn_trans (n := 2 * n * (n - curLine))).
@@ -429,13 +428,11 @@ Proof.
       move/andP: Hmin'=> [/eqP Hj /eqP Hj'].
       rewrite Hj Hj'.
       move: (Hmincorr a b).
-      have ->: (min == a) = (a == min) by exact: eq_sym.
-      have ->: (curLine == b) = (b == curLine) by exact: eq_sym.
-      rewrite Hmin /= Hab.
-      have ->: ((min + b != a + curLine) = (a + curLine != min + b)) by rewrite eq_sym.
-      have ->: ((a + b != min + curLine) = (min + curLine != a + b)) by rewrite eq_sym.
+      rewrite [min == a]eq_sym [curLine == b]eq_sym
+              [min + b == a + curLine]eq_sym [a + b == min + curLine]eq_sym
+              Hmin /= Hab.
       move=> Hcorr.
-      by apply Hcorr.
+      exact: Hcorr.
     - (* j <> min || j' <> curLine *)
       have Hjj'3: get_coord n B j j'.
         by rewrite /get_coord /B' !tnth_mktuple Hmin' in Hjj'2.
@@ -520,7 +517,6 @@ Proof.
       case Hjj': (get_coord n B' j j')=> //.
       have ->: j + j' < i + curLine.+1.
         rewrite -[curLine.+1]add1n addnA addn1.
-        Check from_correct.
         move: (from_correct n (Ordinal ltn_ScurLine) j j' B' HB'cor Hjj')=> [Hj [Hj' _]].
         apply (leq_trans (n := n + curLine)).
         apply (leq_ltn_trans (n := j + curLine)).
@@ -554,11 +550,8 @@ Proof.
       exists min.
       apply/existsP.
       exists curLine.
-      rewrite /B' /get_coord !tnth_mktuple.
-      have ->: min == min by trivial.
-      have ->: curLine == curLine by trivial.
-      move/eqP: Hi ->.
-      by rewrite /=.
+      rewrite /B' /get_coord !tnth_mktuple !eq_refl /=.
+      by move/eqP: Hi ->.
     + (* i <> min *)
       rewrite orbF.
       case HcurLine0: [exists j, exists j', get_coord n B j j' && (i + curLine == j + j')].
@@ -658,24 +651,17 @@ Proof.
       apply/forallP=> j'.
       rewrite negb_and.
       case Hjj': (get_coord n B' j j')=> //=.
-      have ->: i + j' != j + curLine.+1.
-        rewrite neq_ltn.
-        have ->: i + j' < j + curLine.+1.
-          have ->: i = ord0.
-            apply negbT in Hi.
-            rewrite -eqn0Ngt in Hi.
-            move/eqP: Hi=> Hi.
-            apply ord_inj.
-            by rewrite Hi.
-          have ->: ord0 (n' := BitsRepr.wordsize.-1) + j' = j' by trivial.
-          rewrite ltn_addl //.
-          move/forallP: HB'cor=>HB'cor.
-          move: (HB'cor j)=> /forallP HB'corj.
-          move: (HB'corj j')=> /implyP HB'corjj'.
-          move: (HB'corjj' Hjj')=> /andP [/andP [Hj Hj'] _].
-          apply Hj'.
-      by rewrite /=.
-    rewrite //.
+      rewrite neq_ltn.
+      apply/orP; left.
+      have ->: i = ord0.
+        apply negbT in Hi.
+        rewrite -eqn0Ngt in Hi.
+        move/eqP: Hi=> Hi.
+        apply ord_inj.
+        by rewrite Hi.
+      have ->: ord0 (n' := BitsRepr.wordsize.-1) + j' = j' by trivial.
+      rewrite ltn_addl //.
+      by move: (from_correct n (Ordinal ltn_ScurLine) j j' B' HB'cor Hjj')=> [_ [Hj' _]].
   apply sl_repr.
   have ->: make_rd n B' curLine = (make_rd n B curLine) :|: [set min].
     rewrite /make_rd -setP /eq_mem=> i.
@@ -1297,52 +1283,10 @@ Proof.
     by rewrite andbT.
   rewrite //.
   rewrite subn0 ltn_add2l //.
-  split.
-  rewrite /make_col.
-  have ->: [set i | [exists i', get_coord n empty_board i i']] = set0.
-    rewrite -setP /eq_mem=> i.
-    rewrite in_set in_set0.
-    apply negbTE.
-    rewrite negb_exists.
-    apply/forallP =>x.
-    by rewrite Hempty.
-  by rewrite cards0.
-
-  rewrite /is_correct.
-  apply/forallP=> i.
-  apply/forallP=> i'.
-  rewrite Hempty.
-  apply implyFb.
-  rewrite /is_complete.
-  apply/forallP=> x.
-  apply/implyP=> //.
-  (* TODO: factorize ld, rd and col *)
-  (* ld *)
-  rewrite /repr_ld /native_repr.
-  exists (zero BitsRepr.wordsize).
-  rewrite -{1}fromNat0.
-  split.
-  exact: BitsRepr.zero_repr.
-  have ->: (make_ld n empty_board 0) = set0.
-    rewrite -setP /eq_mem=> i.
-    rewrite in_set in_set0.
-    have ->: [exists j, exists j', get_coord n empty_board j j' && (i + 0 == j + j')] = false.
-    have ->: false = ~~ true by trivial.
-    apply negbRL.
-    rewrite negb_exists.
-    apply/forallP=> j.
-    rewrite negb_exists.
-    apply/forallP=> j'.
-    rewrite Hempty andbC andbF //.
-    rewrite //.
-  apply spec.empty_repr.
-  (* rd *)
-  rewrite /repr_rd /native_repr.
-  exists (zero BitsRepr.wordsize).
-  rewrite -{1}fromNat0.
-  split.
-  exact: BitsRepr.zero_repr.
-  have ->: (make_rd n empty_board 0) = set0.
+  have H: forall P,
+    [set i : 'I_BitsRepr.wordsize | [exists j, exists j',
+               get_coord n empty_board j j' && P i j j']] = set0.
+    move=> P.
     rewrite -setP /eq_mem=> i.
     rewrite in_set in_set0.
     have ->: false = ~~ true by trivial.
@@ -1352,14 +1296,7 @@ Proof.
     rewrite negb_exists.
     apply/forallP=> j'.
     by rewrite Hempty andbC andbF.
-  apply spec.empty_repr.
-  (* col *)
-  rewrite /repr_col /native_repr.
-  exists (zero BitsRepr.wordsize).
-  rewrite -{1}fromNat0.
-  split.
-  exact: BitsRepr.zero_repr.
-  have ->: (make_col n empty_board) = set0.
+  have Hcol: (make_col n empty_board) = set0.
     rewrite -setP /eq_mem=> i.
     rewrite in_set in_set0.
     have ->: false = ~~ true by trivial.
@@ -1367,9 +1304,28 @@ Proof.
     rewrite negb_exists.
     apply/forallP=> j.
     by rewrite Hempty.
-  apply spec.empty_repr.
-  rewrite /repr_full.
-  rewrite /native_repr.
+
+  (* Handle ld, rd & col directly *)
+  split; try (rewrite /repr_ld /repr_rd /native_repr;
+              exists (zero BitsRepr.wordsize);
+              split;
+              [ rewrite -{1}fromNat0; exact: BitsRepr.zero_repr
+              | try rewrite /make_ld /make_rd H;
+                try rewrite Hcol;
+                exact: spec.empty_repr]).
+  by rewrite Hcol cards0.
+
+  rewrite /is_correct.
+  apply/forallP=> i.
+  apply/forallP=> i'.
+  rewrite Hempty.
+  by apply implyFb.
+
+  rewrite /is_complete.
+  apply/forallP=> x.
+  by apply/implyP=> //.
+
+  rewrite /repr_full /native_repr.
   exists (decB (shlBn #1 n)).
   split.
   apply BitsRepr.ldec_repr.
