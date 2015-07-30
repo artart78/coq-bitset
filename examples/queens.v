@@ -112,7 +112,6 @@ Proof.
     have ->: [set x : 'I_BitsRepr.wordsize | x < n.+1] = (inord n) |: [set x : 'I_BitsRepr.wordsize | x < n].
       rewrite -setP /eq_mem=> i.
       rewrite !in_set ltnS leq_eqVlt.
-      Set Printing Implicit.
       have ->: (i == @inord BitsRepr.wordsize.-1 n) = (nat_of_ord i == n).
         apply/eqP.
         case H: (nat_of_ord i == n).
@@ -480,29 +479,15 @@ Lemma nextLine_P n B curLine (P: {set 'I_BitsRepr.wordsize}) poss (x: 'I_BitsRep
   @repr_poss n B curLine P' poss'.
 Proof.
   move=> min P' bit poss' Hx HP.
-  split.
+  split; try (rewrite /P';
+             apply (subset_trans (B := pred_of_set P))=> //;
+             [rewrite subD1set|apply HP])=> //.
   (* P' *)
   rewrite /P' setDE.
   apply inter_repr.
   apply HP.
   apply compl_repr.
   apply keep_min_repr=> //.
-  apply HP.
-  (* TODO: factorize *)
-  (* P' \subset (~: make_ld n B curLine) *)
-  rewrite /P'.
-  apply (subset_trans (B := pred_of_set P))=> //.
-  by rewrite subD1set.
-  by apply HP.
-  (* P' \subset (~: make_rd n B curLine) *)
-  rewrite /P'.
-  apply (subset_trans (B := pred_of_set P))=> //.
-  by rewrite subD1set.
-  by apply HP.
-  (* P' \subset (~: make_col n B) *)
-  rewrite /P'.
-  apply (subset_trans (B := pred_of_set P))=> //.
-  by rewrite subD1set.
   by apply HP.
 Qed.
 
