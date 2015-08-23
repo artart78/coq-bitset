@@ -64,7 +64,7 @@ Fixpoint toInt (bs: seq bool)(k: Int63): Int63 :=
   match bs with
     | [::] => zero
     | [:: false & bs] => toInt bs (succ k)
-    | [:: true & bs ] => land (lsr one k) (toInt bs (succ k))
+    | [:: true & bs ] => lor (lsl one k) (toInt bs (succ k))
   end.
 
 (** Careful, this is painfully slow... Any workaround? *)
@@ -76,7 +76,7 @@ Fixpoint fromInt (n: Int63)(k: nat): seq bool :=
   match k with 
     | 0 => [::]
     | k.+1 =>
-      [:: leq (land n (lsr one (toInt63 #(63 - k.+1)))) one &
+      [:: leq (land (lsr n (toInt63 #(63 - k.+1))) one) one &
           fromInt n k]
   end.
 
