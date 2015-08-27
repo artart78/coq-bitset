@@ -48,6 +48,9 @@ Extract Inlined Constant lneg => "-".
 Axiom ldec: Int63 -> Int63.
 Extract Inlined Constant ldec => "(fun x -> x - 1)".
 
+Axiom ladd: Int63 -> Int63 -> Int63.
+Extract Inlined Constant ladd => "(+)".
+
 (** We can convert to and from the axiomatized [Int63] and our
     bitvectors: in fact, they are isomorphic. *)
 
