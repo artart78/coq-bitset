@@ -5,6 +5,7 @@ From Bits
 
 (* TODO: this shall eventually be moved to coq-bits:operations/properties.v *)
 
+
 Lemma toZp_shlBn:
   forall n (p: BITS n) k, k < n ->
     toZp (shlBn p k) = (toZp p * (2 ^ k)%:R)%R.
