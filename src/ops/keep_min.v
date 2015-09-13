@@ -1,7 +1,7 @@
 From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
-     Require Import bits tuple.
+     Require Import bits ssrextra.tuple.
 Require Import props.bineqs props.getbit spec min.
 
 Definition keep_min {n} (bs: BITS n): BITS n
