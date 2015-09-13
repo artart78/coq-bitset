@@ -5,6 +5,52 @@ From Bits
 
 Require Import bineqs repr_op.
 
+(*
+Record pos := mkPos { col : BitsRepr.Int63;
+                      poss : BitsRepr.Int63}.
+
+Definition pos_order (p1 p2: pos): Prop. Admitted.
+
+Theorem nqueens_wf : well_founded pos_order. Admitted.
+ *)
+
+Definition nqueensType (b: bool) :=
+    if b then
+      BitsRepr.Int63
+    else
+      forall (poss curCount: BitsRepr.Int63), BitsRepr.Int63.
+
+Fixpoint countNQueens (ld col rd full: BitsRepr.Int63)(fuel: nat)(b: bool): nqueensType b :=
+  match b return nqueensType b with
+    | true =>
+      match fuel with
+        | 0 => BitsRepr.zero
+        | n'.+1 => 
+          if (BitsRepr.leq col full) then
+            BitsRepr.one
+          else
+            let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
+            countNQueens ld col rd full n' false poss BitsRepr.zero
+      end
+    | false =>
+      fun poss curCount =>
+      match fuel with
+        | 0 => BitsRepr.zero
+        | n'.+1 => 
+          if (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero) then
+            curCount
+          else (
+              let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+              let count := countNQueens
+                             (BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one)
+                             (BitsRepr.lor col bit)
+                             (BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one)
+                             full n' true in
+              countNQueens ld col rd full n' false (BitsRepr.land poss (BitsRepr.lnot bit)) (BitsRepr.ladd curCount count) 
+       )
+      end
+  end.
+
 Fixpoint countNQueensEachPos (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(curCount: BitsRepr.Int63)(full: BitsRepr.Int63)(fuel: nat)
   := match fuel with
      | 0 => BitsRepr.zero
@@ -17,17 +63,17 @@ Fixpoint countNQueensEachPos (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: Bit
          countNQueensEachPos (BitsRepr.land poss (BitsRepr.lnot bit)) ld col rd (BitsRepr.ladd curCount count) full n'
        )
      end
-with countNQueensAux (ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(full: BitsRepr.Int63)(fuel: nat)
-  := match fuel with
-     | 0 => BitsRepr.zero
-     | n'.+1 =>
-       if (BitsRepr.leq col full) then
-         BitsRepr.one
-       else (
-         let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
-         countNQueensEachPos poss ld col rd BitsRepr.zero full n'
-       )
-     end.
+with countNQueensAux (ld col rd full: BitsRepr.Int63)(fuel: nat)
+     := match fuel with
+          | 0 => BitsRepr.zero
+          | n'.+1 =>
+                       if (BitsRepr.leq col full) then
+                         BitsRepr.one
+                       else (
+                           let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
+                           countNQueensEachPos poss ld col rd BitsRepr.zero full n'
+                         )
+        end.
 
 Definition countNQueens (n: nat) (fuel: nat)
   := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) fuel.
