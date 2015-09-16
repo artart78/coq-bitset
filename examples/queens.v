@@ -5,6 +5,39 @@ From Bits
 
 Require Import bineqs repr_op.
 
+Lemma fromInt63_elim:
+  forall x, toInt63 (fromInt63 x) = x.
+Proof.
+Admitted.
+
+Axiom ladd_repr:
+  forall x y, BitsRepr.ladd (toInt63 x) (toInt63 y) = toInt63 (x + y).
+
+(* ladd_repr2 can be proven from ladd_repr, but not the other way
+Lemma ladd_repr2:
+  forall x y, BitsRepr.ladd x y = toInt63 (fromInt63 x + fromInt63 y).
+Proof.
+move=> x y.
+by rewrite ladd_repr !fromInt63_elim.
+Qed.
+*)
+
+Lemma fromInt63_zero:
+  fromInt63 BitsRepr.zero = 0.
+Proof.
+  rewrite fromInt63_def (BitsRepr.fromInt63_repr _ #0).
+  rewrite toNat_fromNatBounded //.
+  exact: BitsRepr.zero_repr.
+Qed.
+
+Lemma fromInt63_one:
+  fromInt63 BitsRepr.one = 1.
+Proof.
+  rewrite fromInt63_def (BitsRepr.fromInt63_repr _ #1).
+  rewrite toNat_fromNatBounded //.
+  exact: BitsRepr.one_repr.
+Qed.
+
 (*
 Record pos := mkPos { col : BitsRepr.Int63;
                       poss : BitsRepr.Int63}.
@@ -20,7 +53,7 @@ Definition nqueensType (b: bool) :=
     else
       forall (poss curCount: BitsRepr.Int63), BitsRepr.Int63.
 
-Fixpoint countNQueens (ld col rd full: BitsRepr.Int63)(fuel: nat)(b: bool): nqueensType b :=
+Fixpoint countNQueensAux (ld col rd full: BitsRepr.Int63)(fuel: nat)(b: bool): nqueensType b :=
   match b return nqueensType b with
     | true =>
       match fuel with
@@ -30,7 +63,7 @@ Fixpoint countNQueens (ld col rd full: BitsRepr.Int63)(fuel: nat)(b: bool): nque
             BitsRepr.one
           else
             let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
-            countNQueens ld col rd full n' false poss BitsRepr.zero
+            countNQueensAux ld col rd full n' false poss BitsRepr.zero
       end
     | false =>
       fun poss curCount =>
@@ -41,18 +74,18 @@ Fixpoint countNQueens (ld col rd full: BitsRepr.Int63)(fuel: nat)(b: bool): nque
             curCount
           else (
               let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
-              let count := countNQueens
+              let count := countNQueensAux
                              (BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one)
                              (BitsRepr.lor col bit)
                              (BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one)
                              full n' true in
-              countNQueens ld col rd full n' false (BitsRepr.land poss (BitsRepr.lnot bit)) (BitsRepr.ladd curCount count) 
+              countNQueensAux ld col rd full n' false (BitsRepr.land poss (BitsRepr.lnot bit)) (BitsRepr.ladd curCount count) 
        )
       end
   end.
-
+(*
 Fixpoint countNQueensEachPos (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(curCount: BitsRepr.Int63)(full: BitsRepr.Int63)(fuel: nat)
-  := match fuel with
+  := match fuel with (* false *)
      | 0 => BitsRepr.zero
      | n'.+1 =>
        if (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero) then
@@ -64,7 +97,7 @@ Fixpoint countNQueensEachPos (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: Bit
        )
      end
 with countNQueensAux (ld col rd full: BitsRepr.Int63)(fuel: nat)
-     := match fuel with
+     := match fuel with (* true *)
           | 0 => BitsRepr.zero
           | n'.+1 =>
                        if (BitsRepr.leq col full) then
@@ -74,9 +107,9 @@ with countNQueensAux (ld col rd full: BitsRepr.Int63)(fuel: nat)
                            countNQueensEachPos poss ld col rd BitsRepr.zero full n'
                          )
         end.
-
+*)
 Definition countNQueens (n: nat) (fuel: nat)
-  := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) fuel.
+  := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) fuel true.
 
 Definition get_coord (n: nat) (B: BitsRepr.wordsize.-tuple (BitsRepr.wordsize.-tuple bool)) (x: 'I_BitsRepr.wordsize) (y: 'I_BitsRepr.wordsize) := tnth (tnth B x) y.
 
@@ -1125,13 +1158,13 @@ Lemma queens_correctInd (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
     @repr_queen n B curLine ld rd col full ->
     @fuel_correct n curLine P fuel ->
      @repr_poss n B curLine P poss ->
-       countNQueensEachPos poss ld col rd curCount full fuel =
+       countNQueensAux ld col rd full fuel false poss curCount =
          toInt63 (#|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + (fromInt63 curCount)))
     /\
     (forall ld col rd full B (curLine: 'I_BitsRepr.wordsize),
     fuel >= (2 * n * (n - curLine) + 1).+1 ->
     @repr_queen n B curLine ld rd col full ->
-      countNQueensAux ld col rd full fuel =
+      countNQueensAux ld col rd full fuel true =
         toInt63 #|[set B' in (valid_pos n) | board_included n B B']|).
 Proof.
   move=> gtz_n ltn_n.
@@ -1144,9 +1177,8 @@ Proof.
   + (* fuel ~ fuel.+1 *)
   split.
   move=> poss ld col rd full B curLine curCount P ltn_curLine Hqueen Hfuel HP.
-  rewrite /countNQueensEachPos.
+  rewrite /countNQueensAux.
   rewrite -/countNQueensAux.
-  rewrite -/countNQueensEachPos.
   case Hend: (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero).
   + (* (poss & full) == 0 *)
     rewrite (eq_repr _ _ [set x in P | x < n] set0) in Hend.
@@ -1169,8 +1201,7 @@ Proof.
       move: (from_correct _ _ i curLine _ Hcor Hi)=> [Habs2 _].
       rewrite ltnNge in Habs2.
       by rewrite Habsi // in Habs2.
-    rewrite cards0 add0n.
-    by have ->: forall x, toInt63 (fromInt63 x) = x by admit.
+    by rewrite cards0 add0n fromInt63_elim.
     rewrite setIdE.
     apply (inter_repr _ _ P [set x : 'I_BitsRepr.wordsize | x < n])=> //.
     apply HP.
@@ -1224,20 +1255,13 @@ Proof.
       by apply (leq_ltn_trans (n := n))=> //.
     move: (nextLine_correct n B curLine P poss ld rd col full x ltn_ScurLine HP Hqueen Hx ltn_x HminP)=> HB'cor.
 
-    have ->: BitsRepr.ladd curCount (countNQueensAux ld' col' rd' full fuel) =
-              toInt63 (fromInt63 curCount + fromInt63 (countNQueensAux ld' col' rd' full fuel)).
-      by admit.
     rewrite (IH2 _ _ _ _ B' (Ordinal ltn_ScurLine))=> //.
     rewrite (IH1 _ _ _ _ _ B curLine _ P')=> //.
-    have ->: forall x y, toInt63 (x + y) = BitsRepr.ladd (toInt63 x) (toInt63 y) by admit.
-    have ->: forall x, toInt63 (fromInt63 x) = x by admit.
-    have ->: forall x y, toInt63 (x + y) = BitsRepr.ladd (toInt63 x) (toInt63 y) by admit.
-    have ->: (toInt63
-           (fromInt63
-              (toInt63 #|[set B'0 in valid_pos n | board_included n B' B'0]|))) =
-        (toInt63 #|[set B'0 in valid_pos n | board_included n B' B'0]|) by admit.
-    have ->: forall x y, BitsRepr.ladd (toInt63 x) (toInt63 y) = toInt63 (x + y) by admit.
-    have ->: forall x y, BitsRepr.ladd (toInt63 x) (toInt63 y) = toInt63 (x + y) by admit.
+    
+    rewrite -ladd_repr.
+    rewrite fromInt63_elim.
+    rewrite -{1}[curCount]fromInt63_elim.
+    rewrite !ladd_repr.
     rewrite [(fromInt63 curCount) + _]addnC addnA.
     move: (nextLine_splitCase n B curLine P min HminP)=> [Hu Hi].
     rewrite Hu cardsU Hi cards0 subn0 //.
@@ -1265,7 +1289,7 @@ Proof.
 
   move=> ld col rd full B curLine Hfuel HB.
   rewrite /countNQueensAux.
-  rewrite -/countNQueensEachPos.
+  rewrite -/countNQueensAux.
   case Hend: (BitsRepr.leq col full).
   + (* col = full *)
     have HcurLine2: n = curLine.
@@ -1279,7 +1303,7 @@ Proof.
       apply HB.
       by trivial.
     rewrite -(nextLine_end n B curLine ld rd col full)=> //.
-    by have ->: BitsRepr.one = toInt63 1 by admit.
+    by rewrite -[BitsRepr.one]fromInt63_elim fromInt63_one.
   + (* col != full *)
     set P := (~: (((make_ld n B curLine) :|: (make_rd n B curLine)) :|: (make_col n B))).
     have ltn_curLine: curLine < n.
@@ -1299,8 +1323,7 @@ Proof.
       apply HB.
       apply HB.
     rewrite (IH1 _ _ _ _ _ B curLine _ P)=> //.
-    have ->: fromInt63 BitsRepr.zero = 0 by admit.
-    rewrite addn0.
+    rewrite fromInt63_zero addn0.
     rewrite (nextLine_oneCase n B curLine ld rd col full) // => //.
     split.
     (* Hfuel1 *)
@@ -1322,7 +1345,7 @@ Proof.
     by rewrite /P !setCU -setIA subsetIl.
     by rewrite /P !setCU -setIAC subsetIr.
     by rewrite /P !setCU subsetIr.
-Admitted.
+Qed.
 
 Theorem queens_correct: forall n, n > 0 -> n < BitsRepr.wordsize -> countNQueens n (2 * n * n + 2) = toInt63 #|valid_pos n|.
 Proof.
