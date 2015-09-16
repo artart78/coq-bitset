@@ -184,124 +184,66 @@ Proof.
   rewrite getBit_dropmsb=> //.
 Qed.
 
-Lemma dropmsb_joinlsb:
-  forall n (bs : BITS n.+1) b,
-    dropmsb (joinlsb (bs, b)) = joinlsb (dropmsb bs, b).
+Lemma getBit_shlB_0:
+  forall n (bs: BITS n), getBit (shlB bs) 0 = false.
 Proof.
-  move=> n bs b.
-  apply allBitsEq.
-  case=> [|k] ?.
-  + (* k ~ 0 *)
-    by rewrite getBit_dropmsb /joinlsb/getBit.
-  + (* k ~ k + 1 *)
-    rewrite getBit_dropmsb=> //.
-    have H: forall bs', getBit (joinlsb (bs', b)) k.+1 = getBit bs' k by compute.
-    by rewrite !H getBit_dropmsb.
-Qed.
-
-
-Lemma setBit_0:
-  forall n, setBit (n := n) #0 0 true = #1.
-Proof.
-  case=> // n.
-  + (* n ~ n + 1 *)
-    by rewrite //= tuple.beheadCons.
-Qed.
-
-Lemma splitlsb_0:
-  forall n, splitlsb (n := n) #0 = (#0, false).
-Proof.
-  move=> n.
-  by rewrite /splitlsb
-             /fromNat /= -/fromNat
-             tuple.theadCons tuple.beheadCons.
-Qed.
-
-Lemma splitmsb_0:
-  forall n, splitmsb (n := n) #0 = (false, #0).
-Proof.
-  elim=> [|n IHn].
-  + (* n ~ 0 *)
-    by rewrite /splitmsb splitlsb_0.
-  + (* n ~ n + 1 *)
-    by rewrite /splitmsb /=
-               tuple.theadCons tuple.beheadCons -/splitmsb
-               IHn.
-Qed.
-
-Lemma dropmsb_setBit:
-  forall n k, k < n ->
-    (dropmsb (setBit (n := n.+1) #0 k true) = setBit (n := n) #0 k true).
-Proof.
-  elim=> // n IHn k le_k.
-  elim: k le_k=> [|k IHk le_k].
-  + (* k ~ 0 *)
-    rewrite /= !tuple.beheadCons /= dropmsb_joinlsb /dropmsb splitmsb_0 //=.
-  + (* k ~ k + 1 *)
-    rewrite {1}/setBit /setBitAux -/setBitAux !splitlsb_0.
-    (* TODO: copying a large chunk of code is not esthetically
-       pleasing (nor future-proof). Is there a way to proceed
-       otherwise, by unfolding setBit and setBitAux on the right-hand
-       side, instead of folding the left-hand side? *)
-    have ->:
-        (match k with
-         | 0 => joinlsb (n := n) (# (0), true)
-         | i'.+1 => joinlsb (setBitAux i' true # (0), false)
-         end) = setBitAux k true #0.
-      by rewrite {2}/setBitAux /= tuple.beheadCons tuple.theadCons /=
-                 -/setBitAux //.
-    have ->: setBitAux k true #0 = setBit #0 k true. by trivial.
-    rewrite dropmsb_joinlsb IHn.
-    rewrite {2}/setBit /setBitAux splitlsb_0 //.
-    by apply le_k.
-Qed.
-
-Lemma getBit_shlBn:
-  forall n k, k < n -> shlBn (n := n) #1 k = setBit #0 k true.
-Proof.
-  elim=> // n IHn k le_k.
-  elim: k le_k.
-  + (* k ~ 0 *)
-    by rewrite setBit_0.
-  + (* k ~ k + 1 *)
-    move=> k IHk le_k.
-    rewrite /shlBn iterS -[iter _ _ _]/(shlBn _ _).
-    rewrite IHk.
-    rewrite {1}/setBit /setBitAux //=.
-    rewrite tuple.beheadCons tuple.theadCons /= -/setBitAux.
-    rewrite /shlB /shlBaux -/setBitAux.
-    have ->:
-        (match k with
-         | 0 => joinlsb (n := n) (# (0), true)
-         | i'.+1 => joinlsb (setBitAux i' true # (0), false)
-         end) = setBitAux k true #0.
-      rewrite {2}/setBitAux //=.
-      rewrite tuple.beheadCons tuple.theadCons /=.
-      by rewrite -/setBitAux //.
-    rewrite -[setBitAux _ _ _]/(setBit _ _ _).
-    rewrite dropmsb_joinlsb.
-    rewrite dropmsb_setBit //.
-    (* TODO: check the ssr doc, but we can extend // with some tactic DB I believe *)
-    auto with arith.
+  elim=> [bs|n Hn /tupleP[b bs]].
+  by rewrite tuple0 /getBit.
+  by rewrite /shlB /shlBaux getBit_dropmsb.
 Qed.
 
 Lemma getBit_shlBn_true:
   forall n k, k < n -> getBit (n := n) (shlBn #1 k) k = true.
 Proof.
-  move=> n k le_k.
-  rewrite getBit_shlBn =>//.
-  apply setBitThenGetSame =>//.
+  elim=> [//|n Hn].
+  elim=> [|k Hk] le_k.
+  rewrite /shlBn /=.
+  rewrite /fromNat //.
+  rewrite /shlBn /= getBit_shlB //=.
+  rewrite -[iter _ _ _]/(shlBn _ _).
+  apply Hk.
+  by apply (ltn_trans (n := k.+1)).
 Qed.
 
 Lemma getBit_shlBn_false:
   forall n k k', k < n -> k' < n -> k <> k' ->
                  getBit (n := n) (shlBn #1 k) k' = false.
 Proof.
-  move=> n k k' ? ?.
-  rewrite getBit_shlBn=> //.
-  have ->: false = getBit (n := n) #0 k'
-    by rewrite getBit_zero.
-  apply setBitThenGetDistinct=> //.
+  elim=> [//|n Hn].
+  elim=> [|k Hk] k' le_k le_k' Hkk'.
+  case: k' le_k' Hkk'=> [//|k' le_k' Hkk'].
+  rewrite /= /getBit /fromNat /= -/fromNat.
+  apply getBit_zero.
+  case: k' le_k' Hkk'=> [|k'] le_k' Hkk'.
+  rewrite /shlBn /=.
+  apply getBit_shlB_0.
+  rewrite /shlBn /= -[iter _ _ _]/(shlBn _ _).
+  rewrite getBit_shlB /= => //.
+  apply Hk.
+  apply (ltn_trans (n := k.+1))=> //.
+  apply (ltn_trans (n := k'.+1))=> //.
+  move/eqP: Hkk'=> Hkk'.
+  apply/eqP.
+  by rewrite -eqSS.
+Qed.
+
+Lemma getBit_shlBn:
+  forall n k, k < n -> shlBn (n := n) #1 k = setBit #0 k true.
+Proof.
+  move=> n k ltn_k.
+  apply allBitsEq=> i ltn_i.
+  case H: (i == k).
+  * move/eqP: H ->.
+    rewrite getBit_shlBn_true=> //.
+    rewrite setBitThenGetSame=> //.
+  * move/eqP: H=> H.
+    rewrite getBit_shlBn_false=> //.
+    rewrite setBitThenGetDistinct=> //.
+    rewrite getBit_zero=> //.
+    move=> Habs.
+    rewrite Habs in H=> //.
+    move=> Habs.
+    by rewrite Habs in H.
 Qed.
 
 Lemma getBit_set_true:
