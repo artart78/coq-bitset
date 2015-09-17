@@ -47,25 +47,32 @@ Record pos := mkPos { ld: BitsRepr.Int63;
                       mode: bool }.
 
 Definition pos_order (p1 p2: pos): Prop := (* p1 < p2 <-> ... *)
-     ((mode p1) < (mode p2))
- || (((mode p1) == (mode p2))
-      && ((fromInt63 (col p1) > fromInt63 (col p2))
-      || ((fromInt63 (col p1) == fromInt63 (col p2))
+      (fromInt63 (col p1) > fromInt63 (col p2))
+   || ((fromInt63 (col p1) == fromInt63 (col p2))
+       && (((mode p1) < (mode p2))
+        || (((mode p1) == (mode p2))
            && (fromInt63 (poss p1) < fromInt63 (poss p2))))).
 
 Theorem nqueens_wf : well_founded pos_order. Admitted.
 
+(* TODO: these are true only if bit is not in col / is in poss *)
+Lemma fromInt63_1: forall st bit, fromInt63 (col st) < fromInt63 (BitsRepr.lor (col st) bit).
+Admitted.
+
+Lemma fromInt63_2: forall st bit, fromInt63 (BitsRepr.land (poss st) (BitsRepr.lnot bit)) < fromInt63 (poss st).
+Admitted.
+
 Definition countNQueensAux: pos -> BitsRepr.Int63.
   refine (Fix nqueens_wf (fun _ => BitsRepr.Int63)
     (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> BitsRepr.Int63) =>
-  match (mode st) with
-    | true =>
+  match (mode st) as x return mode st = x -> _ with
+    | true => fun H =>
       if (BitsRepr.leq (col st) (full st)) then
         BitsRepr.one
       else
         let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor (ld st) (rd st)) (col st)) in
         countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss BitsRepr.zero false) _
-    | false =>
+    | false => fun H =>
       if (BitsRepr.leq (BitsRepr.land (poss st) (full st)) BitsRepr.zero) then
         curCount st
       else (
@@ -80,11 +87,11 @@ Definition countNQueensAux: pos -> BitsRepr.Int63.
             (BitsRepr.land (poss st) (BitsRepr.lnot bit))
             (BitsRepr.ladd (curCount st) count) false) _
       )
-  end)).
-  admit.
-  admit.
-  admit.
-Admitted.
+  end Logic.eq_refl)).
+  by rewrite /pos_order /= H !eq_refl /= orbT.
+  by rewrite /pos_order fromInt63_1.
+  by rewrite /pos_order H eq_refl fromInt63_2 orbC.
+Qed.
 
 Definition countNQueens (n: nat)
   := countNQueensAux (mkPos BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) BitsRepr.zero BitsRepr.zero true).
@@ -242,143 +249,6 @@ Proof.
   move: (Hposs i)=> Hpossi.
   by rewrite Hii' implyTb in Hpossi.
 Qed.
-
-(*
-Lemma nextLine_fuel2 n fuel curLine (P: {set 'I_BitsRepr.wordsize}) (x: 'I_BitsRepr.wordsize):
-  let min := [arg min_(k < x in P) k] in
-  let P' := P :\ min in
-  x < n ->
-  x \in P ->
-  min < 2 * n * (n - curLine) ->
-  @fuel_correct n curLine P fuel ->
-  forall (x0 : 'I_BitsRepr.wordsize), x0 < n /\ x0 \in (P :\ min) ->
-    2 * n * (n - curLine) - [arg min_(k < x0 in (P :\ min)) k] < fuel.-1.
-Proof.
-  move=> min P' ltn_x Hx Hminn' Hfuel x0 [ltn_x0 Hx0].
-  apply (leq_trans (n := 2 * n * (n - curLine) - min)).
-  apply ltn_sub2l.
-  apply Hminn'.
-  case: [arg min_(k < x0 in (P :\ min)) k] / arg_minP=> // i Hi Hj.
-  rewrite !in_set in Hi.
-  rewrite ltn_neqAle.
-  move/andP: Hi=> [Hi1 Hi2].
-  rewrite eq_sym in Hi1.
-  rewrite Hi1 andbC andbT /min.
-  case: arg_minP=> // i' Hi' Hj'.
-  apply (Hj' i)=> //.
-  rewrite -(leq_add2r 1) !addn1 prednK=> //.
-  apply (fuel_inLine Hfuel x).
-  rewrite ltn_x Hx //.
-  exact: (fuel_pos Hfuel).
-Qed.
-
-Lemma nextLine_fuel3 (n: nat) fuel (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) (x: 'I_BitsRepr.wordsize) (ltn_curLine: curLine < n):
-  let min := [arg min_(k < x in P) k] in
-  n > 0 ->
-  min < n ->
-  x < n ->
-  x \in P ->
-  @fuel_correct n curLine P fuel ->
-  fuel.-2 > 0.
-Proof.
-  move=> min gtz_n Hminn ltn_x Hx Hfuel.
-  set P' := P :\ min.
-  have Hfuel3': 1 < 2 * n * (n - curLine) - min.
-    apply (leq_ltn_trans (n := n))=> //.
-    have {1}->: n = 2 * n - n.
-      by rewrite -{1}[n]mul1n -{3}[n]mul1n -mulnBl.
-    apply (leq_ltn_trans (n := 2 * n * (n - curLine) - n)).
-    apply leq_sub2r.
-    have {1}->: 2 * n = 2 * n * 1 by rewrite muln1.
-    rewrite leq_mul2l subn_gt0 ltn_curLine orbT //.
-    apply ltn_sub2l.
-    apply (leq_trans (n := n)).
-    apply Hminn.
-    apply (leq_trans (n := 2 * n)).
-    rewrite -{1}[n]mul1n leq_mul2r.
-    have ->: 0 < 2 by trivial.
-    rewrite orbT //.
-    rewrite -{1}[2 * n]muln1 leq_mul2l subn_gt0 ltn_curLine orbT //.
-    by apply Hminn.
-  rewrite -(leq_add2r (1 + 1)) !addnA !addn1 prednK.
-  rewrite prednK.
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
-  apply Hfuel3'.
-  apply (fuel_inLine Hfuel x).
-  rewrite ltn_x Hx=> //.
-  apply (fuel_pos Hfuel).
-  rewrite -(leq_add2r 1) !addn1 prednK.
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine) - [arg min_(k < x in P) k])).
-  apply (ltn_trans (n := 1))=> //.
-  apply (fuel_inLine Hfuel x).
-  rewrite ltn_x Hx //.
-  exact: (fuel_pos Hfuel).
-Qed.
-
-Lemma nextLine_fuel4 n curLine fuel (x: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) (gtz_n: n > 0) (ltn_curLine: curLine < n) (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize) (Hfuel': fuel = fuel.-1.+1) (ltn_x: x < n) (Hx: x \in P):
-  let min := [arg min_(k < x in P) k] in
-  min < n ->
-  min < 2 * n * (n - curLine) ->
-  @fuel_correct n curLine P fuel ->
-  2 * n * (n - Ordinal (n:=BitsRepr.wordsize) (m:=curLine.+1) ltn_ScurLine) + 1 < fuel.-1.
-Proof.
-  move=> min Hminn Hminn' Hfuel.
-  rewrite /= -(leq_add2r 1) !addn1 -Hfuel'.
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine) - min)).
-  have ->: (2 * n * (n - curLine.+1)).+1 = 2 * n * (n - curLine) - (2 * n - 1).
-    rewrite -[curLine.+1]addn1 subnDA mulnBr -addn1 [2 * n * 1]muln1 subnBA.
-    rewrite addnC [2 * n * (n - curLine) + 1]addnC addnBA //.
-    rewrite -{1}[2 * n]muln1 leq_mul2l subn_gt0 ltn_curLine orbT //.
-    by rewrite muln_gt0 gtz_n.
-  apply ltn_sub2l.
-  apply Hminn'.
-  apply (leq_trans (n := n)).
-  apply Hminn.
-  rewrite subn1 -ltnS prednK.
-  rewrite -{1}[n]mul1n ltn_mul2r.
-  have ->: 1 < 2 by trivial.
-  rewrite andbT.
-  apply (leq_ltn_trans (n := curLine))=> //.
-  apply (leq_trans (n := n)).
-  apply (leq_ltn_trans (n := curLine))=> //.
-  rewrite -{1}[n]mul1n leq_mul2r.
-  have ->: 0 < 2 by trivial.
-  rewrite orbT //.
-  apply (fuel_inLine Hfuel x).
-  by rewrite ltn_x Hx.
-Qed.
-
-Lemma nextLine_fuel2' n curLine (P: {set 'I_BitsRepr.wordsize}) fuel:
-  fuel >= (2 * n * (n - curLine) + 1).+1 ->
-  forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P ->
-   2 * n * (n - curLine) - [arg min_(k < x in P) k] < fuel.-1.
-Proof.
-  move=> Hfuel x [ltn_x Hx].
-  rewrite -(ltn_add2r 1) !addn1 prednK.
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine))).
-  apply leq_subr.
-  rewrite addn1 //.
-  apply Hfuel.
-  apply (leq_ltn_trans (n := (2 * n * (n - curLine) + 1)))=> //.
-Qed.
-
-Lemma nextLine_fuel3' n curLine fuel (gtz_n: n > 0) (ltn_curLine: curLine < n):
-  fuel >= (2 * n * (n - curLine) + 1).+1 ->
-  fuel.-2 > 0.
-Proof.
-  move=> Hfuel.
-  rewrite -(ltn_add2r (1 + 1)) !addnA !addn1 !prednK.
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1)).
-  rewrite -{1}[1]add0n ltn_add2r !muln_gt0 /= gtz_n subn_gt0 ltn_curLine //.
-  apply Hfuel.
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
-  rewrite -(ltn_add2r 1) !addn1 prednK.
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
-  rewrite addn1 ltn0Sn //.
-  apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
-Qed.
-*)
 
 Lemma nextLine_correct n B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) poss ld rd col full x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
   let min := [arg min_(k < x in P) k] in
