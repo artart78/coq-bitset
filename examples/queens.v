@@ -38,78 +38,56 @@ Proof.
   exact: BitsRepr.one_repr.
 Qed.
 
-(*
-Record pos := mkPos { col : BitsRepr.Int63;
-                      poss : BitsRepr.Int63}.
+Record pos := mkPos { ld: BitsRepr.Int63; 
+                      col: BitsRepr.Int63;
+                      rd: BitsRepr.Int63;
+                      full: BitsRepr.Int63;
+                      poss: BitsRepr.Int63;
+                      curCount: BitsRepr.Int63;
+                      mode: bool }.
 
-Definition pos_order (p1 p2: pos): Prop. Admitted.
+Definition pos_order (p1 p2: pos): Prop := (* p1 < p2 <-> ... *)
+     ((mode p1) < (mode p2))
+ || (((mode p1) == (mode p2))
+      && ((fromInt63 (col p1) > fromInt63 (col p2))
+      || ((fromInt63 (col p1) == fromInt63 (col p2))
+           && (fromInt63 (poss p1) < fromInt63 (poss p2))))).
 
 Theorem nqueens_wf : well_founded pos_order. Admitted.
- *)
 
-Definition nqueensType (b: bool) :=
-    if b then
-      BitsRepr.Int63
-    else
-      forall (poss curCount: BitsRepr.Int63), BitsRepr.Int63.
-
-Fixpoint countNQueensAux (ld col rd full: BitsRepr.Int63)(fuel: nat)(b: bool): nqueensType b :=
-  match b return nqueensType b with
+Definition countNQueensAux: pos -> BitsRepr.Int63.
+  refine (Fix nqueens_wf (fun _ => BitsRepr.Int63)
+    (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> BitsRepr.Int63) =>
+  match (mode st) with
     | true =>
-      match fuel with
-        | 0 => BitsRepr.zero
-        | n'.+1 => 
-          if (BitsRepr.leq col full) then
-            BitsRepr.one
-          else
-            let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
-            countNQueensAux ld col rd full n' false poss BitsRepr.zero
-      end
+      if (BitsRepr.leq (col st) (full st)) then
+        BitsRepr.one
+      else
+        let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor (ld st) (rd st)) (col st)) in
+        countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss BitsRepr.zero false) _
     | false =>
-      fun poss curCount =>
-      match fuel with
-        | 0 => BitsRepr.zero
-        | n'.+1 => 
-          if (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero) then
-            curCount
-          else (
-              let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
-              let count := countNQueensAux
-                             (BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one)
-                             (BitsRepr.lor col bit)
-                             (BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one)
-                             full n' true in
-              countNQueensAux ld col rd full n' false (BitsRepr.land poss (BitsRepr.lnot bit)) (BitsRepr.ladd curCount count) 
-       )
-      end
-  end.
-(*
-Fixpoint countNQueensEachPos (poss: BitsRepr.Int63)(ld: BitsRepr.Int63)(col: BitsRepr.Int63)(rd: BitsRepr.Int63)(curCount: BitsRepr.Int63)(full: BitsRepr.Int63)(fuel: nat)
-  := match fuel with (* false *)
-     | 0 => BitsRepr.zero
-     | n'.+1 =>
-       if (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero) then
-         curCount
-       else (
-         let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
-         let count := countNQueensAux (BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one) (BitsRepr.lor col bit) (BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one) full n' in
-         countNQueensEachPos (BitsRepr.land poss (BitsRepr.lnot bit)) ld col rd (BitsRepr.ladd curCount count) full n'
-       )
-     end
-with countNQueensAux (ld col rd full: BitsRepr.Int63)(fuel: nat)
-     := match fuel with (* true *)
-          | 0 => BitsRepr.zero
-          | n'.+1 =>
-                       if (BitsRepr.leq col full) then
-                         BitsRepr.one
-                       else (
-                           let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor ld rd) col) in
-                           countNQueensEachPos poss ld col rd BitsRepr.zero full n'
-                         )
-        end.
-*)
-Definition countNQueens (n: nat) (fuel: nat)
-  := countNQueensAux BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) fuel true.
+      if (BitsRepr.leq (BitsRepr.land (poss st) (full st)) BitsRepr.zero) then
+        curCount st
+      else (
+          let bit := BitsRepr.land (poss st) (BitsRepr.lneg (poss st)) in
+          let count := countNQueensAux (mkPos
+                         (BitsRepr.lsr (BitsRepr.lor (ld st) bit) BitsRepr.one)
+                         (BitsRepr.lor (col st) bit)
+                         (BitsRepr.lsl (BitsRepr.lor (rd st) bit) BitsRepr.one)
+                         (full st) BitsRepr.zero BitsRepr.zero true) _ in
+          countNQueensAux (mkPos
+            (ld st) (col st) (rd st) (full st)
+            (BitsRepr.land (poss st) (BitsRepr.lnot bit))
+            (BitsRepr.ladd (curCount st) count) false) _
+      )
+  end)).
+  admit.
+  admit.
+  admit.
+Admitted.
+
+Definition countNQueens (n: nat)
+  := countNQueensAux (mkPos BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) BitsRepr.zero BitsRepr.zero true).
 
 Definition get_coord (n: nat) (B: BitsRepr.wordsize.-tuple (BitsRepr.wordsize.-tuple bool)) (x: 'I_BitsRepr.wordsize) (y: 'I_BitsRepr.wordsize) := tnth (tnth B x) y.
 
@@ -265,6 +243,7 @@ Proof.
   by rewrite Hii' implyTb in Hpossi.
 Qed.
 
+(*
 Lemma nextLine_fuel2 n fuel curLine (P: {set 'I_BitsRepr.wordsize}) (x: 'I_BitsRepr.wordsize):
   let min := [arg min_(k < x in P) k] in
   let P' := P :\ min in
@@ -399,6 +378,7 @@ Proof.
   rewrite addn1 ltn0Sn //.
   apply (leq_ltn_trans (n := 2 * n * (n - curLine) + 1))=> //.
 Qed.
+*)
 
 Lemma nextLine_correct n B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) poss ld rd col full x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
   let min := [arg min_(k < x in P) k] in
@@ -1152,31 +1132,21 @@ Proof.
 Qed.
 
 Lemma queens_correctInd (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
-  forall fuel,
     (forall poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
     curLine < n ->
     @repr_queen n B curLine ld rd col full ->
-    @fuel_correct n curLine P fuel ->
      @repr_poss n B curLine P poss ->
-       countNQueensAux ld col rd full fuel false poss curCount =
+       countNQueensAux (mkPos ld col rd full poss curCount false) =
          toInt63 (#|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + (fromInt63 curCount)))
     /\
     (forall ld col rd full B (curLine: 'I_BitsRepr.wordsize),
-    fuel >= (2 * n * (n - curLine) + 1).+1 ->
     @repr_queen n B curLine ld rd col full ->
-      countNQueensAux ld col rd full fuel true =
+      countNQueensAux (mkPos ld col rd full BitsRepr.zero BitsRepr.zero true) =
         toInt63 #|[set B' in (valid_pos n) | board_included n B B']|).
 Proof.
   move=> gtz_n ltn_n.
-  elim=> [|fuel [IH1 IH2]].
-  + (* fuel = 0 *)
   split.
-  move=> poss ld col rd full B curLine curCount P ltn_curLine Hqueen Hfuel.
-  move: (fuel_pos Hfuel)=> //.
-  rewrite //.
-  + (* fuel ~ fuel.+1 *)
-  split.
-  move=> poss ld col rd full B curLine curCount P ltn_curLine Hqueen Hfuel HP.
+  move=> poss ld col rd full B curLine curCount P ltn_curLine Hqueen HP.
   rewrite /countNQueensAux.
   rewrite -/countNQueensAux.
   case Hend: (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero).
