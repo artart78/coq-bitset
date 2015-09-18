@@ -3,7 +3,7 @@ open Top
 let _ = 
   for i = 1 to 30 do
     let start = Unix.gettimeofday () in
-    let res = countNQueens i 100000000000000 in
+    let res = countNQueens i in
     Printf.printf "%d [%f]\n" res (Unix.gettimeofday () -. start);
     flush stdout
   done
