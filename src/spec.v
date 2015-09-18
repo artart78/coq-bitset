@@ -4,26 +4,32 @@ From Bits
      Require Import bits.
 Require Import props.bineqs props.getbit.
 
-Definition repr {n}(bs: BITS n) E :=
-  E = [ set x : 'I_n | getBit bs x ].
+Definition repr {T: finType}{n}(bs: BITS n)(E: {set T}) :=
+  forall k : 'I_#|T|, enum_val k \in E <-> getBit bs k.
 
 Lemma repr_rec:
-  forall n (bs: BITS n) E b, repr [tuple of b :: bs] E ->
-    repr bs [ set x : 'I_n | inord(x.+1) \in E ].
+  forall n (bs: BITS n) (T: finType) (E: {set T}) b (H: n.+1 = #|T|), repr [tuple of b :: bs] E ->
+    repr bs [ set (enum_val x) | x in [ set x : 'I_#|T| | enum_val (cast_ord H (inord x.+1)) \in E ] ].
 Proof.
-  move=> n bs E b.
-  rewrite !/repr -!setP !/eq_mem=> HE i.
-  rewrite in_set HE !in_set inordK.
-  rewrite /getBit -nth_behead //=.
-  have ltn_i: i < n by apply ltn_ord.
-  by auto with arith.
-Qed.
+  move=> n bs T E b H.
+  rewrite !/repr=> HE i.
+  apply (iff_trans (B := getBit [tuple of b :: bs] (cast_ord H (inord i.+1)))).
+  apply (iff_trans (B := enum_val (cast_ord H (inord i.+1)) \in E)).
+  have ->: enum_val i
+     \in [set enum_val x
+            | x in [set x : 'I_#|T| | enum_val (cast_ord H (inord x.+1)) \in E]] = ((enum_val (cast_ord H (inord i.+1))) \in E)
+    by admit.
+  rewrite //.
+  apply (HE (cast_ord H (inord i.+1))).
+  have ->: nat_of_ord (cast_ord H (inord i.+1)) = i.+1 by admit.
+  by rewrite /getBit -nth_behead.
+Admitted.
 
-Lemma eq_repr:
-  forall n (bs: BITS n) (bs': BITS n) E E', repr bs E -> repr bs' E' ->
+Lemma eq_repr {T: finType}:
+  forall n (bs: BITS n) (bs': BITS n) (E: {set T}) E' (q: n = #|T|), repr bs E -> repr bs' E' ->
     (bs == bs') = (E == E').
 Proof.
-  move=> n bs bs' E E' H H'.
+  move=> n bs bs' E E' q H H'.
   rewrite /repr in H.
   rewrite /repr in H'.
   case Heq: (E == E').
@@ -32,64 +38,65 @@ Proof.
     apply allBitsEq=> i ltn_i.
     move/eqP: Heq=> Heq.
     move/setP: Heq=> Heq.
-    move: (Heq (Ordinal ltn_i))=> Heqi.
-    rewrite H H' !in_set in Heqi.
-    by apply Heqi.
+    move: (Heq (enum_val (cast_ord q (Ordinal ltn_i))))=> Heqi.
+    admit.
   + (* E <> E' *)
     case Hbs: (bs == bs')=> //.
     move/eqP: Hbs=> Hbs.
     have Habs: E == E'.
       apply/eqP.
       rewrite -setP /eq_mem=> i.
-      rewrite H H' !in_set.
-      by rewrite Hbs.
+      admit.
     by rewrite Habs in Heq.
-Qed.
+Admitted.
 
 Lemma empty_repr:
-  forall n, repr (zero n) set0.
+  forall n T, repr (T := T) (zero n) set0.
 Proof.
-  move=> n.
-  rewrite /repr -setP /eq_mem=> i.
-  by rewrite in_set in_set0 -fromNat0 getBit_zero.
+  move=> n T.
+  rewrite /repr=> k.
+  by rewrite in_set0 -fromNat0 getBit_zero.
 Qed.
 
 Lemma subset_repr:
-  forall k n, k <= n -> repr (decB (shlBn #1 k)) [set x : 'I_n | x < k].
+  forall k n, k <= n -> repr (decB (shlBn (n := n) #1 k)) [set x : 'I_n | x < k].
 Proof.
   move=> k n le_k.
   rewrite makeOnes2=> //.
   rewrite subnKC //.
   move=> ?.
-  rewrite /repr -setP /eq_mem=> i.
-  rewrite !in_set.
-  rewrite getBit_tcast.
-  rewrite getBit_catB.
+  rewrite /repr=> i.
+  rewrite !in_set getBit_tcast getBit_catB.
   case ltn_i: (i < k).
   + (* i < k *)
+    rewrite enum_val_ord.
     by rewrite getBit_ones.
   + (* i >= k *)
-    by rewrite -fromNat0 getBit_zero.
+    rewrite enum_val_ord.
+    by rewrite -fromNat0 getBit_zero ltn_i.
 Qed.
 
-Lemma singleton_repr:
-  forall n (k: 'I_n), repr (setBit #0 k true) [set k].
+Lemma singleton_repr {T: finType}:
+  forall n (k: 'I_n) (q: n = #|T|), repr (n := n) (setBit #0 k true) [set (enum_val (cast_ord q k))].
 Proof.
-  move=> n k.
-  rewrite /repr -setP /eq_mem=> x.
+  move=> n k q.
+  rewrite /repr=> x.
   rewrite !in_set.
-  case x_eq_k: (x == k).
+  case x_eq_k: (enum_val x == enum_val (cast_ord q k)).
   + (* x == k *)
-    move/eqP: x_eq_k ->.
+    have ->: x = cast_ord q k.
+      apply enum_val_inj.
+      by apply/eqP.
     by rewrite setBitThenGetSame.
   + (* x <> k *)
     rewrite setBitThenGetDistinct=> //.
     rewrite getBit_zero //.
+    by rewrite q.
     apply not_eq_sym.
     move=> x_is_k.
-    move/eqP: x_eq_k=>x_eq_k.
-    apply x_eq_k.
-    by apply ord_inj.
+    have Habs: x = cast_ord q k.
+      by apply ord_inj.
+    by rewrite Habs eq_refl in x_eq_k.
 Qed.
 
 Lemma index_repr:
