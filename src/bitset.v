@@ -50,5 +50,5 @@ Definition iteri {A}(S: SET)(k: 'I_wordsize -> A -> A)(bc:
 A): A.
 Admitted.
 
-Definition cardinal (S: SET): nat
+Definition cardinal (S: SET): SET
   := cardinal.cardinal bytesize S.
