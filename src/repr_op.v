@@ -120,6 +120,7 @@ Axiom lsl_repr: forall i j bs k,
 Axiom lneg_repr: forall i bs, native_repr i bs -> native_repr (lneg i) (negB bs).
 Axiom ldec_repr: forall i bs, native_repr i bs -> native_repr (ldec i) (decB bs).
 Axiom leq_repr: forall i i' bs bs', native_repr i bs -> native_repr i' bs' -> (leq i i') = (bs == bs').
+Axiom ladd_repr: forall i i' bs bs', native_repr i bs -> native_repr i' bs' -> native_repr (ladd i i') (addB bs bs').
 
 (** Our conversion, being the identity, respect this relation. *)
 
@@ -436,26 +437,26 @@ Qed.
 
 (** ** Cardinality *)
 
-Definition pop_table := cardinal.pop_table 3.
+Definition pop_table := Eval compute in (mkseq (fun i => toInt63 (count_mem true (fromNat (n := 3) i)
+)) (2^3)).
 
-Definition pop_elem (bs: BitsRepr.Int63)(i: nat): nat
+Definition pop_elem (bs: BitsRepr.Int63)(i: nat): BitsRepr.Int63
   := let x := BitsRepr.land (BitsRepr.lsr bs (toInt63 (i * 3))) 
                             (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 3))) in
-     nth 0 pop_table (fromInt63 x).
+     nth BitsRepr.zero pop_table (fromInt63 x).
 
 Lemma pop_elem_repr: 
   forall n bs i,
     BitsRepr.native_repr n bs ->
-    pop_elem n i = cardinal.pop_elem 3 bs i.
+    BitsRepr.native_repr (pop_elem n i) (cardinal.pop_elem 3 bs i).
 Proof.
   move=> n bs i ?.
   rewrite /pop_elem/cardinal.pop_elem.
-  suff ->:
+  have ->:
        ((fromInt63
           (BitsRepr.land (BitsRepr.lsr n (toInt63 (i * 3)))
                          (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 3))))) =
-       (toNat (andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3)))))
-       by done.
+       (toNat (andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3))))).
   rewrite fromInt63_def; apply f_equal.
   apply BitsRepr.fromInt63_repr.
   apply BitsRepr.land_repr.
@@ -465,60 +466,85 @@ Proof.
     apply BitsRepr.lsl_repr;
        first by apply BitsRepr.one_repr.
     by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
-Qed.
+  admit. (* pop_table represents cardinal.pop_table 3 ... *)
+Admitted.
 
-Fixpoint popAux (bs: BitsRepr.Int63)(i: nat): nat :=
+Fixpoint popAux (bs: BitsRepr.Int63)(i: nat): BitsRepr.Int63 :=
   match i with
-  | 0 => 0
-  | i'.+1 => (pop_elem bs i') + (popAux bs i')
+  | 0 => BitsRepr.zero
+  | i'.+1 => BitsRepr.ladd (pop_elem bs i') (popAux bs i')
   end.
 
 Definition popAux_repr:
   forall n bs i,
     BitsRepr.native_repr n bs ->
-    popAux n i = cardinal.popAux 3 bs i.
+    BitsRepr.native_repr (popAux n i) (cardinal.popAux 3 bs i).
 Proof.
   move=> n bs i ?.
-  elim: i => //= [i IH].
-  rewrite (pop_elem_repr _ bs) //. 
-  rewrite IH //.
+  elim: i => //=.
+  rewrite -fromNat0.
+  apply BitsRepr.zero_repr.
+  move=> i IH.
+  apply BitsRepr.ladd_repr=> //.
+  by apply (pop_elem_repr _ bs).
 Qed.
 
-Definition cardinal  (bs: BitsRepr.Int63): nat
+Definition cardinal (bs: BitsRepr.Int63): BitsRepr.Int63
   := Eval compute in popAux bs 21.
 
 Lemma cardinal_repr:
   forall (bs: BitsRepr.Int63) E, native_repr bs E ->
-    cardinal bs = #|E|.
+    BitsRepr.natural_repr (cardinal bs) #|E|.
 Proof.
   move=> bs E [bv [int_repr fin_repr]].
+  rewrite /BitsRepr.natural_repr.
+  exists # (#|E|).
+  split=> //.
   rewrite - (@cardinal.cardinal_repr _ 3 bv) => //.
   (* Refold [cardinal], for the proof's sake (and my sanity) *)
   rewrite -[cardinal _]/(popAux bs 21).
   rewrite /cardinal.cardinal -[div.divn _ _]/21.
-  rewrite (popAux_repr _ bv) //.
+  by apply (popAux_repr _ bv).
 Qed.
 
 (* TODO: what do we use this one for? *)
 
-Definition ntz (bs: BitsRepr.Int63): nat
-  := 63 - (cardinal (BitsRepr.lor bs (BitsRepr.lneg bs))).
+Definition ntz (bs: BitsRepr.Int63): BitsRepr.Int63
+  := BitsRepr.ladd (toInt63 BitsRepr.wordsize) (BitsRepr.lneg (cardinal (BitsRepr.lor bs (BitsRepr.lneg bs)))).
 
 Lemma ntz_repr:
   forall (bs: BitsRepr.Int63) x E, native_repr bs E -> x \in E ->
-    ntz bs = [arg min_(k < x in E) k].
+    BitsRepr.natural_repr (ntz bs) [arg min_(k < x in E) k].
 Proof.
   move=> bs x E [bv [Hbv1 Hbv2]] Hx.
+  rewrite /BitsRepr.natural_repr.
+  exists #[arg min_(k < x in E) k].
   rewrite -(min.ntz_repr _ bv 3)=> //.
   rewrite /ntz /min.ntz.
   set E' := [ set x : 'I_BitsRepr.wordsize | getBit (min.fill_ntz bv) x ].
   have H: repr (orB bv (negB bv)) E'.
     rewrite /repr -setP /eq_mem=> i.
     by rewrite !in_set min.fill_ntz_repr.
-  rewrite (cardinal_repr _ E').
-  rewrite (cardinal.cardinal_repr _ _ _ E') //.
-  exists (orB bv (negB bv)).
   split=> //.
-  apply BitsRepr.lor_repr=> //.
-  by apply BitsRepr.lneg_repr.
+  rewrite subB_equiv_addB_negB.
+  apply BitsRepr.ladd_repr.
+  rewrite toInt63_def.
+  apply BitsRepr.toInt63_repr.
+  apply BitsRepr.lneg_repr.
+  move: (cardinal.cardinal_repr _ 3 (orB bv (negB bv)) E')=> H'.
+  rewrite H'.
+  have Hok: native_repr (BitsRepr.lor bs (BitsRepr.lneg bs)) E'.
+    exists (orB bv (negB bv)).
+    split.
+    apply BitsRepr.lor_repr.
+    apply Hbv1.
+    apply BitsRepr.lneg_repr.
+    apply Hbv1.
+    by apply H.
+  move: (cardinal_repr (BitsRepr.lor bs (BitsRepr.lneg bs)) E' Hok)=> [y [Hy1 Hy2]].
+  rewrite -Hy2 in Hy1.
+  apply Hy1.
+  trivial.
+  trivial.
+  trivial.
 Qed.

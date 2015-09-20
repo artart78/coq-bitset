@@ -59,11 +59,11 @@ Proof.
                  -/orB IHn.
 Qed.
 
-Definition ntz {n}(k: nat)(bs: BITS n): nat := n - (cardinal k (orB bs (negB bs))).
+Definition ntz {n}(k: nat)(bs: BITS n): BITS n := subB #n (cardinal k (orB bs (negB bs))).
 
 Lemma ntz_repr:
   forall n (bs: BITS n) k x E, k %| n -> k > 0 -> repr bs E -> x \in E ->
-    ntz k bs = [arg min_(k < x in E) k].
+    ntz k bs = #[arg min_(k < x in E) k].
 Proof.
   move=> n bs k x E Hk gtz_k HE Hx.
   rewrite -(index_repr n bs x E)=> //.
@@ -73,6 +73,15 @@ Proof.
   rewrite (cardinal_repr n k (fill_ntz bs) ntzE)=> //.
   rewrite -(count_repr n (fill_ntz bs) ntzE)=> //.
   clear x E Hx HE ntzE H.
+  have H: forall n (bs: BITS n), count_mem true (fill_ntz bs) <= n.
+    move=> n0 bs0.
+    have {3}->: n0 = size (fill_ntz bs0) by rewrite size_tuple.
+    by apply count_size.
+  rewrite subB_equiv_addB_negB negB_fromNat.
+  rewrite fromNat_addBn addnBA.
+  rewrite addnC -addnBA.
+  rewrite addnC -fromNat_wrap.
+  have ->: n - (count_mem true) (fill_ntz bs) = index true bs.
   move: k Hk gtz_k.
   elim: n bs=> [bs|n IHn /tupleP[b bs]] k Hk gtz_k.
   + (* n ~ 0 *)
@@ -89,8 +98,12 @@ Proof.
         by apply val_inj.
       rewrite /= -(IHn bs 1)=> //.
       rewrite add0n subSn //.
-      have {2}->: n = size (fill_ntz_seq bs).
-        have H: size (fill_ntz_seq bs) == n by apply fill_ntzP.
-        by move/eqP: H ->.
-      by apply count_size.
+      by apply H.
+  rewrite //.
+  apply H.
+  apply (leq_trans (n := n))=> //.
+  rewrite ltnW //.
+  apply ltn_expl=> //.
+  apply (leq_ltn_trans (n := n))=> //.
+  by apply ltn_expl.
 Qed.

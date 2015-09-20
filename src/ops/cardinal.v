@@ -9,19 +9,19 @@ Require Import props.bineqs props.getbit props.tozp spec.
 (* TODO: add ref. to Hacker's delight *)
 (* TODO: document the algorithm *)
 
-Definition pop_table (n: nat) := mkseq (fun i => count_mem true (fromNat (n := n) i)) (2^n).
+Definition pop_table {n}(k: nat) := mkseq (fun i => fromNat (n := n) (count_mem true (fromNat (n := k) i))) (2^k).
 
-Definition pop_elem {n}(k: nat)(bs: BITS n)(i: nat): nat
+Definition pop_elem {n}(k: nat)(bs: BITS n)(i: nat): BITS n
   := let x := andB (shrBn bs (i * k)) (decB (shlBn #1 k)) in
-     nth 0 (pop_table k) (toNat x).
+     nth (zero n) (pop_table k) (toNat x).
 
-Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): nat :=
+Fixpoint popAux {n}(k: nat)(bs: BITS n)(i: nat): BITS n :=
   match i with
-  | 0 => 0
-  | i'.+1 => (pop_elem k bs i') + (popAux k bs i')
+  | 0 => zero n
+  | i'.+1 => addB (pop_elem k bs i') (popAux k bs i')
   end.
 
-Definition cardinal {n}(k: nat)(bs: BITS n): nat
+Definition cardinal {n}(k: nat)(bs: BITS n): BITS n
   := popAux k bs (n %/ k).
 
 Lemma count_tcast:
@@ -39,7 +39,7 @@ Lemma pop_elem_repr:
          (q: n = i.+1 * k + (n - i.+1 * k))
          (q': i.+1 * k = i * k + k),
     i.+1 * k <= n ->
-        pop_elem k bs i = count_mem true (high k (tcast q' (low (i.+1 * k) (tcast q bs)))).
+        pop_elem k bs i = #(count_mem true (high k (tcast q' (low (i.+1 * k) (tcast q bs))))).
 Proof.
   move=> n k i bs q q' leq_Sik.
   have le_k: k < n.+1.
@@ -94,13 +94,13 @@ Lemma pop_rec:
   forall n k i (bs: BITS n)
          (q: n = i * k + (n - i * k)),
     i * k <= n -> k > 0 ->
-        popAux k bs i = count_mem true (low (i * k) (tcast q bs)).
+        popAux k bs i = #(count_mem true (low (i * k) (tcast q bs))).
 Proof.
   move=> n k i.
   move: i n.
   elim=> [|i IHi] n bs q le_i k_gtz.
   + (* i ~ 0 *)
-    by rewrite /=.
+    by rewrite fromNat0.
   + (* i ~ i.+1 *)
     rewrite /popAux -/popAux.
     have ltn_i2k: i * k < n.
@@ -132,13 +132,13 @@ Proof.
         rewrite getBit_high getBit_tcast getBit_low getBit_tcast subnK.
         rewrite le_i0 //.
         by rewrite leqNgt H //.
-    by rewrite count_tcast count_cat addnC.
+    by rewrite count_tcast count_cat fromNat_addBn addnC.
 Qed.
 
 Lemma cardinal_repr:
   forall n k (bs: BITS n) E,
     k %| n -> k > 0 -> repr bs E ->
-        cardinal k bs = #|E|.
+        cardinal k bs = #(#|E|).
 Proof.
   move=> n k bs E div_k_n gtz_k HE.
   have Hcast1: n = n %/ k * k.
@@ -151,6 +151,6 @@ Proof.
     apply allBitsEq=> i le_i.
     by rewrite getBit_low le_i !getBit_tcast.
   rewrite count_tcast.
-  apply count_repr=> //.
+  by have ->: count_mem true bs = #|E| by apply count_repr.
   by rewrite -Hcast1.
 Qed.
