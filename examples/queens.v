@@ -38,13 +38,17 @@ Proof.
   exact: BitsRepr.one_repr.
 Qed.
 
+Axiom exists_repr:
+  forall i, exists S, native_repr i S.
+
 Record pos := mkPos { ld: BitsRepr.Int63; 
                       col: BitsRepr.Int63;
                       rd: BitsRepr.Int63;
                       full: BitsRepr.Int63;
                       poss: BitsRepr.Int63;
                       curCount: BitsRepr.Int63;
-                      mode: bool }.
+                      mode: bool;
+                      Hinv: BitsRepr.leq (BitsRepr.land poss col) BitsRepr.zero }.
 
 Definition pos_order (p1 p2: pos): Prop := (* p1 < p2 <-> ... *)
       (fromInt63 (col p1) > fromInt63 (col p2))
@@ -56,10 +60,16 @@ Definition pos_order (p1 p2: pos): Prop := (* p1 < p2 <-> ... *)
 Theorem nqueens_wf : well_founded pos_order. Admitted.
 
 (* TODO: these are true only if bit is not in col / is in poss *)
-Lemma fromInt63_1: forall st bit, fromInt63 (col st) < fromInt63 (BitsRepr.lor (col st) bit).
+Lemma fromInt63_1: forall st,
+  let bit := BitsRepr.land (poss st) (BitsRepr.lneg (poss st)) in
+  BitsRepr.leq (BitsRepr.land bit (col st)) BitsRepr.zero ->
+  fromInt63 (col st) < fromInt63 (BitsRepr.lor (col st) bit).
 Admitted.
 
-Lemma fromInt63_2: forall st bit, fromInt63 (BitsRepr.land (poss st) (BitsRepr.lnot bit)) < fromInt63 (poss st).
+Lemma fromInt63_2: forall st,
+  BitsRepr.leq (BitsRepr.land (poss st) (full st)) BitsRepr.zero = false ->
+  let bit := BitsRepr.land (poss st) (BitsRepr.lneg (poss st)) in
+  fromInt63 (BitsRepr.land (poss st) (BitsRepr.lnot bit)) < fromInt63 (poss st).
 Admitted.
 
 Definition countNQueensAux: pos -> BitsRepr.Int63.
@@ -71,30 +81,94 @@ Definition countNQueensAux: pos -> BitsRepr.Int63.
         BitsRepr.one
       else
         let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor (ld st) (rd st)) (col st)) in
-        countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss BitsRepr.zero false) _
+        countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss BitsRepr.zero false _) _
     | false => fun H =>
-      if (BitsRepr.leq (BitsRepr.land (poss st) (full st)) BitsRepr.zero) then
-        curCount st
-      else (
+      match (BitsRepr.leq (BitsRepr.land (poss st) (full st)) BitsRepr.zero)
+        as x return (_ = x -> _) with
+      | true => fun H' => curCount st
+      | false => fun H' =>
           let bit := BitsRepr.land (poss st) (BitsRepr.lneg (poss st)) in
           let count := countNQueensAux (mkPos
                          (BitsRepr.lsr (BitsRepr.lor (ld st) bit) BitsRepr.one)
                          (BitsRepr.lor (col st) bit)
                          (BitsRepr.lsl (BitsRepr.lor (rd st) bit) BitsRepr.one)
-                         (full st) BitsRepr.zero BitsRepr.zero true) _ in
+                         (full st) BitsRepr.zero BitsRepr.zero true _) _ in
           countNQueensAux (mkPos
             (ld st) (col st) (rd st) (full st)
             (BitsRepr.land (poss st) (BitsRepr.lnot bit))
-            (BitsRepr.ladd (curCount st) count) false) _
-      )
+            (BitsRepr.ladd (curCount st) count) false _) _
+      end Logic.eq_refl
   end Logic.eq_refl)).
+  move: (exists_repr (ld st))=> [L HL].
+  move: (exists_repr (rd st))=> [R HR].
+  move: (exists_repr (col st))=> [C HC].
+  rewrite (eq_repr _ _ ((~: ((L :|: R) :|: C)) :&: C) set0).
+  apply/eqP.
+  rewrite -setP /eq_mem=> x.
+  rewrite !in_set.
+  case Hin: (x \in C).
+  * by rewrite orbT.
+  * by rewrite andbF.
+  apply inter_repr=> //.
+  apply compl_repr.
+  apply union_repr=> //.
+  apply union_repr=> //.
+  apply zero_repr.
   by rewrite /pos_order /= H !eq_refl /= orbT.
-  by rewrite /pos_order fromInt63_1.
-  by rewrite /pos_order H eq_refl fromInt63_2 orbC.
+  move: (exists_repr (BitsRepr.lor (col st) bit))=> [C HC].
+  move: (exists_repr (poss st))=> [P HP].
+  rewrite (eq_repr _ _ (set0 :&: C) set0).
+  rewrite set0I //.
+  apply inter_repr=> //.
+  apply zero_repr.
+  apply zero_repr.
+  rewrite /pos_order fromInt63_1 //.
+  move: (exists_repr (poss st))=> [P HP].
+  move: (exists_repr (BitsRepr.lneg (poss st)))=> [N HN].
+  move: (exists_repr (col st))=> [C HC].
+  rewrite (eq_repr _ _ ((P :&: N) :&: C) set0).
+  rewrite setIAC.
+  have ->: P :&: C = set0.
+    apply/eqP.
+    rewrite -(eq_repr (BitsRepr.land (poss st) (col st)) BitsRepr.zero).
+    apply (Hinv st).
+    apply inter_repr=> //.
+    apply zero_repr.
+  apply/eqP.
+  apply set0I.
+  apply inter_repr=> //.
+  apply inter_repr=> //.
+  by apply zero_repr.
+  move: (exists_repr (poss st))=> [P HP].
+  move: (exists_repr bit)=> [B HB].
+  move: (exists_repr (col st))=> [C HC].
+  rewrite (eq_repr _ _ ((P :&: (~: B)) :&: C) set0).
+  rewrite setIAC.
+  have ->: P :&: C = set0.
+    apply/eqP.
+    rewrite -(eq_repr (BitsRepr.land (poss st) (col st)) BitsRepr.zero).
+    apply (Hinv st).
+    apply inter_repr=> //.
+    apply zero_repr.
+  apply/eqP.
+  apply set0I.
+  apply inter_repr=> //.
+  apply inter_repr=> //.
+  apply compl_repr=> //.
+  apply zero_repr.
+  rewrite /pos_order H eq_refl /=.
+  apply/orP; right.
+  exact: fromInt63_2.
 Qed.
 
-Definition countNQueens (n: nat)
-  := countNQueensAux (mkPos BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) BitsRepr.zero BitsRepr.zero true).
+Definition countNQueens (n: nat): BitsRepr.Int63.
+  refine (countNQueensAux (mkPos BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) BitsRepr.zero BitsRepr.zero true _)).
+  rewrite (eq_repr _ _ (set0 :&: set0) set0).
+  apply/eqP.
+  apply set0I.
+  apply inter_repr; apply zero_repr.
+  apply zero_repr.
+Qed.
 
 Definition get_coord (n: nat) (B: BitsRepr.wordsize.-tuple (BitsRepr.wordsize.-tuple bool)) (x: 'I_BitsRepr.wordsize) (y: 'I_BitsRepr.wordsize) := tnth (tnth B x) y.
 
@@ -1002,16 +1076,16 @@ Proof.
 Qed.
 
 Lemma queens_correctInd (n: nat) : n > 0 -> n < BitsRepr.wordsize ->
-    (forall poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
+    (forall poss ld col rd full B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}) Hinv,
     curLine < n ->
     @repr_queen n B curLine ld rd col full ->
      @repr_poss n B curLine P poss ->
-       countNQueensAux (mkPos ld col rd full poss curCount false) =
+       countNQueensAux (mkPos ld col rd full poss curCount false Hinv) =
          toInt63 (#|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + (fromInt63 curCount)))
     /\
-    (forall ld col rd full B (curLine: 'I_BitsRepr.wordsize),
+    (forall ld col rd full B (curLine: 'I_BitsRepr.wordsize) Hinv,
     @repr_queen n B curLine ld rd col full ->
-      countNQueensAux (mkPos ld col rd full BitsRepr.zero BitsRepr.zero true) =
+      countNQueensAux (mkPos ld col rd full BitsRepr.zero BitsRepr.zero true Hinv) =
         toInt63 #|[set B' in (valid_pos n) | board_included n B B']|).
 Proof.
 Admitted.
@@ -1195,6 +1269,7 @@ Proof.
   have Hempty: forall x y, get_coord n empty_board x y = false.
     move=> x y.
     by rewrite /get_coord !tnth_mktuple.
+(*
   rewrite /countNQueens.
   move: (queens_correctInd n gtz_n ltn_n)=> [_ Hind].
   rewrite (Hind _ _ _ _ empty_board ord0)=> //.
@@ -1260,7 +1335,7 @@ Proof.
   apply spec.subset_repr.
   by rewrite leq_eqVlt ltn_n orbT.
 Qed.
-
+*)
 Cd "extraction".
 
 Require Import ExtrOcamlBasic.
