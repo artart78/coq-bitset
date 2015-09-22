@@ -1078,18 +1078,22 @@ Proof.
 Qed.
 
 Lemma queens_correctInd (n: nat) : n > 0 -> n < BitsRepr.wordsize -> forall pos,
-  (forall B (curLine: 'I_BitsRepr.wordsize) curCount (P: {set 'I_BitsRepr.wordsize}),
+  (forall B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}),
+  mode pos = false ->
   curLine < n ->
   @repr_queen n B curLine (ld pos) (rd pos) (col pos) (full pos) ->
    @repr_poss n B curLine P (poss pos) ->
     countNQueensAux (mkPos (ld pos) (col pos) (rd pos) (full pos)
-                           (poss pos) curCount false (Hinv pos)) =
-         toInt63 (#|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + (fromInt63 curCount)))
+                           (poss pos) (curCount pos) false (Hinv pos)) =
+         toInt63 (#|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + (fromInt63 (curCount pos))))
  /\
-  (forall B (curLine: 'I_BitsRepr.wordsize) Hinv,
+  (forall B (curLine: 'I_BitsRepr.wordsize),
+  mode pos = true ->
+  poss pos = BitsRepr.zero ->
+  curCount pos = BitsRepr.zero ->
   @repr_queen n B curLine (ld pos) (rd pos) (col pos) (full pos) ->
     countNQueensAux (mkPos (ld pos) (col pos) (rd pos) (full pos)
-                           BitsRepr.zero BitsRepr.zero true Hinv) =
+                           (poss pos) (curCount pos) true (Hinv pos)) =
       toInt63 #|[set B' in (valid_pos n) | board_included n B B']|).
 Proof.
   move=> gtz_n ltn_n.
@@ -1100,8 +1104,40 @@ Proof.
   set rd := rd st.
   set full := full st.
   set poss := poss st.
+  set curCount := curCount st.
+
+  (* TODO: this part can probably be simplified/erased *)
+  have IH1: forall ld col rd full poss curCount mode Hinv,
+  pos_order (mkPos ld col rd full poss curCount mode Hinv) st ->
+  forall B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}),
+  mode = false ->
+  curLine < n ->
+  @repr_queen n B curLine ld rd col full ->
+   @repr_poss n B curLine P poss ->
+    countNQueensAux (mkPos ld col rd full poss curCount mode Hinv) =
+         toInt63 (#|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + (fromInt63 curCount)).
+      move=> ld0 col0 rd0 full0 poss0 curCount0 mode0 Hinv0 Hord B0 curLine0 P0 Hmode0 HcurLine Hqueen0 Hposs0.
+      rewrite Hmode0.
+      rewrite Hmode0 in Hord.
+      apply (IH (mkPos ld0 col0 rd0 full0 poss0 curCount0 false Hinv0))=> //.
+  have IH2: forall ld col rd full poss curCount mode Hinv,
+  pos_order (mkPos ld col rd full poss curCount mode Hinv) st ->
+  forall B (curLine: 'I_BitsRepr.wordsize),
+  mode = true ->
+  poss = BitsRepr.zero ->
+  curCount = BitsRepr.zero ->
+  @repr_queen n B curLine ld rd col full ->
+    countNQueensAux (mkPos ld col rd full poss curCount mode Hinv) =
+      toInt63 #|[set B' in (valid_pos n) | board_included n B B']|.
+    move=> ld0 col0 rd0 full0 poss0 curCount0 mode0 Hinv0 Hord B0 curLine0 Hmode0 Hposs0 HcurCount0 HB0.
+    rewrite Hmode0.
+    move: (IH (mkPos ld0 col0 rd0 full0 poss0 curCount0 mode0 Hinv0) Hord)=> [_ IH2'].
+    rewrite /= in IH2'.
+    apply (IH2' B0 curLine0)=> //.
+  (****************************************************)
+
   split.
-  move=> B curLine curCount P ltn_curLine Hqueen HP.
+  move=> B curLine P Hmode ltn_curLine Hqueen HP.
   rewrite /countNQueensAux.
   rewrite Fix_eq /=.
   rewrite -/countNQueensAux.
@@ -1134,6 +1170,7 @@ Proof.
     apply Hqueen.
     apply zero_repr.
   + (* (poss & full) != 0 *)
+    have Hend': BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero = false by auto.
     rewrite (eq_repr _ _ [set x in P | x < n] set0) in Hend.
     move/eqP: Hend=> Hend.
     set bit := (BitsRepr.land poss (BitsRepr.lneg poss)).
@@ -1163,13 +1200,8 @@ Proof.
     have ltn_ScurLine: curLine.+1 < BitsRepr.wordsize.
       by apply (leq_ltn_trans (n := n))=> //.
     move: (nextLine_correct n B curLine P poss ld rd col full x ltn_ScurLine HP Hqueen Hx ltn_x HminP)=> HB'cor.
-
-    admit.
-    (*
-    rewrite (IH _ _).
-    move: (IH pos2)=> IH1'.
-    rewrite (IH2 _ _ _ _ B' (Ordinal ltn_ScurLine))=> //.
-    rewrite (IH1 _ _ _ _ _ B curLine _ P')=> //.
+    rewrite (IH2 ld' _ _ _ _ _ _ _ _ B' (Ordinal ltn_ScurLine))=> //.
+    rewrite (IH1 _ _ _ _ _ _ _ _ _ B curLine P')=> //.
     
     rewrite -ladd_repr.
     rewrite fromInt63_elim.
@@ -1178,6 +1210,14 @@ Proof.
     rewrite [(fromInt63 curCount) + _]addnC addnA.
     move: (nextLine_splitCase n B curLine P min HminP)=> [Hu Hi].
     rewrite Hu cardsU Hi cards0 subn0 //.
+    rewrite /pos_order Hmode eq_refl /=.
+    apply/orP; right.
+    apply fromInt63_2=> //.
+    apply nextLine_P=> //.
+    rewrite /pos_order Hmode /=.
+    apply/orP; left.
+    apply fromInt63_1=> //.
+    admit. (* Exact same proof as for the definition. *)
     split.
     rewrite (nextLine_numCol n B curLine ld rd col full min P poss) //.
     apply HB'cor.
@@ -1187,7 +1227,6 @@ Proof.
     apply (nextLine_col n B curLine ld rd col full poss)=> //.
     (* full *)
     apply Hqueen.
-    *)
     rewrite setIdE.
     apply inter_repr=> //.
     apply HP.
@@ -1196,7 +1235,7 @@ Proof.
   admit. (* WTF is this? *)
   (****************************************************)
 
-  move=> B curLine Hfuel HB.
+  move=> B curLine Hmode Hposs HcurCount HB.
   rewrite /countNQueensAux.
   rewrite Fix_eq /=.
   rewrite -/countNQueensAux.
@@ -1232,11 +1271,11 @@ Proof.
       by apply proper_card.
       apply HB.
       apply HB.
-    admit.
-    (*
-    rewrite (IH1 _ _ _ _ _ B curLine _ P)=> //.
+    rewrite (IH1 _ _ _ _ _ _ _ _ _ B curLine P)=> //.
     rewrite fromInt63_zero addn0.
     rewrite (nextLine_oneCase n B curLine ld rd col full) // => //.
+    rewrite /pos_order /=.
+    by rewrite !Hmode /= eq_refl orbT.
     split.
     apply compl_repr.
     apply union_repr=> //.
@@ -1247,7 +1286,6 @@ Proof.
     by rewrite /P !setCU -setIA subsetIl.
     by rewrite /P !setCU -setIAC subsetIr.
     by rewrite /P !setCU subsetIr.
-    *)
   admit. (* Bleh *)
 Admitted.
 
@@ -1263,10 +1301,8 @@ Proof.
     countNQueensAux (mkPos ld col rd full
                            BitsRepr.zero BitsRepr.zero true Hinv) =
       toInt63 #|[set B' in (valid_pos n) | board_included n B B']|.
-    by admit.
-  (*
-  move: (queens_correctInd n gtz_n ltn_n _)=> [_ Hind].
-  *)
+    move=> ld0 rd0 col0 full0 B curLine Hinv0.
+    by apply (queens_correctInd n gtz_n ltn_n (mkPos ld0 col0 rd0 full0 BitsRepr.zero BitsRepr.zero true Hinv0)).
   rewrite (Hind _ _ _ _ empty_board ord0)=> //.
   have ->: [set B' in valid_pos n | board_included n empty_board B'] = valid_pos n.
     rewrite -setP /eq_mem=> i.
@@ -1329,7 +1365,7 @@ Proof.
   by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
   apply spec.subset_repr.
   by rewrite leq_eqVlt ltn_n orbT.
-Admitted.
+Qed.
 
 Cd "extraction".
 
