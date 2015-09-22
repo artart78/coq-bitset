@@ -10,70 +10,41 @@ Section bloom.
 (* Definition *)
 
 Variable P: Type.
-Fixpoint bloomAdd (T: BitsRepr.Int63) (H: seq (P -> 'I_BitsRepr.wordsize)) (add: P) : BitsRepr.Int63
+Fixpoint bloomSig_aux (T: BitsRepr.Int63) (H: seq (P -> 'I_BitsRepr.wordsize)) (elem: P): BitsRepr.Int63
  := match H with
-   | [::] => T
-   | h :: t => bloomAdd (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (toInt63 (h add))) T) t add
-   end.
+    | [::] => T
+    | h :: t => bloomSig_aux (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (toInt63 (h elem))) T) t elem
+    end.
+
+Definition bloomSig (H: seq (P -> 'I_BitsRepr.wordsize)) (elem: P): BitsRepr.Int63
+ := bloomSig_aux BitsRepr.zero H elem.
+
+Definition bloomAdd (T: BitsRepr.Int63) (H: seq (P -> 'I_BitsRepr.wordsize)) (add: P) : BitsRepr.Int63
+ := BitsRepr.lor T (bloomSig H add).
 
 Definition bloomCheck (T: BitsRepr.Int63) (H: seq (P -> 'I_BitsRepr.wordsize)) (check: P) : bool
- := let sig := bloomAdd BitsRepr.zero H check in
+ := let sig := bloomSig H check in
     BitsRepr.leq (BitsRepr.land sig T) sig.
 
 (* Proof *)
 
-Fixpoint bloomAdd_repr (T: {set 'I_BitsRepr.wordsize}) (H: seq (P -> 'I_BitsRepr.wordsize)) (add: P)
+Fixpoint bloomSig_repr_aux (T: {set 'I_BitsRepr.wordsize}) (H: seq (P -> 'I_BitsRepr.wordsize)) (elem: P)
  := match H with
     | [::] => T
-    | h :: t => bloomAdd_repr ((h add) |: T) t add
+    | h :: t => bloomSig_repr_aux ((h elem) |: T) t elem
     end.
 
-Lemma bloomAdd_isRepr:
-  forall H T T' add, native_repr T T' -> native_repr (bloomAdd T H add) (bloomAdd_repr T' H add).
+Definition bloomSig_repr (H: seq (P -> 'I_BitsRepr.wordsize)) (elem: P)
+ := bloomSig_repr_aux set0 H elem.
+
+Lemma bloomSig_isRepr:
+  forall H T T' add, native_repr T T' -> native_repr (bloomSig_aux T H add) (bloomSig_repr_aux T' H add).
 Proof.
   elim=> [//|a l IH] T T' add Hrepr.
-  rewrite /bloomAdd /bloomAdd_repr -/bloomAdd -/bloomAdd_repr.
+  rewrite /bloomSig /bloomSig_repr -/bloomSig -/bloomSig_repr.
   apply IH.
   apply union_repr=> //.
   apply singleton_repr.
-Qed.
-
-Lemma bloom_correct1: forall H (T': {set 'I_BitsRepr.wordsize}) add,
-  T' \subset bloomAdd_repr T' H add.
-Proof.
-  elim=> [//=|a l IH T' add].
-  apply (subset_trans (B := pred_of_set (a add |: T'))).
-  apply subsetU1.
-  apply IH.
-Qed.
-
-Lemma bloom_correct2': forall H S T S' T' check, native_repr T T' -> native_repr S S' ->
-  S' \subset T' ->
-  bloomAdd_repr S' H check \subset bloomAdd_repr T' H check.
-Proof.
-  elim=> [//=|a l IH] S T S' T' check HT HS Hsubset.
-  rewrite /bloomAdd_repr -/bloomAdd_repr.
-  apply (IH (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (toInt63 (a check))) S)
-            (BitsRepr.lor (BitsRepr.lsl BitsRepr.one (toInt63 (a check))) T)).
-  apply union_repr=> //.
-  apply singleton_repr=> //.
-  apply union_repr=> //.
-  apply singleton_repr=> //.
-  apply setUS=> //.
-Qed.  
-
-Lemma bloom_correct2: forall T T' H check, native_repr T T' ->
-  bloomCheck (bloomAdd T H check) H check.
-Proof.
-  move=> T T' H check Hrepr.
-  rewrite /bloomCheck.
-  rewrite (subset_repr _ _ (bloomAdd_repr set0 H check) (bloomAdd_repr T' H check)).
-  apply (bloom_correct2' _ BitsRepr.zero T)=> //.
-  apply zero_repr.
-  apply sub0set.
-  apply bloomAdd_isRepr.
-  apply zero_repr.
-  apply bloomAdd_isRepr=> //.
 Qed.
 
 Lemma bloom_correct: forall T T' H add check, native_repr T T' ->
@@ -84,20 +55,31 @@ Proof.
   * move=> Habs.
     have Habs': bloomCheck (bloomAdd T H add) H check.
       rewrite /bloomCheck in Habs.
-      rewrite (subset_repr _ _ (bloomAdd_repr set0 H check) T') in Habs=> //.
+      rewrite (subset_repr _ _ (bloomSig_repr H check) T') in Habs=> //.
       rewrite /bloomCheck.
-      rewrite (subset_repr _ _ (bloomAdd_repr set0 H check) (bloomAdd_repr T' H add)).
+      rewrite (subset_repr _ _ (bloomSig_repr H check) (T' :|: (bloomSig_repr H add))).
       rewrite (subset_trans (B := pred_of_set T')) //.
-      apply bloom_correct1.
-      apply bloomAdd_isRepr=> //.
+      apply subsetUl.
+      apply bloomSig_isRepr.
       apply zero_repr.
-      apply bloomAdd_isRepr=> //.
-      apply bloomAdd_isRepr=> //.
+      apply union_repr=> //.
+      apply bloomSig_isRepr.
+      apply zero_repr.
+      apply bloomSig_isRepr.
       apply zero_repr.
     by rewrite Habs' in Hyp.
   * move=> Habs.
     rewrite Habs in Hyp.
-    by rewrite (bloom_correct2 _ T') in Hyp.
+    have Habs': bloomCheck (bloomAdd T H check) H check.
+      rewrite /bloomCheck.
+      rewrite (subset_repr _ _ (bloomSig_repr H check) (T' :|: (bloomSig_repr H check))).
+      apply subsetUr.
+      apply bloomSig_isRepr.
+      apply zero_repr.
+      apply union_repr=> //.
+      apply bloomSig_isRepr.
+      apply zero_repr.
+    by rewrite Habs' in Hyp.
 Qed.
 
 End bloom.
