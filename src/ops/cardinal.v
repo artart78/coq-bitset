@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun div finset ssralg zmodp.
 From Bits
      Require Import bits ssrextra.tuple.
-Require Import props.bineqs props.getbit props.tozp spec.
+Require Import props.bineqs props.getbit spec.
 
 (** * Cardinal through binary population count  *)
 

@@ -2,7 +2,7 @@ From Ssreflect
      Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple zmodp fintype div ssralg.
 From Bits
      Require Import bits.
-Require Import tozp getbit.
+Require Import getbit.
 
 (* TODO: what is this file about? 
          combinatorial of boolean operations? *)
