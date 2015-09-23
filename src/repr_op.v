@@ -1,3 +1,4 @@
+Require Import FMapList OrderedType OrderedTypeEx Compare_dec Peano_dec.
 From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
@@ -437,13 +438,70 @@ Qed.
 
 (** ** Cardinality *)
 
-Definition pop_table := Eval compute in (mkseq (fun i => toInt63 (count_mem true (fromNat (n := 3) i)
-)) (2^3)).
+Lemma fromInt63_inj: forall x y,
+  fromInt63 x = fromInt63 y -> x = y.
+Admitted.
+
+Module Int63_as_OT <: OrderedType.
+
+  Definition t := BitsRepr.Int63.
+
+  Definition eq x y : Prop := (fromInt63 x) = (fromInt63 y).
+
+  Definition lt x y : Prop := (fromInt63 x) < (fromInt63 y).
+  Definition eq_refl x := @Logic.eq_refl nat (fromInt63 x).
+  Definition eq_sym x y := @Logic.eq_sym nat (fromInt63 x) (fromInt63 y).
+  Definition eq_trans x y z := @Logic.eq_trans nat (fromInt63 x) (fromInt63 y) (fromInt63 z).
+
+  Lemma lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
+  Proof.
+  move=> x y z H1 H2.
+  rewrite /lt.
+  apply (ltn_trans (n := fromInt63 y)).
+  apply H1.
+  apply H2.
+  Qed.
+
+  Lemma lt_not_eq : forall x y : t, lt x y -> ~ eq x y.
+  Admitted.
+
+  Definition compare x y : Compare lt eq x y.
+  Proof.
+    case_eq (nat_compare (fromInt63 x) (fromInt63 y)); intro.
+    - apply EQ.
+      by apply nat_compare_eq.
+    - apply LT.
+      apply/ltP.
+      by apply nat_compare_Lt_lt.
+    - apply GT.
+      apply/ltP.
+      by apply nat_compare_Gt_gt.
+  Qed.
+
+  Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
+    move=> x y.
+    by apply eq_nat_dec.
+  Qed.
+
+End Int63_as_OT.
+
+Module M := FMapList.Make(Int63_as_OT).
+
+Fixpoint pop_tableAux (i: nat) (m: M.t BitsRepr.Int63) :=
+  match i with
+  | 0 => M.add BitsRepr.zero BitsRepr.zero m
+  | i'.+1 => M.add (toInt63 i) (toInt63 (count_mem true (fromNat (n := 3) i))) (pop_tableAux i' m)
+  end.
+
+Definition pop_table := pop_tableAux (2 ^ 3) (M.empty BitsRepr.Int63).
 
 Definition pop_elem (bs: BitsRepr.Int63)(i: nat): BitsRepr.Int63
   := let x := BitsRepr.land (BitsRepr.lsr bs (toInt63 (i * 3))) 
                             (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 3))) in
-     nth BitsRepr.zero pop_table (fromInt63 x).
+     match (M.find x pop_table) with
+     | None => BitsRepr.zero
+     | Some x => x
+     end.
 
 Lemma pop_elem_repr: 
   forall n bs i,
@@ -452,11 +510,12 @@ Lemma pop_elem_repr:
 Proof.
   move=> n bs i ?.
   rewrite /pop_elem/cardinal.pop_elem.
+Admitted.
+(*
   have ->:
-       ((fromInt63
           (BitsRepr.land (BitsRepr.lsr n (toInt63 (i * 3)))
-                         (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 3))))) =
-       (toNat (andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3))))).
+                         (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 3)))) =
+       (toNat (andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3)))).
   rewrite fromInt63_def; apply f_equal.
   apply BitsRepr.fromInt63_repr.
   apply BitsRepr.land_repr.
@@ -468,6 +527,7 @@ Proof.
     by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
   admit. (* pop_table represents cardinal.pop_table 3 ... *)
 Admitted.
+*)
 
 Fixpoint popAux (bs: BitsRepr.Int63)(i: nat): BitsRepr.Int63 :=
   match i with
@@ -490,7 +550,7 @@ Proof.
 Qed.
 
 Definition cardinal (bs: BitsRepr.Int63): BitsRepr.Int63
-  := Eval compute in popAux bs 21.
+  := popAux bs 21.
 
 Lemma cardinal_repr:
   forall (bs: BitsRepr.Int63) E, native_repr bs E ->
