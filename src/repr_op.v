@@ -440,26 +440,24 @@ Qed.
 
 Module M := PositiveMap.
 
-(*
-Fixpoint toPositive_aux (i: BitsRepr.Int63) (p: option positive) (k: 'I_BitsRepr.wordsize) :=
-  match (nat_of_ord k) with
-  | 0 => None
-  | k'.+1 => if (get i (inord k')) then
-               match p with
-               | None => toPositive_aux i (Some xH) (inord k')
-               | Some x => toPositive_aux i (Some (xI x)) (inord k')
-               end
-             else
-               match p with
-               | None => toPositive_aux i None (inord k')
-               | Some x => toPositive_aux i (Some (xO x)) (inord k')
-               end
+Fixpoint toPositive_aux (bs: seq bool) :=
+  match bs with
+  | [::] => None
+  | false :: bs' => match (toPositive_aux bs') with
+                    | None => None
+                    | Some x => Some (xO x)
+                    end
+  | true :: bs' => match (toPositive_aux bs') with
+                   | None => Some xH
+                   | Some x => Some (xI x)
+                   end
   end.
 
-Definition toPositive {n} (p: BitsRepr.Int63) :=
-  foldr (fun b z => if b then Zsucc (Zdouble z) else Zdouble z) Z0 p.
-*)
-Axiom toPositive: BitsRepr.Int63 -> positive.
+Definition toPositive (p: BitsRepr.Int63) : positive :=
+  match (toPositive_aux (BitsRepr.fromInt63 (BitsRepr.ladd p BitsRepr.one))) with
+  | None => xH (* TODO: it would be nice raising an exception here *)
+  | Some x => x
+  end.
 
 Fixpoint pop_tableAux (i: nat) (m: M.t BitsRepr.Int63) :=
   match i with
@@ -467,9 +465,7 @@ Fixpoint pop_tableAux (i: nat) (m: M.t BitsRepr.Int63) :=
   | i'.+1 => M.add (toPositive (toInt63 i)) (toInt63 (count_mem true (fromNat (n := 3) i))) (pop_tableAux i' m)
   end.
 
-Definition pop_table := Eval compute in (pop_tableAux (2 ^ 3) (M.empty BitsRepr.Int63)).
-
-Print pop_table.
+Definition pop_table := pop_tableAux (2 ^ 3) (M.empty BitsRepr.Int63).
 
 Definition pop_elem (bs: BitsRepr.Int63)(i: nat): BitsRepr.Int63
   := let x := BitsRepr.land (BitsRepr.lsr bs (toInt63 (i * 3))) 
@@ -526,7 +522,7 @@ Proof.
 Qed.
 
 Definition cardinal (bs: BitsRepr.Int63): BitsRepr.Int63
-  := Eval compute in popAux bs 21.
+  := popAux bs 21.
 
 Lemma cardinal_repr:
   forall (bs: BitsRepr.Int63) E, native_repr bs E ->
