@@ -1,7 +1,7 @@
 From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
-     Require Import bits.
+     Require Import bits extraction.axioms63.
 
 Require Import bineqs repr_op.
 
@@ -11,11 +11,11 @@ Proof.
 Admitted.
 
 Axiom ladd_repr:
-  forall x y, BitsRepr.ladd (toInt63 x) (toInt63 y) = toInt63 (x + y).
+  forall x y, ladd (toInt63 x) (toInt63 y) = toInt63 (x + y).
 
 (* ladd_repr2 can be proven from ladd_repr, but not the other way
 Lemma ladd_repr2:
-  forall x y, BitsRepr.ladd x y = toInt63 (fromInt63 x + fromInt63 y).
+  forall x y, ladd x y = toInt63 (fromInt63 x + fromInt63 y).
 Proof.
 move=> x y.
 by rewrite ladd_repr !fromInt63_elim.
@@ -23,32 +23,40 @@ Qed.
 *)
 
 Lemma fromInt63_zero:
-  fromInt63 BitsRepr.zero = 0.
+  fromInt63 zero = 0.
 Proof.
-  rewrite fromInt63_def (BitsRepr.fromInt63_repr _ #0).
+  rewrite fromInt63_def.
+  admit.
+  (*
+  rewrite fromInt63_def (fromInt63_repr _ #0).
   rewrite toNat_fromNatBounded //.
-  exact: BitsRepr.zero_repr.
-Qed.
+  exact: zero_repr.
+  *)
+Admitted.
 
 Lemma fromInt63_one:
-  fromInt63 BitsRepr.one = 1.
+  fromInt63 one = 1.
 Proof.
-  rewrite fromInt63_def (BitsRepr.fromInt63_repr _ #1).
+  rewrite fromInt63_def.
+  admit.
+  (*
+  rewrite fromInt63_def (fromInt63_repr _ #1).
   rewrite toNat_fromNatBounded //.
-  exact: BitsRepr.one_repr.
-Qed.
+  exact: one_repr.
+  *)
+Admitted.
 
 Axiom exists_repr:
-  forall i, exists S, native_repr i S.
+  forall i, exists S, machine_repr i S.
 
-Record pos := mkPos { ld: BitsRepr.Int63; 
-                      col: BitsRepr.Int63;
-                      rd: BitsRepr.Int63;
-                      full: BitsRepr.Int63;
-                      poss: BitsRepr.Int63;
-                      curCount: BitsRepr.Int63;
+Record pos := mkPos { ld: Int63; 
+                      col: Int63;
+                      rd: Int63;
+                      full: Int63;
+                      poss: Int63;
+                      curCount: Int63;
                       mode: bool;
-                      Hinv: BitsRepr.leq (BitsRepr.land poss col) BitsRepr.zero }.
+                      Hinv: leq (land poss col) zero }.
 
 Definition pos_order (p1 p2: pos): Prop := (* p1 < p2 <-> ... *)
       (fromInt63 (col p1) > fromInt63 (col p2))
@@ -61,42 +69,42 @@ Theorem nqueens_wf : well_founded pos_order. Admitted.
 
 (* TODO: these are true only if bit is not in col / is in poss *)
 Lemma fromInt63_1: forall st,
-  let bit := BitsRepr.land (poss st) (BitsRepr.lneg (poss st)) in
-  BitsRepr.leq (BitsRepr.land bit (col st)) BitsRepr.zero ->
-  fromInt63 (col st) < fromInt63 (BitsRepr.lor (col st) bit).
+  let bit := land (poss st) (lneg (poss st)) in
+  leq (land bit (col st)) zero ->
+  fromInt63 (col st) < fromInt63 (lor (col st) bit).
 Admitted.
 
 Lemma fromInt63_2: forall st,
-  BitsRepr.leq (BitsRepr.land (poss st) (full st)) BitsRepr.zero = false ->
-  let bit := BitsRepr.land (poss st) (BitsRepr.lneg (poss st)) in
-  fromInt63 (BitsRepr.land (poss st) (BitsRepr.lnot bit)) < fromInt63 (poss st).
+  leq (land (poss st) (full st)) zero = false ->
+  let bit := land (poss st) (lneg (poss st)) in
+  fromInt63 (land (poss st) (lnot bit)) < fromInt63 (poss st).
 Admitted.
 
-Definition countNQueensAux: pos -> BitsRepr.Int63.
-  refine (Fix nqueens_wf (fun _ => BitsRepr.Int63)
-    (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> BitsRepr.Int63) =>
+Definition countNQueensAux: pos -> Int63.
+  refine (Fix nqueens_wf (fun _ => Int63)
+    (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> Int63) =>
   match (mode st) as x return mode st = x -> _ with
     | true => fun H =>
-      if (BitsRepr.leq (col st) (full st)) then
-        BitsRepr.one
+      if (leq (col st) (full st)) then
+        one
       else
-        let poss := BitsRepr.lnot (BitsRepr.lor (BitsRepr.lor (ld st) (rd st)) (col st)) in
-        countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss BitsRepr.zero false _) _
+        let poss := lnot (lor (lor (ld st) (rd st)) (col st)) in
+        countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss zero false _) _
     | false => fun H =>
-      match (BitsRepr.leq (BitsRepr.land (poss st) (full st)) BitsRepr.zero)
+      match (leq (land (poss st) (full st)) zero)
         as x return (_ = x -> _) with
       | true => fun H' => curCount st
       | false => fun H' =>
-          let bit := BitsRepr.land (poss st) (BitsRepr.lneg (poss st)) in
+          let bit := land (poss st) (lneg (poss st)) in
           let count := countNQueensAux (mkPos
-                         (BitsRepr.lsr (BitsRepr.lor (ld st) bit) BitsRepr.one)
-                         (BitsRepr.lor (col st) bit)
-                         (BitsRepr.lsl (BitsRepr.lor (rd st) bit) BitsRepr.one)
-                         (full st) BitsRepr.zero BitsRepr.zero true _) _ in
+                         (lsr (lor (ld st) bit) one)
+                         (lor (col st) bit)
+                         (lsl (lor (rd st) bit) one)
+                         (full st) zero zero true _) _ in
           countNQueensAux (mkPos
             (ld st) (col st) (rd st) (full st)
-            (BitsRepr.land (poss st) (BitsRepr.lnot bit))
-            (BitsRepr.ladd (curCount st) count) false _) _
+            (land (poss st) (lnot bit))
+            (ladd (curCount st) count) false _) _
       end Logic.eq_refl
   end Logic.eq_refl)).
   move: (exists_repr (ld st))=> [L HL].
@@ -115,7 +123,7 @@ Definition countNQueensAux: pos -> BitsRepr.Int63.
   apply union_repr=> //.
   apply zero_repr.
   by rewrite /pos_order /= H !eq_refl /= orbT.
-  move: (exists_repr (BitsRepr.lor (col st) bit))=> [C HC].
+  move: (exists_repr (lor (col st) bit))=> [C HC].
   move: (exists_repr (poss st))=> [P HP].
   rewrite (eq_repr _ _ (set0 :&: C) set0).
   rewrite set0I //.
@@ -124,13 +132,13 @@ Definition countNQueensAux: pos -> BitsRepr.Int63.
   apply zero_repr.
   rewrite /pos_order fromInt63_1 //.
   move: (exists_repr (poss st))=> [P HP].
-  move: (exists_repr (BitsRepr.lneg (poss st)))=> [N HN].
+  move: (exists_repr (lneg (poss st)))=> [N HN].
   move: (exists_repr (col st))=> [C HC].
   rewrite (eq_repr _ _ ((P :&: N) :&: C) set0).
   rewrite setIAC.
   have ->: P :&: C = set0.
     apply/eqP.
-    rewrite -(eq_repr (BitsRepr.land (poss st) (col st)) BitsRepr.zero).
+    rewrite -(eq_repr (land (poss st) (col st)) zero).
     apply (Hinv st).
     apply inter_repr=> //.
     apply zero_repr.
@@ -146,7 +154,7 @@ Definition countNQueensAux: pos -> BitsRepr.Int63.
   rewrite setIAC.
   have ->: P :&: C = set0.
     apply/eqP.
-    rewrite -(eq_repr (BitsRepr.land (poss st) (col st)) BitsRepr.zero).
+    rewrite -(eq_repr (land (poss st) (col st)) zero).
     apply (Hinv st).
     apply inter_repr=> //.
     apply zero_repr.
@@ -161,8 +169,8 @@ Definition countNQueensAux: pos -> BitsRepr.Int63.
   exact: fromInt63_2.
 Defined.
 
-Definition countNQueens (n: nat): BitsRepr.Int63.
-  refine (countNQueensAux (mkPos BitsRepr.zero BitsRepr.zero BitsRepr.zero (BitsRepr.ldec (BitsRepr.lsl BitsRepr.one (toInt63 n))) BitsRepr.zero BitsRepr.zero true _)).
+Definition countNQueens (n: nat): Int63.
+  refine (countNQueensAux (mkPos zero zero zero (ldec (lsl one (toInt63 n))) zero zero true _)).
   rewrite (eq_repr _ _ (set0 :&: set0) set0).
   apply/eqP.
   apply set0I.
@@ -172,16 +180,16 @@ Defined.
 
 Print countNQueens.
 
-Definition get_coord (n: nat) (B: BitsRepr.wordsize.-tuple (BitsRepr.wordsize.-tuple bool)) (x: 'I_BitsRepr.wordsize) (y: 'I_BitsRepr.wordsize) := tnth (tnth B x) y.
+Definition get_coord (n: nat) (B: wordsize.-tuple (wordsize.-tuple bool)) (x: 'I_wordsize) (y: 'I_wordsize) := tnth (tnth B x) y.
 
 Definition is_complete n B : bool :=
-  [forall k : 'I_BitsRepr.wordsize, (k < n) ==>
+  [forall k : 'I_wordsize, (k < n) ==>
     [exists k', get_coord n B k' k == true]].
 
 Definition is_correct cur n B :=
-  [forall i : 'I_BitsRepr.wordsize, forall i' : 'I_BitsRepr.wordsize,
+  [forall i : 'I_wordsize, forall i' : 'I_wordsize,
    (get_coord n B i i') ==> (i < n) && (i' < cur)
-   && [forall j : 'I_BitsRepr.wordsize, forall j' : 'I_BitsRepr.wordsize,
+   && [forall j : 'I_wordsize, forall j' : 'I_wordsize,
     ~~ ((i == j) && (i' == j')) ==> (get_coord n B j j') ==>
     (i != j) && (i' != j') (* Not on the same horizontal / vertical line *)
     && (i + j' != j + i') (* Not on the same right diagonal *)
@@ -189,34 +197,34 @@ Definition is_correct cur n B :=
 
 Definition valid_pos n := [set B | is_complete n B && is_correct n n B].
 
-Definition make_ld n B i' := [set i : 'I_BitsRepr.wordsize | [exists j : 'I_BitsRepr.wordsize, exists j' : 'I_BitsRepr.wordsize, (get_coord n B j j') && (i + i' == j + j')]].
+Definition make_ld n B i' := [set i : 'I_wordsize | [exists j : 'I_wordsize, exists j' : 'I_wordsize, (get_coord n B j j') && (i + i' == j + j')]].
 
 Definition repr_ld n B i' ld
-  := native_repr ld (make_ld n B i').
+  := machine_repr ld (make_ld n B i').
 
-Definition make_col n B := [set i : 'I_BitsRepr.wordsize | [exists i' : 'I_BitsRepr.wordsize,
+Definition make_col n B := [set i : 'I_wordsize | [exists i' : 'I_wordsize,
        get_coord n B i i']].
 
 Definition repr_col n B col
-  := native_repr col (make_col n B).
+  := machine_repr col (make_col n B).
 
 Definition make_rd n B i'
-  := [set i : 'I_BitsRepr.wordsize | [exists j : 'I_BitsRepr.wordsize, exists j' : 'I_BitsRepr.wordsize,
+  := [set i : 'I_wordsize | [exists j : 'I_wordsize, exists j' : 'I_wordsize,
      (get_coord n B j j') && (i + j' == j + i')]].
 
 Definition repr_rd n B i' rd
-  := native_repr rd (make_rd n B i').
+  := machine_repr rd (make_rd n B i').
 
 Definition repr_full n full
-  := native_repr full [set x : 'I_BitsRepr.wordsize | x < n].
+  := machine_repr full [set x : 'I_wordsize | x < n].
 
 Definition board_included n B B' := [forall x, forall y, get_coord n B x y ==> get_coord n B' x y].
 
-Definition empty_board := [tuple [tuple false | i < BitsRepr.wordsize] | i < BitsRepr.wordsize].
+Definition empty_board := [tuple [tuple false | i < wordsize] | i < wordsize].
 
-Definition board_possible n (P: {set ordinal_finType BitsRepr.wordsize}) B' i' := [forall i, get_coord n B' i i' ==> (i \in P)].
+Definition board_possible n (P: {set ordinal_finType wordsize}) B' i' := [forall i, get_coord n B' i i' ==> (i \in P)].
 
-Record repr_queen {n B} {curLine: 'I_BitsRepr.wordsize} {ld rd col full} :=
+Record repr_queen {n B} {curLine: 'I_wordsize} {ld rd col full} :=
   { line_val: nat_of_ord curLine = #|make_col n B|;
     correct: is_correct curLine n B;
     complete: is_complete curLine B;
@@ -226,33 +234,27 @@ Record repr_queen {n B} {curLine: 'I_BitsRepr.wordsize} {ld rd col full} :=
     r_full: repr_full n full }.
 
 Record repr_poss {n B curLine P poss} :=
-  { poss_repr: native_repr poss P;
+  { poss_repr: machine_repr poss P;
     poss_ld: P \subset (~: make_ld n B curLine);
     poss_rd: P \subset (~: make_rd n B curLine);
     poss_col: P \subset (~: make_col n B) }.
 
-Record fuel_correct {n curLine} {P: {set 'I_BitsRepr.wordsize}} {fuel} :=
-  { fuel_pos: fuel > 0;
-    fuel_inLine: (forall x : 'I_BitsRepr.wordsize, x < n /\ x \in P ->
-                  fuel >= (2 * n * (n - curLine) - [arg min_(k < x in P) k]).+1);
-    fuel_gt1: fuel.-1 > 0 }.
-
-Lemma size_full (n: nat) : n < BitsRepr.wordsize ->
-  n = #|[set x : 'I_BitsRepr.wordsize | x < n]|.
+Lemma size_full (n: nat) : n < wordsize ->
+  n = #|[set x : 'I_wordsize | x < n]|.
 Proof.
   elim: n=> [|n IHn] ltn_n.
   + (* n = 0 *)
-    have ->: [set x : 'I_BitsRepr.wordsize | x < 0] = set0.
+    have ->: [set x : 'I_wordsize | x < 0] = set0.
       rewrite -setP /eq_mem=> i.
       by rewrite in_set //.
     by rewrite cards0.
   + (* n ~ n.+1 *)
-    have ltn'_n: n < BitsRepr.wordsize.
+    have ltn'_n: n < wordsize.
       by apply (ltn_trans (n := n.+1)).
-    have ->: [set x : 'I_BitsRepr.wordsize | x < n.+1] = (inord n) |: [set x : 'I_BitsRepr.wordsize | x < n].
+    have ->: [set x : 'I_wordsize | x < n.+1] = (inord n) |: [set x : 'I_wordsize | x < n].
       rewrite -setP /eq_mem=> i.
       rewrite !in_set ltnS leq_eqVlt.
-      have ->: (i == @inord BitsRepr.wordsize.-1 n) = (nat_of_ord i == n).
+      have ->: (i == @inord wordsize.-1 n) = (nat_of_ord i == n).
         apply/eqP.
         case H: (nat_of_ord i == n).
         + (* i == n *)
@@ -267,7 +269,7 @@ Proof.
           by rewrite Habs' in H.
         by trivial.
     rewrite cardsU1 -IHn=> //.
-    have ->: (@inord 62 n \notin [set x : 'I_BitsRepr.wordsize | x < n]).
+    have ->: (@inord 62 n \notin [set x : 'I_wordsize | x < n]).
       rewrite in_set inordK=> //.
       by rewrite ltnn.
     by rewrite -add1n.
@@ -295,7 +297,7 @@ Lemma from_correct: forall n cur i i' B, is_correct cur n B -> get_coord n B i i
 Qed.
 
 Lemma from_complete: forall n B, is_complete n B ->
-  forall (k: 'I_BitsRepr.wordsize), k < n -> exists k', get_coord n B k' k.
+  forall (k: 'I_wordsize), k < n -> exists k', get_coord n B k' k.
 Proof.
   move=> n B Hcompl k ltn_k.
   rewrite /is_complete in Hcompl.
@@ -316,7 +318,7 @@ Lemma from_included: forall n B i j j', board_included n B i -> get_coord n B j 
   by rewrite Hjj' /= in Hincljj'.
 Qed.
 
-Lemma from_possible: forall n (P: {set 'I_BitsRepr.wordsize}) B' i', board_possible n P B' i' ->
+Lemma from_possible: forall n (P: {set 'I_wordsize}) B' i', board_possible n P B' i' ->
   forall i, get_coord n B' i i' -> i \in P.
 Proof.
   move=> n P B' i' Hposs i Hii'.
@@ -326,9 +328,9 @@ Proof.
   by rewrite Hii' implyTb in Hpossi.
 Qed.
 
-Lemma nextLine_correct n B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}) poss ld rd col full x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
+Lemma nextLine_correct n B (curLine: 'I_wordsize) (P: {set 'I_wordsize}) poss ld rd col full x (ltn_ScurLine: curLine.+1 < wordsize):
   let min := [arg min_(k < x in P) k] in
-  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < wordsize] | x < wordsize] in
   @repr_poss n B curLine P poss ->
   @repr_queen n B curLine ld rd col full ->
   x \in P ->
@@ -447,7 +449,7 @@ Proof.
 Qed.
 
 Lemma nextLine_complete n B curLine ld rd col full min:
-  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < wordsize] | x < wordsize] in
   @repr_queen n B curLine ld rd col full ->
   is_complete curLine.+1 B'.
 Proof.
@@ -471,11 +473,11 @@ Proof.
     by rewrite /get_coord /B' !tnth_mktuple Hj andbF.
 Qed.
 
-Lemma nextLine_P n B curLine (P: {set 'I_BitsRepr.wordsize}) poss (x: 'I_BitsRepr.wordsize):
+Lemma nextLine_P n B curLine (P: {set 'I_wordsize}) poss (x: 'I_wordsize):
   let min := [arg min_(k < x in P) k] in
   let P' := P :\ min in
-  let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
-  let poss' := BitsRepr.land poss (BitsRepr.lnot bit) in
+  let bit := land poss (lneg poss) in
+  let poss' := land poss (lnot bit) in
   x \in P ->
   @repr_poss n B curLine P poss ->
   @repr_poss n B curLine P' poss'.
@@ -493,12 +495,12 @@ Proof.
   by apply HP.
 Qed.
 
-Lemma nextLine_ld n B (curLine: 'I_BitsRepr.wordsize) ld rd col full poss (P: {set 'I_BitsRepr.wordsize}) x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
-  let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+Lemma nextLine_ld n B (curLine: 'I_wordsize) ld rd col full poss (P: {set 'I_wordsize}) x (ltn_ScurLine: curLine.+1 < wordsize):
+  let bit := land poss (lneg poss) in
   let min := [arg min_(k < x in P) k] in
-  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
-  let ld' := BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one in
-  n < BitsRepr.wordsize ->
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < wordsize] | x < wordsize] in
+  let ld' := lsr (lor ld bit) one in
+  n < wordsize ->
   x \in P ->
   @repr_queen n B curLine ld rd col full ->
   @repr_poss n B curLine P poss ->
@@ -507,7 +509,7 @@ Lemma nextLine_ld n B (curLine: 'I_BitsRepr.wordsize) ld rd col full poss (P: {s
 Proof.
   move=> bit min B' ld' ltn_n Hx HB HP HB'cor.
   rewrite /repr_ld.
-  have ->: (make_ld n B' (Ordinal ltn_ScurLine)) = [set i : 'I_BitsRepr.wordsize | (i < BitsRepr.wordsize.-1) && (inord i.+1 \in (make_ld n B' curLine))].
+  have ->: (make_ld n B' (Ordinal ltn_ScurLine)) = [set i : 'I_wordsize | (i < wordsize.-1) && (inord i.+1 \in (make_ld n B' curLine))].
     rewrite /make_ld -setP /eq_mem=> i.
     rewrite !in_set.
     have Habs: i.+1 >= n -> [exists j, exists j', get_coord n B' j j' && (i + curLine.+1 == j + j')] = false.
@@ -529,17 +531,17 @@ Proof.
         rewrite ltn_add2r=> //.
         rewrite leq_add2r=> //.
       by rewrite orbT orbT.
-    case ltn'_i: (i < BitsRepr.wordsize .-1).
-    + (* i < BitsRepr.wordsize .-1 *)
+    case ltn'_i: (i < wordsize .-1).
+    + (* i < wordsize .-1 *)
       rewrite inordK.
       have ->: i + curLine.+1 = i.+1 + curLine.
         by rewrite -add1n addnA addn1 //.
       rewrite //.
       rewrite -[i.+1]addn1 -[63]addn1 ltn_add2r.
       by apply ltn'_i.
-    + (* i >= BitsRepr.wordsize .-1 *)
+    + (* i >= wordsize .-1 *)
       have Hi: i.+1 >= n.
-        apply (leq_trans (n := BitsRepr.wordsize))=> //.
+        apply (leq_trans (n := wordsize))=> //.
         rewrite leq_eqVlt ltn_n orbT //.
         rewrite -(leq_add2r 1) !addn1 /= in ltn'_i.
         by rewrite leqNgt ltn'_i.
@@ -596,11 +598,11 @@ Proof.
   apply HP.
 Qed.
 
-Lemma nextLine_rd n B (curLine: 'I_BitsRepr.wordsize) ld rd col full poss (P: {set 'I_BitsRepr.wordsize}) x (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize):
-  let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+Lemma nextLine_rd n B (curLine: 'I_wordsize) ld rd col full poss (P: {set 'I_wordsize}) x (ltn_ScurLine: curLine.+1 < wordsize):
+  let bit := land poss (lneg poss) in
   let min := [arg min_(k < x in P) k] in
-  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
-  let rd' := BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < wordsize] | x < wordsize] in
+  let rd' := lsl (lor rd bit) one in
   x \in P ->
   @repr_queen n B curLine ld rd col full ->
   @repr_poss n B curLine P poss ->
@@ -609,7 +611,7 @@ Lemma nextLine_rd n B (curLine: 'I_BitsRepr.wordsize) ld rd col full poss (P: {s
 Proof.
   move=> bit min B' rd' Hx HB HP HB'cor.
   rewrite /repr_rd.
-  have ->: (make_rd n B' (Ordinal ltn_ScurLine)) = [set i : 'I_BitsRepr.wordsize | ((i > 0) && (inord i.-1 \in (make_rd n B' curLine)))].
+  have ->: (make_rd n B' (Ordinal ltn_ScurLine)) = [set i : 'I_wordsize | ((i > 0) && (inord i.-1 \in (make_rd n B' curLine)))].
     rewrite /make_rd -setP /eq_mem=> i.
     rewrite !in_set.
     case Hi: (i > 0)=> /=.
@@ -664,7 +666,7 @@ Proof.
         move/eqP: Hi=> Hi.
         apply ord_inj.
         by rewrite Hi.
-      have ->: ord0 (n' := BitsRepr.wordsize.-1) + j' = j' by trivial.
+      have ->: ord0 (n' := wordsize.-1) + j' = j' by trivial.
       rewrite ltn_addl //.
       by move: (from_correct n (Ordinal ltn_ScurLine) j j' B' HB'cor Hjj')=> [_ [Hj' _]].
   apply sl_repr.
@@ -722,11 +724,11 @@ Proof.
   by apply HP.
 Qed.
 
-Lemma nextLine_col n B curLine ld rd col full poss (P: {set 'I_BitsRepr.wordsize}) (x: 'I_BitsRepr.wordsize):
-  let bit := BitsRepr.land poss (BitsRepr.lneg poss) in
+Lemma nextLine_col n B curLine ld rd col full poss (P: {set 'I_wordsize}) (x: 'I_wordsize):
+  let bit := land poss (lneg poss) in
   let min := [arg min_(k < x in P) k] in
-  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
-  let col' := BitsRepr.lor col bit in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < wordsize] | x < wordsize] in
+  let col' := lor col bit in
   x \in P ->
   @repr_queen n B curLine ld rd col full ->
   @repr_poss n B curLine P poss ->
@@ -768,8 +770,8 @@ Proof.
   by apply HP.
 Qed.
 
-Lemma nextLine_numCol n B (curLine: 'I_BitsRepr.wordsize) ld rd col full min (P: {set 'I_BitsRepr.wordsize}) poss (ltn_ScurLine: curLine.+1 < BitsRepr.wordsize) (HminP: min \in P):
-  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+Lemma nextLine_numCol n B (curLine: 'I_wordsize) ld rd col full min (P: {set 'I_wordsize}) poss (ltn_ScurLine: curLine.+1 < wordsize) (HminP: min \in P):
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < wordsize] | x < wordsize] in
   @repr_queen n B curLine ld rd col full ->
   @repr_poss n B curLine P poss ->
   #|make_col n B'| = Ordinal ltn_ScurLine.
@@ -822,7 +824,7 @@ Qed.
 
 Lemma nextLine_splitCase n B curLine P min:
   let P' := P :\ min in
-  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize] in
+  let B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < wordsize] | x < wordsize] in
   let setA := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P' B'0 curLine] in
   let setB := [set B'0 in valid_pos n | board_included n B' B'0] in
   let setC := [set B'0 in valid_pos n | board_included n B B'0 & board_possible n P B'0 curLine] in
@@ -954,7 +956,7 @@ Proof.
     by rewrite !andbF.
 Qed.
 
-Lemma nextLine_end (n: nat) B (curLine: 'I_BitsRepr.wordsize) ld rd col full (HcurLine2: n = curLine):
+Lemma nextLine_end (n: nat) B (curLine: 'I_wordsize) ld rd col full (HcurLine2: n = curLine):
   @repr_queen n B curLine ld rd col full ->
   1 = #|[set B' in valid_pos n | board_included n B B']|.
 Proof.
@@ -1015,7 +1017,7 @@ Proof.
   by rewrite cards1.
 Qed.
 
-Lemma nextLine_oneCase n B (curLine: 'I_BitsRepr.wordsize) ld rd col full:
+Lemma nextLine_oneCase n B (curLine: 'I_wordsize) ld rd col full:
   let P := (~: (((make_ld n B curLine) :|: (make_rd n B curLine)) :|: (make_col n B))) in
   @repr_queen n B curLine ld rd col full ->
   [set B' in valid_pos n | board_included n B B' & board_possible n P B' curLine]
@@ -1077,8 +1079,8 @@ Proof.
     by rewrite andbC andbF.
 Qed.
 
-Lemma queens_correctInd (n: nat) : n > 0 -> n < BitsRepr.wordsize -> forall pos,
-  (forall B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}),
+Lemma queens_correctInd (n: nat) : n > 0 -> n < wordsize -> forall pos,
+  (forall B (curLine: 'I_wordsize) (P: {set 'I_wordsize}),
   mode pos = false ->
   curLine < n ->
   @repr_queen n B curLine (ld pos) (rd pos) (col pos) (full pos) ->
@@ -1087,10 +1089,10 @@ Lemma queens_correctInd (n: nat) : n > 0 -> n < BitsRepr.wordsize -> forall pos,
                            (poss pos) (curCount pos) false (Hinv pos)) =
          toInt63 (#|[set B' in (valid_pos n) | board_included n B B' && board_possible n P B' curLine]| + (fromInt63 (curCount pos))))
  /\
-  (forall B (curLine: 'I_BitsRepr.wordsize),
+  (forall B (curLine: 'I_wordsize),
   mode pos = true ->
-  poss pos = BitsRepr.zero ->
-  curCount pos = BitsRepr.zero ->
+  poss pos = zero ->
+  curCount pos = zero ->
   @repr_queen n B curLine (ld pos) (rd pos) (col pos) (full pos) ->
     countNQueensAux (mkPos (ld pos) (col pos) (rd pos) (full pos)
                            (poss pos) (curCount pos) true (Hinv pos)) =
@@ -1109,7 +1111,7 @@ Proof.
   (* TODO: this part can probably be simplified/erased *)
   have IH1: forall ld col rd full poss curCount mode Hinv,
   pos_order (mkPos ld col rd full poss curCount mode Hinv) st ->
-  forall B (curLine: 'I_BitsRepr.wordsize) (P: {set 'I_BitsRepr.wordsize}),
+  forall B (curLine: 'I_wordsize) (P: {set 'I_wordsize}),
   mode = false ->
   curLine < n ->
   @repr_queen n B curLine ld rd col full ->
@@ -1122,10 +1124,10 @@ Proof.
       apply (IH (mkPos ld0 col0 rd0 full0 poss0 curCount0 false Hinv0))=> //.
   have IH2: forall ld col rd full poss curCount mode Hinv,
   pos_order (mkPos ld col rd full poss curCount mode Hinv) st ->
-  forall B (curLine: 'I_BitsRepr.wordsize),
+  forall B (curLine: 'I_wordsize),
   mode = true ->
-  poss = BitsRepr.zero ->
-  curCount = BitsRepr.zero ->
+  poss = zero ->
+  curCount = zero ->
   @repr_queen n B curLine ld rd col full ->
     countNQueensAux (mkPos ld col rd full poss curCount mode Hinv) =
       toInt63 #|[set B' in (valid_pos n) | board_included n B B']|.
@@ -1141,11 +1143,11 @@ Proof.
   rewrite /countNQueensAux.
   rewrite Fix_eq /=.
   rewrite -/countNQueensAux.
-  case Hend: (BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero).
+  case Hend: (leq (land poss full) zero).
   + (* (poss & full) == 0 *)
     rewrite (eq_repr _ _ [set x in P | x < n] set0) in Hend.
     move/eqP: Hend=> Hend.
-    have H1: forall x : 'I_BitsRepr.wordsize, x \in P -> x >= n.
+    have H1: forall x : 'I_wordsize, x \in P -> x >= n.
       move=> x Hx.
       case ltn_x: (n <= x)=> //.
       apply negbT in ltn_x.
@@ -1165,17 +1167,17 @@ Proof.
       by rewrite Habsi // in Habs2.
     by rewrite cards0 add0n fromInt63_elim.
     rewrite setIdE.
-    apply (inter_repr _ _ P [set x : 'I_BitsRepr.wordsize | x < n])=> //.
+    apply (inter_repr _ _ P [set x : 'I_wordsize | x < n])=> //.
     apply HP.
     apply Hqueen.
     apply zero_repr.
   + (* (poss & full) != 0 *)
-    have Hend': BitsRepr.leq (BitsRepr.land poss full) BitsRepr.zero = false by auto.
+    have Hend': leq (land poss full) zero = false by auto.
     rewrite (eq_repr _ _ [set x in P | x < n] set0) in Hend.
     move/eqP: Hend=> Hend.
-    set bit := (BitsRepr.land poss (BitsRepr.lneg poss)).
-    have: [exists x : 'I_BitsRepr.wordsize, (x < n) && (x \in P)].
-      case Habs: [exists x : 'I_BitsRepr.wordsize, (x < n) && (x \in P)]=> //.
+    set bit := (land poss (lneg poss)).
+    have: [exists x : 'I_wordsize, (x < n) && (x \in P)].
+      case Habs: [exists x : 'I_wordsize, (x < n) && (x \in P)]=> //.
       apply negbT in Habs.
       rewrite negb_exists in Habs.
       move/forallP: Habs=> Habs.
@@ -1191,13 +1193,13 @@ Proof.
       rewrite /min /arg_min.
       case: pickP=> y //=.
       by move/andP => [H1 _].
-    set ld' := (BitsRepr.lsr (BitsRepr.lor ld bit) BitsRepr.one).
-    set col' := (BitsRepr.lor col bit).
-    set rd' := (BitsRepr.lsl (BitsRepr.lor rd bit) BitsRepr.one).
-    set B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < BitsRepr.wordsize] | x < BitsRepr.wordsize].
-    set poss' := (BitsRepr.land poss (BitsRepr.lnot bit)).
+    set ld' := (lsr (lor ld bit) one).
+    set col' := (lor col bit).
+    set rd' := (lsl (lor rd bit) one).
+    set B' := [tuple [tuple (if ((x == min) && (y == curLine)) then true else get_coord n B x y) | y < wordsize] | x < wordsize].
+    set poss' := (land poss (lnot bit)).
     set P' := P :\ min.
-    have ltn_ScurLine: curLine.+1 < BitsRepr.wordsize.
+    have ltn_ScurLine: curLine.+1 < wordsize.
       by apply (leq_ltn_trans (n := n))=> //.
     move: (nextLine_correct n B curLine P poss ld rd col full x ltn_ScurLine HP Hqueen Hx ltn_x HminP)=> HB'cor.
     rewrite (IH2 ld' _ _ _ _ _ _ _ _ B' (Ordinal ltn_ScurLine))=> //.
@@ -1239,28 +1241,28 @@ Proof.
   rewrite /countNQueensAux.
   rewrite Fix_eq /=.
   rewrite -/countNQueensAux.
-  case Hend: (BitsRepr.leq col full).
+  case Hend: (leq col full).
   + (* col = full *)
     have HcurLine2: n = curLine.
       move: (r_col HB)=> Hcol.
       rewrite /repr_col in Hcol.
       rewrite (line_val HB).
       rewrite {1}(size_full n)=> //.
-      have ->: (make_col n B) = [set x : 'I_BitsRepr.wordsize | x < n].
+      have ->: (make_col n B) = [set x : 'I_wordsize | x < n].
         apply/eqP.
-        rewrite -(eq_repr col full (make_col n B) [set x : 'I_BitsRepr.wordsize | x < n ])=> //.
+        rewrite -(eq_repr col full (make_col n B) [set x : 'I_wordsize | x < n ])=> //.
       apply HB.
       by trivial.
     rewrite -(nextLine_end n B curLine ld rd col full)=> //.
-    by rewrite -[BitsRepr.one]fromInt63_elim fromInt63_one.
+    by rewrite -[one]fromInt63_elim fromInt63_one.
   + (* col != full *)
     set P := (~: (((make_ld n B curLine) :|: (make_rd n B curLine)) :|: (make_col n B))).
     have ltn_curLine: curLine < n.
-      rewrite (eq_repr _ _ (make_col n B) [set x : 'I_BitsRepr.wordsize | x < n]) in Hend=> //.
+      rewrite (eq_repr _ _ (make_col n B) [set x : 'I_wordsize | x < n]) in Hend=> //.
       rewrite (line_val HB) {2}(size_full n)=> //.
-      have Hprop: make_col n B \proper [set x0 : 'I_BitsRepr.wordsize | x0 < n].
+      have Hprop: make_col n B \proper [set x0 : 'I_wordsize | x0 < n].
         rewrite properEneq.
-        have ->: make_col n B \subset [set x0 : 'I_BitsRepr.wordsize | x0 < n].
+        have ->: make_col n B \subset [set x0 : 'I_wordsize | x0 < n].
           apply/subsetP.
           rewrite /sub_mem=> i Hi.
           rewrite /make_col in_set in Hi.
@@ -1289,20 +1291,20 @@ Proof.
   admit. (* Bleh *)
 Admitted.
 
-Theorem queens_correct: forall n, n > 0 -> n < BitsRepr.wordsize -> countNQueens n = toInt63 #|valid_pos n|.
+Theorem queens_correct: forall n, n > 0 -> n < wordsize -> countNQueens n = toInt63 #|valid_pos n|.
 Proof.
   move=> n gtz_n ltn_n.
   have Hempty: forall x y, get_coord n empty_board x y = false.
     move=> x y.
     by rewrite /get_coord !tnth_mktuple.
   rewrite /countNQueens.
-  have Hind: forall ld rd col full, forall B (curLine: 'I_BitsRepr.wordsize) Hinv,
+  have Hind: forall ld rd col full, forall B (curLine: 'I_wordsize) Hinv,
   @repr_queen n B curLine ld rd col full ->
     countNQueensAux (mkPos ld col rd full
-                           BitsRepr.zero BitsRepr.zero true Hinv) =
+                           zero zero true Hinv) =
       toInt63 #|[set B' in (valid_pos n) | board_included n B B']|.
     move=> ld0 rd0 col0 full0 B curLine Hinv0.
-    by apply (queens_correctInd n gtz_n ltn_n (mkPos ld0 col0 rd0 full0 BitsRepr.zero BitsRepr.zero true Hinv0)).
+    by apply (queens_correctInd n gtz_n ltn_n (mkPos ld0 col0 rd0 full0 zero zero true Hinv0)).
   rewrite (Hind _ _ _ _ empty_board ord0)=> //.
   have ->: [set B' in valid_pos n | board_included n empty_board B'] = valid_pos n.
     rewrite -setP /eq_mem=> i.
@@ -1315,7 +1317,7 @@ Proof.
     by rewrite andbT.
   rewrite //.
   have H: forall P,
-    [set i : 'I_BitsRepr.wordsize | [exists j, exists j',
+    [set i : 'I_wordsize | [exists j, exists j',
                get_coord n empty_board j j' && P i j j']] = set0.
     move=> P.
     rewrite -setP /eq_mem=> i.
@@ -1337,13 +1339,7 @@ Proof.
     by rewrite Hempty.
 
   (* Handle ld, rd & col directly *)
-  split; try (rewrite /repr_ld /repr_rd /native_repr;
-              exists (zero BitsRepr.wordsize);
-              split;
-              [ rewrite -{1}fromNat0; exact: BitsRepr.zero_repr
-              | try rewrite /make_ld /make_rd H;
-                try rewrite Hcol;
-                exact: spec.empty_repr]).
+  split.
   by rewrite Hcol cards0.
 
   rewrite /is_correct.
@@ -1356,13 +1352,19 @@ Proof.
   apply/forallP=> x.
   by apply/implyP=> //.
 
+  by rewrite /repr_ld /make_ld H; exact: zero_repr.
+
+  by rewrite /repr_rd /make_rd H; exact: zero_repr.
+
+  by rewrite /repr_col Hcol; exact: zero_repr.
+
   rewrite /repr_full /native_repr.
   exists (decB (shlBn #1 n)).
   split.
-  apply BitsRepr.ldec_repr.
-  apply BitsRepr.lsl_repr.
-  apply BitsRepr.one_repr.
-  by eexists; split; first by rewrite toInt63_def; apply BitsRepr.toInt63_repr.
+  apply ldec_repr.
+  apply lsl_repr.
+  apply one_repr.
+  by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
   apply spec.subset_repr.
   by rewrite leq_eqVlt ltn_n orbT.
 Qed.
