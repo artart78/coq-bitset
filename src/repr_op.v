@@ -438,16 +438,20 @@ Qed.
 
 (** ** Cardinality *)
 
+Lemma fromInt63_inj: forall x y,
+  fromInt63 x = fromInt63 y -> x = y.
+Admitted.
+
 Module Int63_as_OT <: OrderedType.
 
   Definition t := BitsRepr.Int63.
 
-  Definition eq := @eq BitsRepr.Int63.
+  Definition eq x y : Prop := (fromInt63 x) = (fromInt63 y).
 
   Definition lt x y : Prop := (fromInt63 x) < (fromInt63 y).
-  Definition eq_refl := @Logic.eq_refl t.
-  Definition eq_sym := @Logic.eq_sym t.
-  Definition eq_trans := @Logic.eq_trans t.
+  Definition eq_refl x := @Logic.eq_refl nat (fromInt63 x).
+  Definition eq_sym x y := @Logic.eq_sym nat (fromInt63 x) (fromInt63 y).
+  Definition eq_trans x y z := @Logic.eq_trans nat (fromInt63 x) (fromInt63 y) (fromInt63 z).
 
   Lemma lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
   Proof.
@@ -464,13 +468,20 @@ Module Int63_as_OT <: OrderedType.
   Definition compare x y : Compare lt eq x y.
   Proof.
     case_eq (nat_compare (fromInt63 x) (fromInt63 y)); intro.
-    - apply EQ. admit.
-    - apply LT. admit.
-    - apply GT. admit.
-  Admitted.
+    - apply EQ.
+      by apply nat_compare_eq.
+    - apply LT.
+      apply/ltP.
+      by apply nat_compare_Lt_lt.
+    - apply GT.
+      apply/ltP.
+      by apply nat_compare_Gt_gt.
+  Qed.
 
   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
-  Admitted.
+    move=> x y.
+    by apply eq_nat_dec.
+  Qed.
 
 End Int63_as_OT.
 
@@ -482,9 +493,7 @@ Fixpoint pop_tableAux (i: nat) (m: M.t BitsRepr.Int63) :=
   | i'.+1 => M.add (toInt63 i) (toInt63 (count_mem true (fromNat (n := 3) i))) (pop_tableAux i' m)
   end.
 
-Definition pop_table := Eval compute in (pop_tableAux (2 ^ 3) (M.empty BitsRepr.Int63)).
-
-Print pop_table.
+Definition pop_table := pop_tableAux (2 ^ 3) (M.empty BitsRepr.Int63).
 
 Definition pop_elem (bs: BitsRepr.Int63)(i: nat): BitsRepr.Int63
   := let x := BitsRepr.land (BitsRepr.lsr bs (toInt63 (i * 3))) 
@@ -541,7 +550,7 @@ Proof.
 Qed.
 
 Definition cardinal (bs: BitsRepr.Int63): BitsRepr.Int63
-  := Eval compute in popAux bs 21.
+  := popAux bs 21.
 
 Lemma cardinal_repr:
   forall (bs: BitsRepr.Int63) E, native_repr bs E ->
