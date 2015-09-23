@@ -1,5 +1,4 @@
 -R src Bitset
-src/bitset.v
 src/spec.v
 src/repr_op.v
 src/props/bineqs.v

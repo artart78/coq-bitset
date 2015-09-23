@@ -109,8 +109,7 @@ VFILES:=src/ops/union.v\
   src/props/getbit.v\
   src/props/bineqs.v\
   src/repr_op.v\
-  src/spec.v\
-  src/bitset.v
+  src/spec.v
 
 -include $(addsuffix .d,$(VFILES))
 .SECONDARY: $(addsuffix .d,$(VFILES))
