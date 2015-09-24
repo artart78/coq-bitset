@@ -10,17 +10,22 @@ Lemma fromInt63_elim:
 Proof.
 Admitted.
 
-Axiom ladd_repr:
+Lemma ladd_repr:
   forall x y, ladd (toInt63 x) (toInt63 y) = toInt63 (x + y).
-
-(* ladd_repr2 can be proven from ladd_repr, but not the other way
-Lemma ladd_repr2:
-  forall x y, ladd x y = toInt63 (fromInt63 x + fromInt63 y).
 Proof.
-move=> x y.
-by rewrite ladd_repr !fromInt63_elim.
-Qed.
-*)
+  move=> x y.
+  rewrite !toInt63_def.
+  Print ladd_repr.
+  have H: bitsFromInt63 (ladd (bitsToInt63 # (x)) (bitsToInt63 # (y))) = bitsFromInt63 (bitsToInt63 # (x + y)).
+    have ->: bitsFromInt63 (bitsToInt63 #(x + y)) = #(x + y) by admit.
+    have H: native_repr (ladd (bitsToInt63 # (x)) (bitsToInt63 # (y))) (addB # (x) # (y)).
+      apply ladd_repr.
+      apply bitsToInt63_repr.
+      apply bitsToInt63_repr.
+    rewrite -fromNat_addBn.
+    admit. (* eq_adj *)
+  admit. (* fromInt_inj *)    
+Admitted.
 
 Lemma fromInt63_zero:
   fromInt63 zero = 0.
@@ -70,14 +75,14 @@ Theorem nqueens_wf : well_founded pos_order. Admitted.
 (* TODO: these are true only if bit is not in col / is in poss *)
 Lemma fromInt63_1: forall st,
   let bit := land (poss st) (lneg (poss st)) in
-  leq (land bit (col st)) zero ->
-  fromInt63 (col st) < fromInt63 (lor (col st) bit).
+  leq (land bit (col st)) zero -> (* bit :&: (col st) = set0 *)
+  fromInt63 (col st) < fromInt63 (lor (col st) bit). (* adding 'bit' adds bits *)
 Admitted.
 
 Lemma fromInt63_2: forall st,
-  leq (land (poss st) (full st)) zero = false ->
-  let bit := land (poss st) (lneg (poss st)) in
-  fromInt63 (land (poss st) (lnot bit)) < fromInt63 (poss st).
+  leq (land (poss st) (full st)) zero = false -> (* (poss st) :&: (full st) <> set0 *)
+  let bit := land (poss st) (lneg (poss st)) in (* bit the singleton {minimum in poss st} *)
+  fromInt63 (land (poss st) (lnot bit)) < fromInt63 (poss st). (* removing 'bit' removes bits *)
 Admitted.
 
 Definition countNQueensAux: pos -> Int63.
