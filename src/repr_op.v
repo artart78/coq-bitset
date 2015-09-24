@@ -76,6 +76,7 @@ Proof.
   split.
   * apply lsl_repr.
     apply one_repr.
+    split; first by apply (ltn_trans (n := wordsize))=> //.
     by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
   * rewrite getBit_shlBn=> //.
     apply singleton_repr.
@@ -91,6 +92,7 @@ Proof.
   exists (shlBn bv 1); split.
   * apply: lsl_repr;
       first by assumption.
+    split; first by trivial.
     eexists; split;
       first by apply one_repr.
     done.
@@ -114,6 +116,7 @@ Proof.
   exists (shrBn bv 1); split.
   * apply: lsr_repr; 
       first by assumption.
+    split; first by trivial.
     eexists; split; 
       first by apply one_repr.
     done.
@@ -182,6 +185,7 @@ Proof.
   apply land_repr;
      last by apply one_repr.
   apply lsr_repr=> //.
+  exists; first by apply (ltn_trans (n := wordsize)).
   eexists; split => //;
     first by rewrite toInt63_def; apply bitsToInt63_repr.
 Qed.
@@ -243,11 +247,13 @@ Proof.
     apply lor_repr=> //.
     apply lsl_repr=> //.
     + by rewrite toInt63_def; apply bitsToInt63_repr.
-    + by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
+    + split; first by apply (ltn_trans (n := wordsize)).
+      by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
     apply land_repr=> //.
     apply lnot_repr=> //.
     apply lsl_repr=> //.
     rewrite toInt63_def; apply bitsToInt63_repr=> //.
+    split; first by apply (ltn_trans (n := wordsize)).
     by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
   by apply set.set_repr.
 Qed.
@@ -417,6 +423,10 @@ Lemma cardinal_repr:
 Proof.
   move=> bs E [bv [int_repr fin_repr]].
   rewrite /natural_repr.
+  split.
+  apply (leq_ltn_trans (n := #|'I_wordsize|))=> //.
+  apply max_card.
+  rewrite card_ord //.
   exists # (#|E|).
   split=> //.
   rewrite - (@cardinal.cardinal_repr _ 3 bv) => //.
@@ -437,6 +447,7 @@ Lemma ntz_repr:
 Proof.
   move=> bs x E [bv [Hbv1 Hbv2]] Hx.
   rewrite /natural_repr.
+  split; first by apply (ltn_trans (n := wordsize)).
   exists #[arg min_(k < x in E) k].
   rewrite -(min.ntz_repr _ bv 3)=> //.
   rewrite /ntz /min.ntz.
@@ -460,7 +471,7 @@ Proof.
     apply lneg_repr.
     apply Hbv1.
     by apply H.
-  move: (cardinal_repr (lor bs (lneg bs)) E' Hok)=> [y [Hy1 Hy2]].
+  move: (cardinal_repr (lor bs (lneg bs)) E' Hok)=> [_ [y [Hy1 Hy2]]].
   rewrite -Hy2 in Hy1.
   apply Hy1.
   trivial.
