@@ -10,14 +10,34 @@ Section bloom.
 (* Definition *)
 
 Variable P: Type.
-Fixpoint bloomSig_aux (T: Int63) (H: seq (P -> 'I_wordsize)) (elem: P): Int63
+
+Section bloom_def.
+
+Variable T: Type.
+Variable union: T -> T -> T. (* lor, |: *)
+Variable singleton: nat -> T. (* x -> lsl one (toInt63 x), id *)
+Variable empty: T.
+
+Fixpoint bloomSig_def_aux (curFilter: T) (H: seq (P -> 'I_wordsize)) (elem: P): T
  := match H with
-    | [::] => T
-    | h :: t => bloomSig_aux (lor (lsl one (toInt63 (h elem))) T) t elem
+    | [::] => curFilter
+    | h :: t => bloomSig_def_aux (union (singleton (h elem)) curFilter) t elem
     end.
 
-Definition bloomSig (H: seq (P -> 'I_wordsize)) (elem: P): Int63
- := bloomSig_aux zero H elem.
+Definition bloomSig_def (H: seq (P -> 'I_wordsize)) (elem: P): T
+ := bloomSig_def_aux empty H elem.
+
+End bloom_def.
+
+Definition bloomSig
+ := bloomSig_def Int63 lor (fun x => lsl one (toInt63 x)) zero.
+Definition bloomSig_aux
+ := bloomSig_def_aux Int63 lor (fun x => lsl one (toInt63 x)).
+
+Definition bloomSig_repr
+ := bloomSig_def {set 'I_wordsize} (setU (T := ordinal_finType wordsize)) (fun x => [set (inord x)]) set0.
+Definition bloomSig_repr_aux
+ := bloomSig_def_aux {set 'I_wordsize} (setU (T := ordinal_finType wordsize)) (fun x => [set (inord x)]).
 
 Definition bloomAdd (T: Int63) (H: seq (P -> 'I_wordsize)) (add: P) : Int63
  := lor T (bloomSig H add).
@@ -28,15 +48,6 @@ Definition bloomCheck (T: Int63) (H: seq (P -> 'I_wordsize)) (check: P) : bool
 
 (* Proof *)
 
-Fixpoint bloomSig_repr_aux (T: {set 'I_wordsize}) (H: seq (P -> 'I_wordsize)) (elem: P)
- := match H with
-    | [::] => T
-    | h :: t => bloomSig_repr_aux ((h elem) |: T) t elem
-    end.
-
-Definition bloomSig_repr (H: seq (P -> 'I_wordsize)) (elem: P)
- := bloomSig_repr_aux set0 H elem.
-
 Lemma bloomSig_isRepr:
   forall H T T' add, machine_repr T T' -> machine_repr (bloomSig_aux T H add) (bloomSig_repr_aux T' H add).
 Proof.
@@ -44,6 +55,9 @@ Proof.
   rewrite /bloomSig /bloomSig_repr -/bloomSig -/bloomSig_repr.
   apply IH.
   apply union_repr=> //.
+  have {1}->: a add = inord (n' := wordsize.-1) (a add).
+    apply ord_inj.
+    by rewrite inordK.
   apply singleton_repr.
 Qed.
 

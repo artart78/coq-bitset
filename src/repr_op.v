@@ -372,24 +372,21 @@ Lemma pop_elem_repr:
 Proof.
   move=> n bs i ?.
   rewrite /pop_elem/cardinal.pop_elem.
+  rewrite /cardinal.pop_table.
+  rewrite nth_mkseq.
+  set i' := land (lsr n (toInt63 (i * 3))) (ldec (lsl one (toInt63 3))).
+  rewrite (M.find_1 (e := toInt63 (count_mem true (fromNat (n := 3) (fromInt63 i'))))).
+  have ->: fromInt63 i' = toNat (andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3))).
+    rewrite fromInt63_def.
+    have ->: bitsFromInt63 i' = andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3)).
+      admit. (* This should be easy *)
+    rewrite //.
+  rewrite toInt63_def.
+  apply bitsToInt63_repr.
+  rewrite /pop_table /pop_tableAux [_ (2^3) _]/=.
+  admit. (* Trivial, but painful *)
+  admit. (* toNat (...) < 2 ^ 3: this should be easy *)
 Admitted.
-(*
-  have ->:
-          (land (lsr n (toInt63 (i * 3)))
-                         (ldec (lsl one (toInt63 3)))) =
-       (toNat (andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3)))).
-  rewrite fromInt63_def; apply f_equal.
-  apply fromInt63_repr.
-  apply land_repr.
-  * by apply lsr_repr=> //;
-    eexists; split; first by rewrite toInt63_def; apply toInt63_repr.
-  * apply ldec_repr;
-    apply lsl_repr;
-       first by apply one_repr.
-    by eexists; split; first by rewrite toInt63_def; apply toInt63_repr.
-  admit. (* pop_table represents cardinal.pop_table 3 ... *)
-Admitted.
-*)
 
 Fixpoint popAux (bs: Int63)(i: nat): Int63 :=
   match i with
