@@ -74,7 +74,7 @@ Proof.
   move=> x.
   exists (shlBn #1 x).
   split.
-  * apply lsl_repr.
+  * apply lsl_repr=> //.
     apply one_repr.
     by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
   * rewrite getBit_shlBn=> //.
@@ -89,8 +89,7 @@ Lemma sl_repr:
 Proof.
   move=> i E [bv [r_native r_set]].
   exists (shlBn bv 1); split.
-  * apply: lsl_repr;
-      first by assumption.
+  * apply: lsl_repr=> //.
     eexists; split;
       first by apply one_repr.
     done.
@@ -112,8 +111,7 @@ Lemma sr_repr:
 Proof.
   move=> i E [bv [r_native r_set]].
   exists (shrBn bv 1); split.
-  * apply: lsr_repr; 
-      first by assumption.
+  * apply: lsr_repr=> //.
     eexists; split; 
       first by apply one_repr.
     done.
