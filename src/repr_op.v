@@ -1,8 +1,8 @@
 Require Import FMapList OrderedType OrderedTypeEx Compare_dec Peano_dec.
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
+     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset div.
 From Bits
-     Require Import bits extraction.axioms63.
+     Require Import bits extraction.axioms32.
 Require Import props.bineqs props.getbit spec.
 
 Require create get set inter union symdiff compl keep_min min cardinal shift.
@@ -14,43 +14,43 @@ Require create get set inter union symdiff compl keep_min min cardinal shift.
     We establish a relation between OCaml's types (which extracts
     efficiently to machine-native datatypes) and the finset
     library. This is achieved by composing the representation of [BITS
-    63] with OCaml's [int] (defined in [coq:bits]) and the
+    32] with OCaml's [int] (defined in [coq:bits]) and the
     representation of [finset] with [BITS n].
 
  *)
 
 Definition machine_repr
-           (n: Int63)
+           (n: Int)
            (E: {set 'I_wordsize}): Prop :=
   exists bv, native_repr n bv /\ repr bv E.
 
 
-(** We go from Coq's [nat] to [Int63] by (brutally) collapsing [nat]
+(** We go from Coq's [nat] to [Int] by (brutally) collapsing [nat]
     to [int]: *)
 
 Extract Inductive nat => int [ "0" "succ" ]
                              "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 
-Axiom toInt63: nat -> Int63.
+Axiom toInt: nat -> Int.
 
-Extract Inlined Constant toInt63 => "".
+Extract Inlined Constant toInt => "".
 
-Axiom toInt63_def : forall n, toInt63 n = bitsToInt63 (# n).
+Axiom toInt_def : forall n, toInt n = bitsToInt (# n).
 
 
-Axiom fromInt63: Int63 -> nat.
+Axiom fromInt: Int -> nat.
 
-Extract Inlined Constant fromInt63 => "".
+Extract Inlined Constant fromInt => "".
 
-Axiom fromInt63_def : forall n, fromInt63 n = toNat (bitsFromInt63 n).
+Axiom fromInt_def : forall n, fromInt n = toNat (bitsFromInt n).
 
 (** ** Equality *)
 
-Lemma eq_repr: forall i i' E E', machine_repr i E -> machine_repr i' E' -> (leq i i') = (E == E').
+Lemma eq_repr: forall i i' E E', machine_repr i E -> machine_repr i' E' -> (eq i i') = (E == E').
 Proof.
   move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
-  rewrite (leq_repr _ _ bv bv')=> //.
-  by rewrite (spec.eq_repr _ _ _ E E').
+  rewrite (axioms32.eq_repr _ _ bv bv')=> //.
+  by rewrite -(spec.eq_repr _ bv bv' E E').
 Qed.
 
 (** ** Zero *)
@@ -69,14 +69,16 @@ Qed.
 
 Lemma singleton_repr:
   forall (x: 'I_wordsize),
-    machine_repr (lsl one (toInt63 x)) [set x].
+    machine_repr (lsl one (toInt x)) [set x].
 Proof.
   move=> x.
   exists (shlBn #1 x).
   split.
   * apply lsl_repr=> //.
     apply one_repr.
-    by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
+    apply/existsP; exists # (x); apply/andP; split=> //.
+    apply/eqIntP.
+    rewrite toInt_def=> //.
   * rewrite getBit_shlBn=> //.
     apply singleton_repr.
 Qed.
@@ -90,8 +92,7 @@ Proof.
   move=> i E [bv [r_native r_set]].
   exists (shlBn bv 1); split.
   * apply: lsl_repr=> //.
-    eexists; split;
-      first by apply one_repr.
+    apply/existsP; eexists; apply/andP; split; first by apply one_repr.
     done.
   * have H: wordsize = wordsize.-1.+1 by compute.
     have ->: [set i0 : 'I_wordsize | 0 < i0 & inord i0.-1 \in E]
@@ -112,8 +113,7 @@ Proof.
   move=> i E [bv [r_native r_set]].
   exists (shrBn bv 1); split.
   * apply: lsr_repr=> //.
-    eexists; split; 
-      first by apply one_repr.
+    apply/existsP; eexists; apply/andP; split; first by apply one_repr.
     done.
   * have H: wordsize = wordsize.-1.+1 by compute.
     have ->: [set i0 : 'I_wordsize | i0 < wordsize.-1 & inord i0.+1 \in E]
@@ -129,7 +129,7 @@ Qed.
 
 (** ** Complement *)
 
-Definition compl (bs: Int63): Int63
+Definition compl (bs: Int): Int
   := lnot bs.
 
 Lemma compl_repr:
@@ -143,8 +143,8 @@ Qed.
 
 (** ** Set creation *)
 
-Definition create (b: bool): Int63
-  := if b then ldec (toInt63 0) else (toInt63 0).
+Definition create (b: bool): Int
+  := if b then dec (toInt 0) else (toInt 0).
 
 Lemma create_repr:
   forall (b: bool),
@@ -155,17 +155,17 @@ Proof.
   * apply create.create_repr => //.
   * rewrite /create/create.create; case: b.
     + (* Case: b ~ true *)
-      apply ldec_repr.
-      by rewrite toInt63_def;
-         apply bitsToInt63_repr.
+      apply dec_repr.
+      by rewrite toInt_def;
+         apply/eqIntP.
     + (* Case: b ~ false *)
-      by rewrite toInt63_def; apply bitsToInt63_repr.
+      by rewrite toInt_def; apply/eqIntP.
 Qed.
 
 (** ** Querying *)
 
-Definition get (bs: Int63) (k: 'I_wordsize): bool
-  := leq (land (lsr bs (toInt63 k)) one) one.
+Definition get (bs: Int) (k: 'I_wordsize): bool
+  := eq (land (lsr bs (toInt k)) one) one.
 
 Lemma get_repr:
   forall i E (k: 'I_wordsize), machine_repr i E ->
@@ -174,19 +174,20 @@ Proof.
   move=> i E k H.
   rewrite /get.
   move: H=> [bv [Hbv1 Hbv2]].
-  rewrite (leq_repr _ _ (andB (shrBn bv k) #1) #1);
+  rewrite (axioms32.eq_repr _ _ (andB (shrBn bv k) #1) #1);
     last by apply one_repr.
   apply get.get_repr=> //.
   apply land_repr;
      last by apply one_repr.
   apply lsr_repr=> //.
-  eexists; split => //;
-    first by rewrite toInt63_def; apply bitsToInt63_repr.
+  apply/existsP; exists # (k); apply/andP; split=> //.
+  rewrite toInt_def.
+  by apply/eqIntP.
 Qed.
 
 (** ** Intersection *)
 
-Definition inter (bs: Int63) (bs': Int63): Int63
+Definition inter (bs: Int) (bs': Int): Int
   := land bs bs'.
 
 Lemma inter_repr:
@@ -205,8 +206,8 @@ Qed.
 
 (** ** Minimal element *)
 
-Definition keep_min (bs: Int63): Int63
-  := land bs (lneg bs).
+Definition keep_min (bs: Int): Int
+  := land bs (neg bs).
 
 Lemma keep_min_repr:
   forall i E x, machine_repr i E -> x \in E ->
@@ -217,21 +218,21 @@ Proof.
   exists (keep_min.keep_min bv).
   split.
   apply land_repr=> //.
-  apply lneg_repr=> //.
+  apply neg_repr=> //.
   by apply keep_min.keep_min_repr.
 Qed.
 
 (** ** Insertion *)
 
-Definition set (bs: Int63) k (b: bool): Int63
+Definition set (bs: Int) k (b: bool): Int
   := if b then 
-       lor bs (lsl (toInt63 1) k) 
+       lor bs (lsl (toInt 1) k) 
      else
-       land bs (lnot (lsl (toInt63 1) k)).
+       land bs (lnot (lsl (toInt 1) k)).
 
 Lemma set_repr:
   forall i (k: 'I_wordsize) (b: bool) E, machine_repr i E ->
-    machine_repr (set i (toInt63 k) b) (if b then (k |: E) else (E :\ k)).
+    machine_repr (set i (toInt k) b) (if b then (k |: E) else (E :\ k)).
 Proof.
   move=> i k b E [bv [Hbv1 Hbv2]].
   exists (set.set bv k b).
@@ -240,19 +241,21 @@ Proof.
   case: b.
     apply lor_repr=> //.
     apply lsl_repr=> //.
-    + by rewrite toInt63_def; apply bitsToInt63_repr.
-    + by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
+    + by rewrite toInt_def; apply/eqIntP.
+    + rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
+      by apply/eqIntP.
     apply land_repr=> //.
     apply lnot_repr=> //.
     apply lsl_repr=> //.
-    rewrite toInt63_def; apply bitsToInt63_repr=> //.
-    by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
+    by rewrite toInt_def; apply/eqIntP.
+    rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
+      by apply/eqIntP.
   by apply set.set_repr.
 Qed.
 
 (** ** Symmetrical difference *)
 
-Definition symdiff (bs: Int63) (bs': Int63): Int63
+Definition symdiff (bs: Int) (bs': Int): Int
   := lxor bs bs'.
 
 Lemma symdiff_repr:
@@ -268,7 +271,7 @@ Qed.
 
 (** ** Union *)
 
-Definition union (bs: Int63) (bs': Int63): Int63
+Definition union (bs: Int) (bs': Int): Int
   := lor bs bs'.
 
 Lemma union_repr:
@@ -284,9 +287,9 @@ Qed.
 
 (** ** Subset *)
 
-Lemma subset_repr: forall (bs bs': Int63) E E',
+Lemma subset_repr: forall (bs bs': Int) E E',
   machine_repr bs E -> machine_repr bs' E' ->
-    (leq (land bs bs') bs) =
+    (eq (land bs bs') bs) =
       (E \subset E').
 Proof.
   move=> bs bs' E E' HE HE'.
@@ -298,26 +301,26 @@ Qed.
 
 (** ** Cardinality *)
 
-Lemma fromInt63_inj: forall x y,
-  fromInt63 x = fromInt63 y -> x = y.
+Lemma fromInt_inj: forall x y,
+  fromInt x = fromInt y -> x = y.
 Admitted.
 
-Module Int63_as_OT <: OrderedType.
+Module Int_as_OT <: OrderedType.
 
-  Definition t := Int63.
+  Definition t := Int.
 
-  Definition eq x y : Prop := (fromInt63 x) = (fromInt63 y).
+  Definition eq x y : Prop := (fromInt x) = (fromInt y).
 
-  Definition lt x y : Prop := (fromInt63 x) < (fromInt63 y).
-  Definition eq_refl x := @Logic.eq_refl nat (fromInt63 x).
-  Definition eq_sym x y := @Logic.eq_sym nat (fromInt63 x) (fromInt63 y).
-  Definition eq_trans x y z := @Logic.eq_trans nat (fromInt63 x) (fromInt63 y) (fromInt63 z).
+  Definition lt x y : Prop := (fromInt x) < (fromInt y).
+  Definition eq_refl x := @Logic.eq_refl nat (fromInt x).
+  Definition eq_sym x y := @Logic.eq_sym nat (fromInt x) (fromInt y).
+  Definition eq_trans x y z := @Logic.eq_trans nat (fromInt x) (fromInt y) (fromInt z).
 
   Lemma lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
   Proof.
   move=> x y z H1 H2.
   rewrite /lt.
-  apply (ltn_trans (n := fromInt63 y)).
+  apply (ltn_trans (n := fromInt y)).
   apply H1.
   apply H2.
   Qed.
@@ -327,7 +330,7 @@ Module Int63_as_OT <: OrderedType.
 
   Definition compare x y : Compare lt eq x y.
   Proof.
-    case_eq (nat_compare (fromInt63 x) (fromInt63 y)); intro.
+    case_eq (nat_compare (fromInt x) (fromInt y)); intro.
     - apply EQ.
       by apply nat_compare_eq.
     - apply LT.
@@ -343,21 +346,23 @@ Module Int63_as_OT <: OrderedType.
     by apply eq_nat_dec.
   Qed.
 
-End Int63_as_OT.
+End Int_as_OT.
 
-Module M := FMapList.Make(Int63_as_OT).
+Module M := FMapList.Make(Int_as_OT).
 
-Fixpoint pop_tableAux (i: nat) (m: M.t Int63) :=
+Definition tableSize := 4.
+
+Fixpoint pop_tableAux (i: nat) (m: M.t Int) :=
   match i with
   | 0 => M.add zero zero m
-  | i'.+1 => M.add (toInt63 i) (toInt63 (count_mem true (fromNat (n := 3) i))) (pop_tableAux i' m)
+  | i'.+1 => M.add (toInt i) (toInt (count_mem true (fromNat (n := tableSize) i))) (pop_tableAux i' m)
   end.
 
-Definition pop_table := pop_tableAux (2 ^ 3) (M.empty Int63).
+Definition pop_table := pop_tableAux (2 ^ tableSize) (M.empty Int).
 
-Definition pop_elem (bs: Int63)(i: nat): Int63
-  := let x := land (lsr bs (toInt63 (i * 3))) 
-                            (ldec (lsl one (toInt63 3))) in
+Definition pop_elem (bs: Int)(i: nat): Int
+  := let x := land (lsr bs (toInt (i * tableSize))) 
+                            (dec (lsl one (toInt tableSize))) in
      match (M.find x pop_table) with
      | None => zero
      | Some x => x
@@ -366,99 +371,104 @@ Definition pop_elem (bs: Int63)(i: nat): Int63
 Lemma pop_elem_repr: 
   forall n bs i,
     native_repr n bs ->
-    native_repr (pop_elem n i) (cardinal.pop_elem 3 bs i).
+    native_repr (pop_elem n i) (cardinal.pop_elem tableSize bs i).
 Proof.
   move=> n bs i ?.
   rewrite /pop_elem/cardinal.pop_elem.
   rewrite /cardinal.pop_table.
   rewrite nth_mkseq.
-  set i' := land (lsr n (toInt63 (i * 3))) (ldec (lsl one (toInt63 3))).
-  rewrite (M.find_1 (e := toInt63 (count_mem true (fromNat (n := 3) (fromInt63 i'))))).
-  have ->: fromInt63 i' = toNat (andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3))).
-    rewrite fromInt63_def.
-    have ->: bitsFromInt63 i' = andB (shrBn bs (i * 3)) (decB (shlBn # (1) 3)).
+  set i' := land (lsr n (toInt (i * tableSize))) (dec (lsl one (toInt 3))).
+  rewrite (M.find_1 (e := toInt (count_mem true (fromNat (n := tableSize) (fromInt i'))))).
+  have ->: fromInt i' = toNat (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
+    rewrite fromInt_def.
+    have ->: bitsFromInt i' = andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize)).
+      apply/eqP.
+      rewrite -eq_adj.
       admit. (* This should be easy *)
     rewrite //.
-  rewrite toInt63_def.
-  apply bitsToInt63_repr.
-  rewrite /pop_table /pop_tableAux [_ (2^3) _]/=.
+  rewrite toInt_def.
+  apply/eqIntP=> //.
+  rewrite /pop_table /pop_tableAux [_ (2^tableSize) _]/=.
   admit. (* Trivial, but painful *)
-  admit. (* toNat (...) < 2 ^ 3: this should be easy *)
+  admit. (* toNat (...) < 2 ^ 4: this should be easy *)
 Admitted.
 
-Fixpoint popAux (bs: Int63)(i: nat): Int63 :=
+Fixpoint popAux (bs: Int)(i: nat): Int :=
   match i with
   | 0 => zero
-  | i'.+1 => ladd (pop_elem bs i') (popAux bs i')
+  | i'.+1 => add (pop_elem bs i') (popAux bs i')
   end.
 
 Definition popAux_repr:
   forall n bs i,
     native_repr n bs ->
-    native_repr (popAux n i) (cardinal.popAux 3 bs i).
+    native_repr (popAux n i) (cardinal.popAux tableSize bs i).
 Proof.
   move=> n bs i ?.
   elim: i => //=.
   rewrite -fromNat0.
-  apply axioms63.zero_repr.
+  apply axioms32.zero_repr.
   move=> i IH.
-  apply ladd_repr=> //.
+  apply add_repr=> //.
   by apply (pop_elem_repr _ bs).
 Qed.
 
-Definition cardinal (bs: Int63): Int63
-  := popAux bs 21.
+Definition cardinal (bs: Int): Int
+  := popAux bs (wordsize %/ tableSize).
 
 Lemma cardinal_repr:
-  forall (bs: Int63) E, machine_repr bs E ->
+  forall (bs: Int) E, machine_repr bs E ->
     natural_repr (cardinal bs) #|E|.
 Proof.
   move=> bs E [bv [int_repr fin_repr]].
   rewrite /natural_repr.
+  apply/existsP.
   exists # (#|E|).
-  split=> //.
-  rewrite - (@cardinal.cardinal_repr _ 3 bv) => //.
+  apply/andP; split=> //.
+  rewrite - (@cardinal.cardinal_repr _ tableSize bv) => //.
   (* Refold [cardinal], for the proof's sake (and my sanity) *)
-  rewrite -[cardinal _]/(popAux bs 21).
-  rewrite /cardinal.cardinal -[div.divn _ _]/21.
+  rewrite -[cardinal _]/(popAux bs (wordsize %/ tableSize)).
+  rewrite /cardinal.cardinal -[div.divn _ _]/(wordsize %/ tableSize).
   by apply (popAux_repr _ bv).
 Qed.
 
 (* TODO: what do we use this one for? *)
 
-Definition ntz (bs: Int63): Int63
-  := ladd (toInt63 wordsize) (lneg (cardinal (lor bs (lneg bs)))).
+Definition ntz (bs: Int): Int
+  := add (toInt wordsize) (neg (cardinal (lor bs (neg bs)))).
 
 Lemma ntz_repr:
-  forall (bs: Int63) x E, machine_repr bs E -> x \in E ->
+  forall (bs: Int) x E, machine_repr bs E -> x \in E ->
     natural_repr (ntz bs) [arg min_(k < x in E) k].
 Proof.
   move=> bs x E [bv [Hbv1 Hbv2]] Hx.
   rewrite /natural_repr.
+  apply/existsP.
   exists #[arg min_(k < x in E) k].
-  rewrite -(min.ntz_repr _ bv 3)=> //.
+  rewrite -(min.ntz_repr _ bv tableSize)=> //.
   rewrite /ntz /min.ntz.
   set E' := [ set x : 'I_wordsize | getBit (min.fill_ntz bv) x ].
   have H: repr (orB bv (negB bv)) E'.
     rewrite /repr -setP /eq_mem=> i.
     by rewrite !in_set min.fill_ntz_repr.
+  apply/andP.
   split=> //.
   rewrite subB_equiv_addB_negB.
-  apply ladd_repr.
-  rewrite toInt63_def.
-  apply bitsToInt63_repr.
-  apply lneg_repr.
-  move: (cardinal.cardinal_repr _ 3 (orB bv (negB bv)) E')=> H'.
+  apply add_repr.
+  rewrite toInt_def.
+  apply/eqIntP=> //.
+  apply neg_repr.
+  move: (cardinal.cardinal_repr _ tableSize (orB bv (negB bv)) E')=> H'.
   rewrite H'.
-  have Hok: machine_repr (lor bs (lneg bs)) E'.
+  have Hok: machine_repr (lor bs (neg bs)) E'.
     exists (orB bv (negB bv)).
     split.
     apply lor_repr.
     apply Hbv1.
-    apply lneg_repr.
+    apply neg_repr.
     apply Hbv1.
     by apply H.
-  move: (cardinal_repr (lor bs (lneg bs)) E' Hok)=> [y [Hy1 Hy2]].
+  move: (cardinal_repr (lor bs (neg bs)) E' Hok)=> /existsP[y /andP[Hy1 /eqP Hy2]].
   rewrite -Hy2 in Hy1.
   apply Hy1.
   trivial.
