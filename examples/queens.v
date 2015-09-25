@@ -1367,7 +1367,7 @@ Proof.
   exists (decB (shlBn #1 n)).
   split.
   apply ldec_repr.
-  apply lsl_repr.
+  apply lsl_repr=> //.
   apply one_repr.
   by eexists; split; first by rewrite toInt63_def; apply bitsToInt63_repr.
   apply spec.subset_repr.
