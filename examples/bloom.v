@@ -1,7 +1,7 @@
 From Ssreflect
      Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
 From Bits
-     Require Import bits extraction.axioms63.
+     Require Import bits extraction.axioms32.
 
 Require Import bineqs repr_op.
 
@@ -15,7 +15,7 @@ Section bloom_def.
 
 Variable T: Type.
 Variable union: T -> T -> T. (* lor, |: *)
-Variable singleton: nat -> T. (* x -> lsl one (toInt63 x), id *)
+Variable singleton: nat -> T. (* x -> lsl one (toInt x), id *)
 Variable empty: T.
 
 Fixpoint bloomSig_def_aux (curFilter: T) (H: seq (P -> 'I_wordsize)) (elem: P): T
@@ -30,21 +30,21 @@ Definition bloomSig_def (H: seq (P -> 'I_wordsize)) (elem: P): T
 End bloom_def.
 
 Definition bloomSig
- := bloomSig_def Int63 lor (fun x => lsl one (toInt63 x)) zero.
+ := bloomSig_def Int lor (fun x => lsl one (toInt x)) zero.
 Definition bloomSig_aux
- := bloomSig_def_aux Int63 lor (fun x => lsl one (toInt63 x)).
+ := bloomSig_def_aux Int lor (fun x => lsl one (toInt x)).
 
 Definition bloomSig_repr
  := bloomSig_def {set 'I_wordsize} (setU (T := ordinal_finType wordsize)) (fun x => [set (inord x)]) set0.
 Definition bloomSig_repr_aux
  := bloomSig_def_aux {set 'I_wordsize} (setU (T := ordinal_finType wordsize)) (fun x => [set (inord x)]).
 
-Definition bloomAdd (T: Int63) (H: seq (P -> 'I_wordsize)) (add: P) : Int63
+Definition bloomAdd (T: Int) (H: seq (P -> 'I_wordsize)) (add: P) : Int
  := lor T (bloomSig H add).
 
-Definition bloomCheck (T: Int63) (H: seq (P -> 'I_wordsize)) (check: P) : bool
+Definition bloomCheck (T: Int) (H: seq (P -> 'I_wordsize)) (check: P) : bool
  := let sig := bloomSig H check in
-    leq (land sig T) sig.
+    eq (land sig T) sig.
 
 (* Proof *)
 
