@@ -73,25 +73,79 @@ Record pos := mkPos { ld: Int;
                       Hinv: eq (land poss col) zero }.
 
 Definition pos_order (p1 p2: pos): Prop := (* p1 < p2 <-> ... *)
-      (fromInt (col p1) > fromInt (col p2))
-   || ((fromInt (col p1) == fromInt (col p2))
+      (fromInt (cardinal (col p1)) > fromInt (cardinal (col p2)))
+   || ((fromInt (cardinal (col p1)) == fromInt (cardinal (col p2)))
        && (((mode p1) < (mode p2))
         || (((mode p1) == (mode p2))
-           && (fromInt (poss p1) < fromInt (poss p2))))).
+           && (fromInt (cardinal (poss p1)) < fromInt (cardinal (poss p2)))))).
 
 Theorem nqueens_wf : well_founded pos_order. Admitted.
 
+Lemma fromInt_cardinal: forall i E, machine_repr i E -> fromInt (cardinal i) = #|E|.
+Proof.
+  move=> i E HE.
+  move: (cardinal_repr i E HE) => H.
+  rewrite /natural_repr in H.
+  move/existsP: H=> [bs /andP [Hbs1 Hbs2]].
+  rewrite /native_repr in Hbs1.
+  move/eqIntP: Hbs1=> Hbs1.
+  rewrite Hbs1.
+  rewrite fromInt_def.
+  rewrite bitsToIntK.
+  have ->: #|E| = toNat (fromNat (n := wordsize) (#|E|)).
+    rewrite toNat_fromNatBounded=> //.
+    apply (leq_ltn_trans (n := wordsize))=> //.
+    have {5}->: wordsize = #|'I_wordsize| by rewrite card_ord.
+    rewrite subset_leq_card=> //.
+    rewrite subset_predT=> //.
+  by move/eqP: Hbs2 ->.
+Qed.
+
 (* TODO: these are true only if bit is not in col / is in poss *)
-Lemma fromInt_1: forall st,
+Lemma cardinal_1: forall st,
+  (poss st) <> zero ->
   let bit := land (poss st) (neg (poss st)) in
-  eq (land bit (col st)) zero -> (* bit :&: (col st) = set0 *)
-  fromInt (col st) < fromInt (lor (col st) bit). (* adding 'bit' adds bits *)
+  (land bit (col st)) = zero -> (* bit :&: (col st) = set0 *)
+  fromInt (cardinal (col st)) < fromInt (cardinal (lor (col st) bit)). (* adding 'bit' adds bits *)
+Proof.
+  move=> st Hposs bit Hbit.
+  move: (exists_repr (col st))=> [C HC].
+  move: (exists_repr (poss st))=> [P HP].
+
+  have Hx: exists x, x \in P.
+    by admit.
+  move: Hx=> [x Hx].
+
+  set X := [set [arg min_(k < x in P) k]].
+
+  move: (keep_min_repr (poss st) P x HP Hx)=> Hk.
+
+  rewrite (fromInt_cardinal (col st) C HC).
+  rewrite (fromInt_cardinal (lor (col st) bit) (C :|: X)).
+  apply proper_card.
+  apply properUl.
+  rewrite subsets_disjoint.
+  apply/setDidPl.
+  rewrite setDE setCK.
+  have ->: X :&: C = set0.
+    apply/eqP.
+    rewrite -(eq_repr (land bit (col st)) zero).
+    apply/eqIntP.
+    apply Hbit.
+    apply inter_repr=> //.
+    apply zero_repr.
+  rewrite //.
+  move =>Habs.
+  move: (in_set0 [arg min_(k < x in P) k]) => Habs'.
+  rewrite Habs in_set1 in Habs'.
+  by move/eqP: Habs'.
+  by apply union_repr.
 Admitted.
 
-Lemma fromInt_2: forall st,
+Lemma cardinal_2: forall st,
   eq (land (poss st) (full st)) zero = false -> (* (poss st) :&: (full st) <> set0 *)
   let bit := land (poss st) (neg (poss st)) in (* bit the singleton {minimum in poss st} *)
-  fromInt (land (poss st) (lnot bit)) < fromInt (poss st). (* removing 'bit' removes bits *)
+  fromInt (cardinal (land (poss st) (lnot bit))) < fromInt (cardinal (poss st)). (* removing 'bit' removes bits *)
 Admitted.
 
 Definition countNQueensAux: pos -> Int.
@@ -144,10 +198,23 @@ Definition countNQueensAux: pos -> Int.
   apply inter_repr=> //.
   apply zero_repr.
   apply zero_repr.
-  rewrite /pos_order fromInt_1 //.
+  rewrite /pos_order cardinal_1 //.
   move: (exists_repr (poss st))=> [P HP].
   move: (exists_repr (neg (poss st)))=> [N HN].
   move: (exists_repr (col st))=> [C HC].
+  move: (exists_repr (full st))=> [F HF].
+  move=> Habs.
+  rewrite Habs in H'.
+  rewrite (eq_repr _ _ (set0 :&: F) set0) in H'.
+  rewrite set0I eq_refl in H'=> //.
+  apply inter_repr=> //.
+  apply zero_repr.
+  apply zero_repr.
+  move: (exists_repr (poss st))=> [P HP].
+  move: (exists_repr (neg (poss st)))=> [N HN].
+  move: (exists_repr (col st))=> [C HC].
+  move: (exists_repr (full st))=> [F HF].
+  apply/eqIntP.
   rewrite (eq_repr _ _ ((P :&: N) :&: C) set0).
   rewrite setIAC.
   have ->: P :&: C = set0.
@@ -180,7 +247,7 @@ Definition countNQueensAux: pos -> Int.
   apply zero_repr.
   rewrite /pos_order H eq_refl /=.
   apply/orP; right.
-  exact: fromInt_2.
+  exact: cardinal_2.
 Defined.
 
 Definition countNQueens (n: nat): Int.
@@ -1228,12 +1295,13 @@ Proof.
     rewrite Hu cardsU Hi cards0 subn0 //.
     rewrite /pos_order Hmode eq_refl /=.
     apply/orP; right.
-    apply fromInt_2=> //.
+    apply cardinal_2=> //.
     apply nextLine_P=> //.
     rewrite /pos_order Hmode /=.
     apply/orP; left.
-    apply fromInt_1=> //.
-    admit. (* Exact same proof as for the definition. *)
+    apply cardinal_1=> //.
+    admit. (* Exact same proof as for the definition (countNQueensAux "proof") *)
+    admit. (* Same *)
     split.
     rewrite (nextLine_numCol n B curLine ld rd col full min P poss) //.
     apply HB'cor.
