@@ -8,7 +8,10 @@ Require Import bineqs repr_op.
 Lemma fromInt_elim:
   forall x, toInt (fromInt x) = x.
 Proof.
-Admitted.
+  move=> x.
+  rewrite fromInt_def toInt_def toNatK.
+  exact: bitsFromIntK.
+Qed.
 
 Lemma ladd_repr:
   forall x y, add (toInt x) (toInt y) = toInt (x + y).
@@ -51,7 +54,14 @@ Qed.
 Lemma exists_repr:
   forall i, exists S, machine_repr i S.
 Proof.
-Admitted.
+  move=> i.
+  set bs := bitsFromInt i.
+  exists [ set x : 'I_wordsize | getBit bs x ] .
+  exists bs; split=> //.
+  apply/eqIntP.
+  apply bitsFromInt_inj.
+  by rewrite bitsFromIntK.
+Qed.
 
 Record pos := mkPos { ld: Int; 
                       col: Int;
