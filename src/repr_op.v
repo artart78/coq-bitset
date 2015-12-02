@@ -75,6 +75,7 @@ Proof.
   exists (shlBn #1 x).
   split.
   * apply lsl_repr=> //.
+    apply (leq_trans (n := x.+1))=> //.
     apply one_repr.
     apply/existsP; exists # (x); apply/andP; split=> //.
     apply/eqIntP.
@@ -180,6 +181,7 @@ Proof.
   apply land_repr;
      last by apply one_repr.
   apply lsr_repr=> //.
+  apply (leq_trans (n := k.+1))=> //.
   apply/existsP; exists # (k); apply/andP; split=> //.
   rewrite toInt_def.
   by apply/eqIntP.
@@ -241,12 +243,14 @@ Proof.
   case: b.
     apply lor_repr=> //.
     apply lsl_repr=> //.
+    apply (leq_trans (n := k.+1))=> //.
     + by rewrite toInt_def; apply/eqIntP.
     + rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
       by apply/eqIntP.
     apply land_repr=> //.
     apply lnot_repr=> //.
     apply lsl_repr=> //.
+    apply (leq_trans (n := k.+1))=> //.
     by rewrite toInt_def; apply/eqIntP.
     rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
       by apply/eqIntP.
@@ -380,10 +384,11 @@ Definition pop_elem (bs: Int)(i: nat): Int
 
 Lemma pop_elem_repr: 
   forall n bs i,
+    i * tableSize <= wordsize ->
     native_repr n bs ->
     native_repr (pop_elem n i) (cardinal.pop_elem tableSize bs i).
 Proof.
-  move=> n bs i ?.
+  move=> n bs i ? ?.
   rewrite /pop_elem/cardinal.pop_elem.
   rewrite /cardinal.pop_table.
   rewrite nth_mkseq.
@@ -397,7 +402,6 @@ Proof.
       have H: native_repr i' (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
         apply land_repr.
         apply lsr_repr=> //.
-        admit. (* Probably a hypothesis to add: i * tableSize < wordsize *)
         rewrite /natural_repr.
         apply/existsP.
         exists # (i * tableSize).
@@ -436,16 +440,20 @@ Fixpoint popAux (bs: Int)(i: nat): Int :=
 
 Definition popAux_repr:
   forall n bs i,
+    i * tableSize <= wordsize ->
     native_repr n bs ->
     native_repr (popAux n i) (cardinal.popAux tableSize bs i).
 Proof.
-  move=> n bs i ?.
-  elim: i => //=.
+  move=> n bs i Hi ?.
+  elim: i Hi=> [Hi //=|i IH Hi].
   rewrite -fromNat0.
   apply axioms32.zero_repr.
-  move=> i IH.
+  have Hi': i * tableSize <= wordsize.
+    apply (leq_trans (n := i.+1 * tableSize))=> //.
+    rewrite leq_pmul2r=> //.
   apply add_repr=> //.
-  by apply (pop_elem_repr _ bs).
+  apply (pop_elem_repr _ bs)=> //.
+  by apply IH.
 Qed.
 
 Definition cardinal (bs: Int): Int
