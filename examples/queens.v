@@ -113,7 +113,21 @@ Proof.
   move: (exists_repr (poss st))=> [P HP].
 
   have Hx: exists x, x \in P.
-    by admit.
+    apply/existsP.
+    apply negbNE.
+    rewrite negb_exists.
+    apply/negP=> /forallP Habs.
+    have Hposs': P <> set0.
+      move/eqP =>Habs'.
+      rewrite -(eq_repr (poss st) zero) in Habs'=> //.
+      move/eqIntP: Habs'=> Habs'.
+      by rewrite Habs' in Hposs.
+      by apply zero_repr.
+    move/eqP: Hposs'=> Hposs'.
+    rewrite -proper0 in Hposs'.
+    move/properP: Hposs'=> [_ [x Hx1 Hx2]].
+    move: (Habs x)=> Habs'.
+    by rewrite Hx1 in Habs'.
   move: Hx=> [x Hx].
 
   set X := [set [arg min_(k < x in P) k]].
@@ -140,13 +154,58 @@ Proof.
   rewrite Habs in_set1 in Habs'.
   by move/eqP: Habs'.
   by apply union_repr.
-Admitted.
+Qed.
 
 Lemma cardinal_2: forall st,
-  eq (land (poss st) (full st)) zero = false -> (* (poss st) :&: (full st) <> set0 *)
   let bit := land (poss st) (neg (poss st)) in (* bit the singleton {minimum in poss st} *)
+  (poss st) <> zero ->
   fromInt (cardinal (land (poss st) (lnot bit))) < fromInt (cardinal (poss st)). (* removing 'bit' removes bits *)
-Admitted.
+Proof.
+  move=> st bit Hposs.
+  move: (exists_repr (poss st))=> [P HP].
+
+  have Hx: exists x, x \in P.
+    apply/existsP.
+    apply negbNE.
+    rewrite negb_exists.
+    apply/negP=> /forallP Habs.
+    have Hposs': P <> set0.
+      move/eqP =>Habs'.
+      rewrite -(eq_repr (poss st) zero) in Habs'=> //.
+      move/eqIntP: Habs'=> Habs'.
+      by rewrite Habs' in Hposs.
+      by apply zero_repr.
+    move/eqP: Hposs'=> Hposs'.
+    rewrite -proper0 in Hposs'.
+    move/properP: Hposs'=> [_ [x Hx1 Hx2]].
+    move: (Habs x)=> Habs'.
+    by rewrite Hx1 in Habs'.
+  move: Hx=> [x Hx].
+
+  set X := [set [arg min_(k < x in P) k]].
+
+  move: (keep_min_repr (poss st) P x HP Hx)=> Hk.
+
+  rewrite (fromInt_cardinal (land (poss st) (lnot bit)) (P :&: ~: X)).
+  rewrite (fromInt_cardinal (poss st) P HP).
+  apply proper_card.
+  apply/properP.
+  split.
+  + apply subsetIl.
+  + exists [arg min_(k < x in P) k].
+    rewrite /arg_min.
+    case: pickP=> y //=.
+    by move/andP => [H1 _].
+    rewrite in_setI.
+    rewrite negb_and.
+    apply/orP.
+    right.
+    rewrite in_setC.
+    rewrite in_set1.
+    by rewrite eq_refl.
+  apply inter_repr=> //.
+  by apply compl_repr.
+Qed.
 
 Definition countNQueensAux: pos -> Int.
   refine (Fix nqueens_wf (fun _ => Int)
@@ -247,7 +306,17 @@ Definition countNQueensAux: pos -> Int.
   apply zero_repr.
   rewrite /pos_order H eq_refl /=.
   apply/orP; right.
-  exact: cardinal_2.
+  apply cardinal_2.
+  move=> Habs.
+  have Habs': eq (land (poss st) (full st)) zero = false by assumption.
+  rewrite Habs in Habs'.
+  move: (exists_repr (full st))=> [F HF].
+  rewrite (eq_repr _ _ (set0 :&: F) set0) in Habs'.
+  rewrite set0I in Habs'.
+  by rewrite eq_refl in Habs'.
+  apply inter_repr=> //.
+  apply zero_repr.
+  apply zero_repr.
 Defined.
 
 Definition countNQueens (n: nat): Int.
@@ -1296,12 +1365,48 @@ Proof.
     rewrite /pos_order Hmode eq_refl /=.
     apply/orP; right.
     apply cardinal_2=> //.
+    move => Habs.
+    move: Hend' => Habs'.
+    rewrite /poss Habs in Habs'.
+    move: (exists_repr full)=> [F HF].
+    rewrite (eq_repr _ _ (set0 :&: F) set0) in Habs'.
+    by rewrite set0I eq_refl in Habs'.
+    apply inter_repr=> //.
+    apply zero_repr.
+    apply zero_repr.
     apply nextLine_P=> //.
     rewrite /pos_order Hmode /=.
     apply/orP; left.
     apply cardinal_1=> //.
-    admit. (* Exact same proof as for the definition (countNQueensAux "proof") *)
-    admit. (* Same *)
+    move: (exists_repr (neg poss))=> [N HN].
+    move: (exists_repr col)=> [C HC].
+    move: (exists_repr full)=> [F HF].
+    move=> Habs.
+    rewrite /poss Habs in Hend'.
+    rewrite (eq_repr _ _ (set0 :&: F) set0) in Hend'.
+    rewrite set0I eq_refl in Hend'=> //.
+    apply inter_repr=> //.
+    apply zero_repr.
+    apply zero_repr.
+    move: (exists_repr (neg poss))=> [N HN].
+    move: (exists_repr col)=> [C HC].
+    move: (exists_repr full)=> [F HF].
+    apply/eqIntP.
+    rewrite (eq_repr _ _ ((P :&: N) :&: C) set0).
+    rewrite setIAC.
+    have ->: P :&: C = set0.
+      apply/eqP.
+      rewrite -(eq_repr (land poss col) zero).
+      apply (Hinv st).
+      apply inter_repr=> //.
+      apply HP.
+      apply zero_repr.
+    apply/eqP.
+    apply set0I.
+    apply inter_repr=> //.
+    apply inter_repr=> //.
+    apply HP.
+    by apply zero_repr.
     split.
     rewrite (nextLine_numCol n B curLine ld rd col full min P poss) //.
     apply HB'cor.
