@@ -303,7 +303,12 @@ Qed.
 
 Lemma fromInt_inj: forall x y,
   fromInt x = fromInt y -> x = y.
-Admitted.
+Proof.
+  move=> x y H.
+  rewrite !fromInt_def in H.
+  apply toNat_inj in H.
+  by apply bitsFromInt_inj in H.
+Qed.
 
 Module Int_as_OT <: OrderedType.
 
@@ -326,7 +331,12 @@ Module Int_as_OT <: OrderedType.
   Qed.
 
   Lemma lt_not_eq : forall x y : t, lt x y -> ~ eq x y.
-  Admitted.
+  move=> x y H.
+  rewrite /lt in H.
+  move=> Habs.
+  move/eqP: Habs=> Habs.
+  by rewrite ltn_eqF in Habs.
+  Qed.
 
   Definition compare x y : Compare lt eq x y.
   Proof.
@@ -377,20 +387,45 @@ Proof.
   rewrite /pop_elem/cardinal.pop_elem.
   rewrite /cardinal.pop_table.
   rewrite nth_mkseq.
-  set i' := land (lsr n (toInt (i * tableSize))) (dec (lsl one (toInt 3))).
+  set i' := land (lsr n (toInt (i * tableSize))) (dec (lsl one (toInt tableSize))).
   rewrite (M.find_1 (e := toInt (count_mem true (fromNat (n := tableSize) (fromInt i'))))).
   have ->: fromInt i' = toNat (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
     rewrite fromInt_def.
     have ->: bitsFromInt i' = andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize)).
       apply/eqP.
       rewrite -eq_adj.
-      admit. (* This should be easy *)
+      have H: native_repr i' (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
+        apply land_repr.
+        apply lsr_repr=> //.
+        admit. (* Probably a hypothesis to add: i * tableSize < wordsize *)
+        rewrite /natural_repr.
+        apply/existsP.
+        exists # (i * tableSize).
+        rewrite /native_repr.
+        rewrite toInt_def.
+        rewrite eq_refl andbT.
+        by apply/eqIntP.
+        apply dec_repr.
+        apply lsl_repr.
+        rewrite //.
+        apply one_repr.
+        (* TODO: add a lemma 'natural_repr (toInt x) x'? *)
+        rewrite /natural_repr.
+        apply/existsP.
+        exists #tableSize.
+        rewrite eq_refl andbT.
+        rewrite /native_repr toInt_def.
+        by apply/eqIntP.
+      by apply H.
     rewrite //.
   rewrite toInt_def.
   apply/eqIntP=> //.
   rewrite /pop_table /pop_tableAux [_ (2^tableSize) _]/=.
   admit. (* Trivial, but painful *)
-  admit. (* toNat (...) < 2 ^ 4: this should be easy *)
+  have H: forall bs bs', toNat (andB bs bs') <= toNat bs' by admit.
+  apply (leq_ltn_trans (n := toNat (n := wordsize) (decB (shlBn #1 tableSize)))).
+  apply H.
+  by rewrite makeOnes2.
 Admitted.
 
 Fixpoint popAux (bs: Int)(i: nat): Int :=
