@@ -7,6 +7,18 @@ Require Import getbit.
 (* TODO: what is this file about? 
          combinatorial of boolean operations? *)
 
+Lemma toNat_andB:
+  forall n (bs: BITS n) bs', toNat (andB bs bs') <= toNat bs'.
+Proof.
+  elim=> [bs bs'|n IH /tupleP[b bs] /tupleP[b' bs']].
+  + by rewrite tuple0.
+  + rewrite /andB liftBinOpCons -/andB /=.
+    rewrite /toNat /consB /=.
+    apply leq_add.
+    elim: b=> //.
+    rewrite leq_double.
+    by apply IH.
+Qed.
 
 Lemma count_true:
   forall n, (count_mem true (nseq n true)) = n.

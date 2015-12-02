@@ -426,10 +426,7 @@ Proof.
   apply/eqIntP=> //.
   rewrite /pop_table /pop_tableAux [_ (2^tableSize) _]/=.
   admit. (* Trivial, but painful *)
-  have H: forall bs bs', toNat (andB bs bs') <= toNat bs' by admit.
-  apply (leq_ltn_trans (n := toNat (n := wordsize) (decB (shlBn #1 tableSize)))).
-  apply H.
-  by rewrite makeOnes2.
+  by apply toNat_andB.
 Admitted.
 
 Fixpoint popAux (bs: Int)(i: nat): Int :=
