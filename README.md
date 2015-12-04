@@ -8,53 +8,43 @@ proved extraction to Caml.
 
 ## Installation
 
-### Installing Coq/SSReflect
+### Installing with OPAM (strongly recommended)
 
-TODO
+Everything can be installed everything by using
+[OPAM](https://opam.ocaml.org/doc/Install.html).
 
-### Installing coq-bits
-
-In order to compile this library, you will also need to compile coq-bits.
-
-#### Without OPAM
+You first need to add some coq-related repositories:
 ```shell
-git clone https://github.com/artart78/coq-bits.git
-cd coq-bits
+opam repo add coq-released https://coq.inria.fr/opam/released
+opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
+```
+
+Then, you need to install coq-bits, the dependencies will be installed automatically:
+```shell
+opam pin add coq-bits https://github.com/artart78/coq-bits.git
+```
+(Note you may need to confirm by pressing Y.)
+
+Then, coq-bitset can be installed exactly the same way:
+```shell
+opam pin add coq-bitset https://github.com/artart78/coq-bitset.git
+```
+
+### Installing by hand
+
+You may be able to install the library by hand, although it has not been tested.
+
+The dependencies are:
+  + Coq 8.5~beta2 (other versions are untested)
+  + SSReflect & Mathcomp 1.5.1~beta2 (other versions are untested)
+  + [coq-bits](https://github.com/artart78/coq-bits)
+
+Then, just doing the usual:
+```shell
 make
-make install # launch as root if needed
+make install
 ```
-
-#### With OPA
-```shell
-git clone https://github.com/artart78/coq-bits.git
-cd coq-bits
-opam pin add coq:bits
-```
-Then you can simply update with:
-```shell
-opam upgrade coq:bits
-```
-
-### Installing coq-bitset
-
-#### Without OPAM
-```shell
-git clone https://github.com/artart78/coq-bitset.git
-cd coq-bitset
-make
-make install # launch as root if needed
-```
-
-#### With OPAM
-```shell
-git clone https://github.com/artart78/coq-bitset.git
-cd coq-bitset
-opam pin add coq:bitset
-```
-Then you can simply update with:
-```shell
-opam upgrade coq:bitset
-```
+should work.
 
 ## Usage
 
