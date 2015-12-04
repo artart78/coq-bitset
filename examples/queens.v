@@ -1,7 +1,10 @@
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset.
+     Require Import ssreflect ssrbool eqtype ssrnat seq fintype ssrfun.
+From MathComp
+     Require Import tuple finset.
 From Bits
      Require Import bits extraction.axioms32.
+Require Import Relation_Operators Lexicographic_Product Wf_nat.
 
 Require Import bineqs repr_op.
 
@@ -72,14 +75,53 @@ Record pos := mkPos { ld: Int;
                       mode: bool;
                       Hinv: eq (land poss col) zero }.
 
-Definition pos_order (p1 p2: pos): Prop := (* p1 < p2 <-> ... *)
-      (fromInt (cardinal (col p1)) > fromInt (cardinal (col p2)))
-   || ((fromInt (cardinal (col p1)) == fromInt (cardinal (col p2)))
-       && (((mode p1) < (mode p2))
-        || (((mode p1) == (mode p2))
-           && (fromInt (cardinal (poss p1)) < fromInt (cardinal (poss p2)))))).
+Definition dep2 := sigT (A:=nat) (fun a => nat).
 
-Theorem nqueens_wf : well_founded pos_order. Admitted.
+Definition dep3 := sigT (A:=nat) (fun a => dep2).
+
+Check (existT (A:=nat) (fun a => nat)).
+
+Definition mk2 : nat * nat -> dep2 :=
+  fun m => match m with | (x, y) => existT (A:=nat) (fun a => nat) x y end.
+
+Definition mk3 : (nat * (nat * nat)) -> dep3 :=
+  fun m => match m with | (x, t) => existT (A:=nat) (fun a => dep2) x (mk2 t) end.
+
+Definition lt_pq : dep2 -> dep2 -> Prop :=
+  (lexprod nat (fun a => nat) Peano.lt (fun a:nat =>Peano.lt)).
+
+Definition lt_npq : dep3 -> dep3 -> Prop :=
+  (lexprod nat (fun a => dep2) Peano.lt (fun a:nat =>lt_pq)).
+
+Lemma wf_lexprod : well_founded lt_npq.
+  apply wf_lexprod.
+  apply lt_wf.
+  move=> n.
+  apply wf_lexprod.
+  apply lt_wf.
+  move=> m.
+  by apply lt_wf.
+Qed.
+
+Require Import Inverse_Image.
+
+Definition lt x y := lt_npq (mk3 x) (mk3 y).
+
+Lemma wf_nat3 : well_founded lt.
+  rewrite /lt.
+  apply wf_inverse_image.
+  apply wf_lexprod.
+Qed.
+
+Definition pos_order (p1 p2: pos): Prop :=
+  lt (2 ^ wordsize - fromInt (cardinal (col p1)), (nat_of_bool (mode p1), fromInt (cardinal (poss p1))))
+     (2 ^ wordsize - fromInt (cardinal (col p2)), (nat_of_bool (mode p2), fromInt (cardinal (poss p2)))).
+
+Theorem nqueens_wf : well_founded pos_order.
+  rewrite /pos_order.
+  apply wf_inverse_image.
+  apply wf_nat3.
+Qed.
 
 Lemma fromInt_cardinal: forall i E, machine_repr i E -> fromInt (cardinal i) = #|E|.
 Proof.
@@ -249,7 +291,9 @@ Definition countNQueensAux: pos -> Int.
   apply union_repr=> //.
   apply union_repr=> //.
   apply zero_repr.
-  by rewrite /pos_order /= H !eq_refl /= orbT.
+  rewrite /pos_order /= H.
+  apply right_lex.
+  by apply left_lex=> //.
   move: (exists_repr (lor (col st) bit))=> [C HC].
   move: (exists_repr (poss st))=> [P HP].
   rewrite (eq_repr _ _ (set0 :&: C) set0).
@@ -257,7 +301,12 @@ Definition countNQueensAux: pos -> Int.
   apply inter_repr=> //.
   apply zero_repr.
   apply zero_repr.
-  rewrite /pos_order cardinal_1 //.
+  apply left_lex.
+  apply/ltP.
+  apply ltn_sub2l.
+  rewrite fromInt_def.
+  apply toNatBounded.
+  rewrite cardinal_1 //.
   move: (exists_repr (poss st))=> [P HP].
   move: (exists_repr (neg (poss st)))=> [N HN].
   move: (exists_repr (col st))=> [C HC].
@@ -304,8 +353,10 @@ Definition countNQueensAux: pos -> Int.
   apply inter_repr=> //.
   apply compl_repr=> //.
   apply zero_repr.
-  rewrite /pos_order H eq_refl /=.
-  apply/orP; right.
+  rewrite /pos_order H.
+  apply right_lex.
+  apply right_lex.
+  apply/ltP.
   apply cardinal_2.
   move=> Habs.
   have Habs': eq (land (poss st) (full st)) zero = false by assumption.
@@ -1362,8 +1413,10 @@ Proof.
     rewrite [(fromInt curCount) + _]addnC addnA.
     move: (nextLine_splitCase n B curLine P min HminP)=> [Hu Hi].
     rewrite Hu cardsU Hi cards0 subn0 //.
-    rewrite /pos_order Hmode eq_refl /=.
-    apply/orP; right.
+    rewrite /pos_order Hmode.
+    apply right_lex.
+    apply right_lex.
+    apply/ltP.
     apply cardinal_2=> //.
     move => Habs.
     move: Hend' => Habs'.
@@ -1376,7 +1429,11 @@ Proof.
     apply zero_repr.
     apply nextLine_P=> //.
     rewrite /pos_order Hmode /=.
-    apply/orP; left.
+    apply left_lex.
+    apply/ltP.
+    apply ltn_sub2l.
+    rewrite fromInt_def.
+    apply toNatBounded.
     apply cardinal_1=> //.
     move: (exists_repr (neg poss))=> [N HN].
     move: (exists_repr col)=> [C HC].
@@ -1464,7 +1521,8 @@ Proof.
     rewrite fromInt_zero addn0.
     rewrite (nextLine_oneCase n B curLine ld rd col full) // => //.
     rewrite /pos_order /=.
-    by rewrite !Hmode /= eq_refl orbT.
+    rewrite !Hmode /=.
+    by apply right_lex; apply left_lex.
     split.
     apply compl_repr.
     apply union_repr=> //.
@@ -1550,6 +1608,7 @@ Proof.
   split.
   apply dec_repr.
   apply lsl_repr=> //.
+  apply (leq_trans (n := n.+1))=> //.
   apply one_repr.
   apply/existsP.
   exists # (n).
