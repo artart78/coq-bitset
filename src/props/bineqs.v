@@ -1,5 +1,7 @@
 From Ssreflect
-     Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq tuple zmodp fintype div ssralg.
+     Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype.
+From MathComp
+     Require Import tuple zmodp div ssralg.
 From Bits
      Require Import bits.
 Require Import getbit.

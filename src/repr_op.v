@@ -1,6 +1,8 @@
 Require Import FMapList OrderedType OrderedTypeEx Compare_dec Peano_dec.
 From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq tuple fintype ssrfun finset div.
+     Require Import ssreflect ssrbool eqtype ssrnat seq fintype ssrfun.
+From MathComp
+     Require Import tuple finset div.
 From Bits
      Require Import bits extraction.axioms32.
 Require Import props.bineqs props.getbit spec.
