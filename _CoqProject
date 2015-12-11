@@ -1,4 +1,5 @@
 -R src Bitset
+src/bitset.v
 src/spec.v
 src/repr_op.v
 src/props/bineqs.v
@@ -15,5 +16,6 @@ src/ops/remove.v
 src/ops/shift.v
 src/ops/symdiff.v
 src/ops/union.v
+src/ops/ops.v
 examples/queens.v
 examples/bloom.v

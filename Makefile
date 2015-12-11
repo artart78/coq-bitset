@@ -97,6 +97,7 @@ endif
 
 VFILES:=examples/bloom.v\
   examples/queens.v\
+  src/ops/ops.v\
   src/ops/union.v\
   src/ops/symdiff.v\
   src/ops/shift.v\
@@ -112,7 +113,8 @@ VFILES:=examples/bloom.v\
   src/props/getbit.v\
   src/props/bineqs.v\
   src/repr_op.v\
-  src/spec.v
+  src/spec.v\
+  src/bitset.v
 
 -include $(addsuffix .d,$(VFILES))
 .SECONDARY: $(addsuffix .d,$(VFILES))
