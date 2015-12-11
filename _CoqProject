@@ -14,3 +14,5 @@ src/ops/set.v
 src/ops/shift.v
 src/ops/symdiff.v
 src/ops/union.v
+examples/queens.v
+examples/bloom.v

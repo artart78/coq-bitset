@@ -95,7 +95,9 @@ endif
 #                    #
 ######################
 
-VFILES:=src/ops/union.v\
+VFILES:=examples/bloom.v\
+  examples/queens.v\
+  src/ops/union.v\
   src/ops/symdiff.v\
   src/ops/shift.v\
   src/ops/set.v\

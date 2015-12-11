@@ -521,6 +521,10 @@ Proof.
   trivial.
 Qed.
 
+(** printing \emptyset $\emptyset$ #Ø# *)
+(** printing \cap $\cap$ #∩# *)
+(** printing \cup $\cup$ #∪# *)
+
 (** Module type describing set operations & implementations using bitsets and finsets *)
 Module Type SET.
   Parameter T : Type.

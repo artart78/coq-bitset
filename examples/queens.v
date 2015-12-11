@@ -79,8 +79,6 @@ Definition dep2 := sigT (A:=nat) (fun a => nat).
 
 Definition dep3 := sigT (A:=nat) (fun a => dep2).
 
-Check (existT (A:=nat) (fun a => nat)).
-
 Definition mk2 : nat * nat -> dep2 :=
   fun m => match m with | (x, y) => existT (A:=nat) (fun a => nat) x y end.
 
@@ -378,8 +376,6 @@ Definition countNQueens (n: nat): Int.
   apply inter_repr; apply zero_repr.
   apply zero_repr.
 Defined.
-
-Print countNQueens.
 
 Definition get_coord (n: nat) (B: wordsize.-tuple (wordsize.-tuple bool)) (x: 'I_wordsize) (y: 'I_wordsize) := tnth (tnth B x) y.
 
