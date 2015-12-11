@@ -7,7 +7,7 @@ From Bits
      Require Import bits extraction.axioms32.
 Require Import props.bineqs props.getbit spec.
 
-Require create get set inter union symdiff compl keep_min min cardinal shift.
+Require create get insert remove inter union symdiff compl keep_min min cardinal shift.
 
 (** * A formalisation of bitsets using OCaml's integers *)
 
@@ -231,35 +231,46 @@ Qed.
 
 (** ** Insertion *)
 
-Definition set (bs: Int) k (b: bool): Int
-  := if b then 
-       lor bs (lsl (toInt 1) k) 
-     else
-       land bs (lnot (lsl (toInt 1) k)).
+Definition insert (bs: Int) k: Int
+  := lor bs (lsl (toInt 1) k).
 
-Lemma set_repr:
-  forall i (k: 'I_wordsize) (b: bool) E, machine_repr i E ->
-    machine_repr (set i (toInt k) b) (if b then (k |: E) else (E :\ k)).
+Lemma insert_repr:
+  forall i (k: 'I_wordsize) E, machine_repr i E ->
+    machine_repr (insert i (toInt k)) (k |: E).
 Proof.
-  move=> i k b E [bv [Hbv1 Hbv2]].
-  exists (set.set bv k b).
+  move=> i k E [bv [Hbv1 Hbv2]].
+  exists (insert.insert bv k).
   split.
-  rewrite /set /set.set.
-  case: b.
-    apply lor_repr=> //.
-    apply lsl_repr=> //.
-    apply (leq_trans (n := k.+1))=> //.
-    + by rewrite toInt_def; apply/eqIntP.
-    + rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
-      by apply/eqIntP.
-    apply land_repr=> //.
-    apply lnot_repr=> //.
-    apply lsl_repr=> //.
-    apply (leq_trans (n := k.+1))=> //.
-    by rewrite toInt_def; apply/eqIntP.
-    rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
-      by apply/eqIntP.
-  by apply set.set_repr.
+  rewrite /insert /insert.insert.
+  apply lor_repr=> //.
+  apply lsl_repr=> //.
+  apply (leq_trans (n := k.+1))=> //.
+  + by rewrite toInt_def; apply/eqIntP.
+  + rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
+    by apply/eqIntP.
+  by apply insert.insert_repr.
+Qed.
+
+(** ** Removal *)
+Definition remove (bs: Int) k: Int
+  := land bs (lnot (lsl (toInt 1) k)).
+
+Lemma remove_repr:
+  forall i (k: 'I_wordsize) E, machine_repr i E ->
+    machine_repr (remove i (toInt k)) (E :\ k).
+Proof.
+  move=> i k E [bv [Hbv1 Hbv2]].
+  exists (remove.remove bv k).
+  split.
+  rewrite /remove /remove.remove.
+  apply land_repr=> //.
+  apply lnot_repr=> //.
+  apply lsl_repr=> //.
+  apply (leq_trans (n := k.+1))=> //.
+  by rewrite toInt_def; apply/eqIntP.
+  rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
+    by apply/eqIntP.
+  by apply remove.remove_repr.
 Qed.
 
 (** ** Symmetrical difference *)
@@ -545,7 +556,8 @@ Module Type SET.
   Notation "E1 \cap E2" := (inter E1 E2) (at level 0) : SET_scope.
   Parameter keep_min : forall (E: T) x, x \in E -> T.
   Notation "{ min E }" := (keep_min E) : SET_scope.
-  Parameter set : T -> 'I_wordsize -> bool -> T.
+  Parameter insert : T -> 'I_wordsize -> T.
+  Parameter remove : T -> 'I_wordsize -> T.
   Parameter symdiff : T -> T -> T.
   Notation "E1 \delta E2" := (symdiff E1 E2) (at level 0) : SET_scope.
   Parameter union : T -> T -> T.
@@ -564,7 +576,8 @@ Module Finset <: SET.
   Definition get (E: T) x := x \in E.
   Definition inter (E1: T) E2 := E1 :&: E2.
   Definition keep_min (E: T) (x: 'I_wordsize) (Hx: get E x): T := [set [arg min_(k < x in E) k]].
-  Definition set (E: T) k b := if b then (k |: E) else (E :\ k).
+  Definition insert (E: T) k := k |: E.
+  Definition remove (E: T) k := E :\ k.
   Definition symdiff (E1: T) E2 := ((E2 :\: E1) :|: (E1 :\: E2)).
   Definition union (E1: T) E2 := E1 :|: E2.
   Definition cardinal (E: T) := #|E|.
@@ -580,7 +593,8 @@ Module Bitset <: SET.
   Definition get := get.
   Definition inter := inter.
   Definition keep_min (E: T) (x: 'I_wordsize) (Hx: get E x): T := keep_min E.
-  Definition set E (x: 'I_wordsize) b := set E (toInt x) b.
+  Definition insert E (x: 'I_wordsize) := insert E (toInt x).
+  Definition remove E (x: 'I_wordsize) := remove E (toInt x).
   Definition symdiff := symdiff.
   Definition union := union.
   Definition cardinal (E: T) := fromInt (cardinal E).

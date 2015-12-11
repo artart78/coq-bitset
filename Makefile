@@ -100,10 +100,11 @@ VFILES:=examples/bloom.v\
   src/ops/union.v\
   src/ops/symdiff.v\
   src/ops/shift.v\
-  src/ops/set.v\
+  src/ops/remove.v\
   src/ops/min.v\
   src/ops/keep_min.v\
   src/ops/inter.v\
+  src/ops/insert.v\
   src/ops/get.v\
   src/ops/create.v\
   src/ops/compl.v\
