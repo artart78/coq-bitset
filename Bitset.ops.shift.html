@@ -1,0 +1,110 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>Bitset.ops.shift</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library Bitset.ops.shift</h1>
+
+<div class="code">
+<span class="id" title="var">From</span> <span class="id" title="var">Ssreflect</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">ssreflect</span> <span class="id" title="library">ssrbool</span> <span class="id" title="library">eqtype</span> <span class="id" title="library">ssrnat</span> <span class="id" title="library">seq</span> <span class="id" title="library">fintype</span> <span class="id" title="library">ssrfun</span>.<br/>
+<span class="id" title="var">From</span> <span class="id" title="var">MathComp</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">tuple</span> <span class="id" title="library">finset</span>.<br/>
+<span class="id" title="var">From</span> <span class="id" title="var">Bits</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">bits</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Bitset.props.bineqs.html#"><span class="id" title="library">props.bineqs</span></a> <a class="idref" href="Bitset.props.getbit.html#"><span class="id" title="library">props.getbit</span></a> <a class="idref" href="Bitset.spec.html#"><span class="id" title="library">spec</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="getBit_joinlsb"><span class="id" title="lemma">getBit_joinlsb</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> (<span class="id" title="var">bs</span>: <span class="id" title="definition">BITS</span> <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a>) <span class="id" title="var">i</span> <span class="id" title="var">b</span>, <a class="idref" href="Bitset.ops.shift.html#i"><span class="id" title="variable">i</span></a> <span class="id" title="notation">&gt;</span> 0 <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <span class="id" title="definition">getBit</span> (<span class="id" title="definition">joinlsb</span> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">(</span></a><a class="idref" href="Bitset.ops.shift.html#bs"><span class="id" title="variable">bs</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">,</span></a> <a class="idref" href="Bitset.ops.shift.html#b"><span class="id" title="variable">b</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">)</span></a>) <a class="idref" href="Bitset.ops.shift.html#i"><span class="id" title="variable">i</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="definition">getBit</span> <a class="idref" href="Bitset.ops.shift.html#bs"><span class="id" title="variable">bs</span></a> (<a class="idref" href="Bitset.ops.shift.html#i"><span class="id" title="variable">i</span></a><span class="id" title="notation">.-1</span>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">move</span>⇒ <span class="id" title="var">n</span> <span class="id" title="var">bs</span>; <span class="id" title="tactic">elim</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="sl_repr"><span class="id" title="lemma">sl_repr</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> (<span class="id" title="var">bs</span>: <span class="id" title="definition">BITS</span> <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a>) <span class="id" title="var">E</span> (<span class="id" title="var">H</span>: <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a><span class="id" title="notation">.-1</span><span class="id" title="notation">.+1</span> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a>), <a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> <a class="idref" href="Bitset.ops.shift.html#bs"><span class="id" title="variable">bs</span></a> <a class="idref" href="Bitset.ops.shift.html#E"><span class="id" title="variable">E</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> (<span class="id" title="definition">shlBn</span> <a class="idref" href="Bitset.ops.shift.html#bs"><span class="id" title="variable">bs</span></a> 1) <span class="id" title="notation">[</span><span class="id" title="notation">set</span> <span class="id" title="var">i</span> <span class="id" title="notation">:</span> <span class="id" title="notation">'</span><span class="id" title="notation">I_n</span> <span class="id" title="notation">|</span> 0 <span class="id" title="notation">&lt;</span> <span class="id" title="var">i</span> <span class="id" title="notation">&amp;</span> <span class="id" title="definition">cast_ord</span> <a class="idref" href="Bitset.ops.shift.html#H"><span class="id" title="variable">H</span></a> (@<span class="id" title="definition">inord</span> <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a><span class="id" title="notation">.-1</span> <span class="id" title="var">i</span><span class="id" title="notation">.-1</span>) <span class="id" title="notation">\</span><span class="id" title="keyword">in</span> <a class="idref" href="Bitset.ops.shift.html#E"><span class="id" title="variable">E</span></a><span class="id" title="notation">]</span>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">move</span>⇒ <span class="id" title="var">n</span> <span class="id" title="var">bs</span> <span class="id" title="var">E</span> <span class="id" title="var">H</span> <span class="id" title="var">HE</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> -<span class="id" title="lemma">setP</span> /<span class="id" title="definition">eq_mem</span>⇒ <span class="id" title="var">i</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> !<span class="id" title="lemma">in_set</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<span class="id" title="definition">shlBn</span> /<span class="id" title="definition">iter</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<span class="id" title="definition">shlB</span> <a class="idref" href="Bitset.props.getbit.html#getBit_dropmsb"><span class="id" title="lemma">getBit_dropmsb</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<span class="id" title="definition">shlBaux</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">case</span> <span class="id" title="var">Hi</span>: (<span class="id" title="var">i</span> <span class="id" title="notation">==</span> <span class="id" title="definition">cast_ord</span> <span class="id" title="var">H</span> <span class="id" title="definition">ord0</span>).<br/>
+&nbsp;&nbsp;+ <span class="comment">(*&nbsp;i&nbsp;==&nbsp;0&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">move</span>/<span class="id" title="lemma">eqP</span>: <span class="id" title="var">Hi</span>⇒ <span class="id" title="var">Hi</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="var">Hi</span> /=.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">rewrite</span> /<span class="id" title="definition">getBit</span> /=.<br/>
+&nbsp;&nbsp;+ <span class="comment">(*&nbsp;i&nbsp;&gt;&nbsp;0&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="lemma">negbT</span> <span class="id" title="keyword">in</span> <span class="id" title="var">Hi</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">have</span> <span class="id" title="var">gtz_i</span>: <span class="id" title="var">i</span> <span class="id" title="notation">&gt;</span> 0 <span class="id" title="tactic">by</span> <span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">lt0n</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="Bitset.ops.shift.html#getBit_joinlsb"><span class="id" title="lemma">getBit_joinlsb</span></a> <span class="id" title="var">gtz_i</span>⇒ //.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">andbC</span> <span class="id" title="lemma">andbT</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> <span class="id" title="keyword">in</span> <span class="id" title="var">HE</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">move</span>/<span class="id" title="lemma">setP</span>: <span class="id" title="var">HE</span>⇒ <span class="id" title="var">HE</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<span class="id" title="definition">eq_mem</span> <span class="id" title="keyword">in</span> <span class="id" title="var">HE</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">move</span>: (<span class="id" title="var">HE</span> (<span class="id" title="definition">cast_ord</span> <span class="id" title="var">H</span> (<span class="id" title="definition">inord</span> <span class="id" title="var">i</span><span class="id" title="notation">.-1</span>)))=&gt; <span class="id" title="var">HEi</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">have</span> {2}-&gt;: <span class="id" title="var">i</span><span class="id" title="notation">.-1</span> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="definition">cast_ord</span> <span class="id" title="var">H</span> (<span class="id" title="definition">inord</span> <span class="id" title="var">i</span><span class="id" title="notation">.-1</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="Bitset.props.bineqs.html#nat_cast_ord"><span class="id" title="lemma">nat_cast_ord</span></a> <span class="id" title="lemma">inordK</span> // <span class="id" title="var">H</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> (<span class="id" title="lemma">leq_ltn_trans</span> (<span class="id" title="var">n</span> := <span class="id" title="var">i</span>)).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">exact</span>: <span class="id" title="lemma">leq_pred</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">exact</span>: <span class="id" title="lemma">ltn_ord</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">in_set</span> <span class="id" title="keyword">in</span> <span class="id" title="var">HEi</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="lemma">ltn_ord</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="sr_repr"><span class="id" title="lemma">sr_repr</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> (<span class="id" title="var">bs</span>: <span class="id" title="definition">BITS</span> <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a>) <span class="id" title="var">E</span> (<span class="id" title="var">H</span>: <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a><span class="id" title="notation">.-1</span><span class="id" title="notation">.+1</span> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a>), <a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> <a class="idref" href="Bitset.ops.shift.html#bs"><span class="id" title="variable">bs</span></a> <a class="idref" href="Bitset.ops.shift.html#E"><span class="id" title="variable">E</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> (<span class="id" title="definition">shrBn</span> <a class="idref" href="Bitset.ops.shift.html#bs"><span class="id" title="variable">bs</span></a> 1) <span class="id" title="notation">[</span><span class="id" title="notation">set</span> <span class="id" title="var">i</span> <span class="id" title="notation">:</span> <span class="id" title="notation">'</span><span class="id" title="notation">I_n</span> <span class="id" title="notation">|</span> <span class="id" title="var">i</span> <span class="id" title="notation">&lt;</span> <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a><span class="id" title="notation">.-1</span> <span class="id" title="notation">&amp;</span> <span class="id" title="definition">cast_ord</span> <a class="idref" href="Bitset.ops.shift.html#H"><span class="id" title="variable">H</span></a> (@<span class="id" title="definition">inord</span> <a class="idref" href="Bitset.ops.shift.html#n"><span class="id" title="variable">n</span></a><span class="id" title="notation">.-1</span> <span class="id" title="var">i</span><span class="id" title="notation">.+1</span>) <span class="id" title="notation">\</span><span class="id" title="keyword">in</span> <a class="idref" href="Bitset.ops.shift.html#E"><span class="id" title="variable">E</span></a><span class="id" title="notation">]</span>.<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">move</span>⇒ <span class="id" title="var">n</span> <span class="id" title="var">bs</span> <span class="id" title="var">E</span> <span class="id" title="var">H</span> <span class="id" title="var">HE</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> -<span class="id" title="lemma">setP</span> /<span class="id" title="definition">eq_mem</span>⇒ <span class="id" title="var">i</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> !<span class="id" title="lemma">in_set</span> /<span class="id" title="definition">shrBn</span> /=.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">elim</span>: <span class="id" title="var">n</span> <span class="id" title="var">bs</span> <span class="id" title="var">E</span> <span class="id" title="var">H</span> <span class="id" title="var">HE</span> <span class="id" title="var">i</span>⇒ [//=|<span class="id" title="var">n</span> <span class="id" title="var">IHn</span>] /<span class="id" title="lemma">tupleP</span> [<span class="id" title="var">b</span> <span class="id" title="var">bs</span>] <span class="id" title="var">E</span> <span class="id" title="var">H</span> <span class="id" title="var">HE</span> <span class="id" title="var">i</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<span class="id" title="definition">shrB</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <a class="idref" href="Bitset.props.getbit.html#getBit_joinmsb"><span class="id" title="lemma">getBit_joinmsb</span></a> /<span class="id" title="definition">droplsb</span> /<span class="id" title="definition">splitlsb</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">tuple.beheadCons</span> <span class="id" title="lemma">tuple.theadCons</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> <span class="id" title="keyword">in</span> <span class="id" title="var">HE</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="var">HE</span> <span class="id" title="lemma">in_set</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> {1}<span class="id" title="lemma">succnK</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">case</span> <span class="id" title="var">ltn_i</span>: (<span class="id" title="var">i</span> <span class="id" title="notation">&lt;</span> <span class="id" title="var">n</span>).<br/>
+&nbsp;&nbsp;+ <span class="comment">(*&nbsp;i&nbsp;&lt;&nbsp;n&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">andbC</span> <span class="id" title="lemma">andbT</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">have</span> -&gt;: <span class="id" title="definition">nat_of_ord</span> (<span class="id" title="definition">cast_ord</span> <span class="id" title="var">H</span> (<span class="id" title="definition">inord</span> <span class="id" title="var">i</span><span class="id" title="notation">.+1</span>)) <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#1c39bf18749e5cc609e83c0a0ba5a372"><span class="id" title="notation">=</span></a> <span class="id" title="var">i</span><span class="id" title="notation">.+1</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">rewrite</span> <a class="idref" href="Bitset.props.bineqs.html#nat_cast_ord"><span class="id" title="lemma">nat_cast_ord</span></a> <span class="id" title="lemma">inordK</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">compute</span>.<br/>
+&nbsp;&nbsp;+ <span class="comment">(*&nbsp;i&nbsp;&gt;=&nbsp;n&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">andbC</span> <span class="id" title="lemma">andbF</span> /=.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">apply</span> <span class="id" title="lemma">negbT</span> <span class="id" title="keyword">in</span> <span class="id" title="var">ltn_i</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> -<span class="id" title="lemma">leqNgt</span> <span class="id" title="keyword">in</span> <span class="id" title="var">ltn_i</span>.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<span class="id" title="definition">getBit</span> <span class="id" title="lemma">nth_default</span> //.<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">size_tuple</span>⇒ //.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">rewrite</span> -<span class="id" title="lemma">ltnS</span> <span class="id" title="lemma">ltn_ord</span>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

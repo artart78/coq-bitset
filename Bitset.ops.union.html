@@ -1,0 +1,53 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>Bitset.ops.union</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library Bitset.ops.union</h1>
+
+<div class="code">
+<span class="id" title="var">From</span> <span class="id" title="var">Ssreflect</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">ssreflect</span> <span class="id" title="library">ssrbool</span> <span class="id" title="library">eqtype</span> <span class="id" title="library">ssrnat</span> <span class="id" title="library">seq</span> <span class="id" title="library">fintype</span> <span class="id" title="library">ssrfun</span>.<br/>
+<span class="id" title="var">From</span> <span class="id" title="var">MathComp</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">tuple</span> <span class="id" title="library">finset</span>.<br/>
+<span class="id" title="var">From</span> <span class="id" title="var">Bits</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">bits</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Bitset.props.getbit.html#"><span class="id" title="library">props.getbit</span></a> <a class="idref" href="Bitset.spec.html#"><span class="id" title="library">spec</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="union"><span class="id" title="definition">union</span></a> {<span class="id" title="var">n</span>} (<span class="id" title="var">bs</span>: <span class="id" title="definition">BITS</span> <a class="idref" href="Bitset.ops.union.html#n"><span class="id" title="variable">n</span></a>) (<span class="id" title="var">bs'</span>: <span class="id" title="definition">BITS</span> <a class="idref" href="Bitset.ops.union.html#n"><span class="id" title="variable">n</span></a>): <span class="id" title="definition">BITS</span> <a class="idref" href="Bitset.ops.union.html#n"><span class="id" title="variable">n</span></a><br/>
+&nbsp;&nbsp;:= <span class="id" title="definition">orB</span> <a class="idref" href="Bitset.ops.union.html#bs"><span class="id" title="variable">bs</span></a> <a class="idref" href="Bitset.ops.union.html#bs'"><span class="id" title="variable">bs'</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <a name="union_repr"><span class="id" title="lemma">union_repr</span></a>:<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> (<span class="id" title="var">bs</span>: <span class="id" title="definition">BITS</span> <a class="idref" href="Bitset.ops.union.html#n"><span class="id" title="variable">n</span></a>) (<span class="id" title="var">bs'</span>: <span class="id" title="definition">BITS</span> <a class="idref" href="Bitset.ops.union.html#n"><span class="id" title="variable">n</span></a>) <span class="id" title="var">E</span> <span class="id" title="var">E'</span>, <a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> <a class="idref" href="Bitset.ops.union.html#bs"><span class="id" title="variable">bs</span></a> <a class="idref" href="Bitset.ops.union.html#E"><span class="id" title="variable">E</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> <a class="idref" href="Bitset.ops.union.html#bs'"><span class="id" title="variable">bs'</span></a> <a class="idref" href="Bitset.ops.union.html#E'"><span class="id" title="variable">E'</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> (<a class="idref" href="Bitset.ops.union.html#union"><span class="id" title="definition">union</span></a> <a class="idref" href="Bitset.ops.union.html#bs"><span class="id" title="variable">bs</span></a> <a class="idref" href="Bitset.ops.union.html#bs'"><span class="id" title="variable">bs'</span></a>) (<a class="idref" href="Bitset.ops.union.html#E"><span class="id" title="variable">E</span></a> <span class="id" title="notation">:|:</span> <a class="idref" href="Bitset.ops.union.html#E'"><span class="id" title="variable">E'</span></a>).<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">move</span>⇒ <span class="id" title="var">n</span> <span class="id" title="var">bs</span> <span class="id" title="var">bs'</span> <span class="id" title="var">E</span> <span class="id" title="var">E'</span> <span class="id" title="var">HE</span> <span class="id" title="var">HE'</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> -<span class="id" title="lemma">setP</span> /<span class="id" title="definition">eq_mem</span>⇒ <span class="id" title="var">x</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">rewrite</span> <span class="id" title="lemma">in_setU</span> /<a class="idref" href="Bitset.ops.union.html#union"><span class="id" title="definition">union</span></a> /<span class="id" title="definition">orB</span> <span class="id" title="var">HE</span> <span class="id" title="var">HE'</span> !<span class="id" title="lemma">in_set</span> <a class="idref" href="Bitset.props.getbit.html#getBit_liftBinOp"><span class="id" title="lemma">getBit_liftBinOp</span></a>.<br/>
+<span class="id" title="keyword">Qed</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>
