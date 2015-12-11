@@ -69,9 +69,12 @@ Qed.
 
 (** ** Singleton *)
 
+Definition singleton (x: 'I_wordsize) :=
+  lsl one (toInt x).
+
 Lemma singleton_repr:
   forall (x: 'I_wordsize),
-    machine_repr (lsl one (toInt x)) [set x].
+    machine_repr (singleton x) [set x].
 Proof.
   move=> x.
   exists (shlBn #1 x).
@@ -517,3 +520,58 @@ Proof.
   trivial.
   trivial.
 Qed.
+
+(** Module type describing set operations & implementations using bitsets and finsets *)
+Module Type SET.
+  Parameter T : Type.
+  Parameter empty : T.
+  Notation "{}" := empty : set_scope.
+  Parameter singleton : 'I_wordsize -> T.
+  Notation "{ x }" := (singleton x) : set_scope.
+  Parameter compl : T -> T.
+  Notation "~ E" := (compl E) : set_scope.
+  Parameter create : bool -> T.
+  Parameter get : T -> 'I_wordsize -> bool.
+  Notation "x \in E" := (get E x) : set_scope.
+  Parameter inter : T -> T -> T.
+  Notation "E1 /\ E2" := (inter E1 E2) : set_scope.
+  Parameter keep_min : forall (E: T) x, x \in E -> T.
+  Notation "{ min E }" := (keep_min E) : set_scope.
+  Parameter set : T -> 'I_wordsize -> bool -> T.
+  Parameter symdiff : T -> T -> T.
+  Notation "E1 \delta E2" := (symdiff E1 E2) (at level 0) : set_scope.
+  Parameter union : T -> T -> T.
+  Notation "E1 \/ E2" := (union E1 E2) : set_scope.
+  Parameter cardinal : T -> nat.
+  Notation "| E |" := (cardinal E) : set_scope.
+End SET.
+
+Module Finset <: SET.
+  Definition T := {set 'I_wordsize}.
+  Definition empty : T := set0.
+  Definition singleton (x: 'I_wordsize) : T := [set x].
+  Definition compl (E: T) := ~: E.
+  Definition create b := if b then [ set : 'I_wordsize ] else set0.
+  Definition get (E: T) x := x \in E.
+  Definition inter (E1: T) E2 := E1 :&: E2.
+  Definition keep_min (E: T) (x: 'I_wordsize) (Hx: get E x): T := [set [arg min_(k < x in E) k]].
+  Definition set (E: T) k b := if b then (k |: E) else (E :\ k).
+  Definition symdiff (E1: T) E2 := ((E2 :\: E1) :|: (E1 :\: E2)).
+  Definition union (E1: T) E2 := E1 :|: E2.
+  Definition cardinal (E: T) := #|E|.
+End Finset.
+
+Module Bitset <: SET.
+  Definition T := Int.
+  Definition empty := zero.
+  Definition singleton := singleton.
+  Definition compl := compl.
+  Definition create := create.
+  Definition get := get.
+  Definition inter := inter.
+  Definition keep_min (E: T) (x: 'I_wordsize) (Hx: get E x): T := keep_min E.
+  Definition set E (x: 'I_wordsize) b := set E (toInt x) b.
+  Definition symdiff := symdiff.
+  Definition union := union.
+  Definition cardinal (E: T) := fromInt (cardinal E).
+End Bitset.
