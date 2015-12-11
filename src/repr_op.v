@@ -524,30 +524,35 @@ Qed.
 (** Module type describing set operations & implementations using bitsets and finsets *)
 Module Type SET.
   Parameter T : Type.
+  Parameter eq : T -> T -> bool.
+  Infix "=" := eq : SET_scope.
+  Open Scope SET_scope.
+  Bind Scope SET_scope with T.
   Parameter empty : T.
-  Notation "{}" := empty : set_scope.
+  Notation "\emptyset" := empty : SET_scope.
   Parameter singleton : 'I_wordsize -> T.
-  Notation "{ x }" := (singleton x) : set_scope.
+  Notation "{ x }" := (singleton x) : SET_scope.
   Parameter compl : T -> T.
-  Notation "~ E" := (compl E) : set_scope.
+  Notation "~ E" := (compl E) : SET_scope.
   Parameter create : bool -> T.
   Parameter get : T -> 'I_wordsize -> bool.
-  Notation "x \in E" := (get E x) : set_scope.
+  Notation "x \in E" := (get E x) : SET_scope.
   Parameter inter : T -> T -> T.
-  Notation "E1 /\ E2" := (inter E1 E2) : set_scope.
+  Notation "E1 \cap E2" := (inter E1 E2) (at level 0) : SET_scope.
   Parameter keep_min : forall (E: T) x, x \in E -> T.
-  Notation "{ min E }" := (keep_min E) : set_scope.
+  Notation "{ min E }" := (keep_min E) : SET_scope.
   Parameter set : T -> 'I_wordsize -> bool -> T.
   Parameter symdiff : T -> T -> T.
-  Notation "E1 \delta E2" := (symdiff E1 E2) (at level 0) : set_scope.
+  Notation "E1 \delta E2" := (symdiff E1 E2) (at level 0) : SET_scope.
   Parameter union : T -> T -> T.
-  Notation "E1 \/ E2" := (union E1 E2) : set_scope.
+  Notation "E1 \cup E2" := (union E1 E2) (at level 0) : SET_scope.
   Parameter cardinal : T -> nat.
-  Notation "| E |" := (cardinal E) : set_scope.
+  Notation "| E |" := (cardinal E) (at level 30) : SET_scope.
 End SET.
 
 Module Finset <: SET.
   Definition T := {set 'I_wordsize}.
+  Definition eq (E: T) (E': T) := E == E'.
   Definition empty : T := set0.
   Definition singleton (x: 'I_wordsize) : T := [set x].
   Definition compl (E: T) := ~: E.
@@ -563,6 +568,7 @@ End Finset.
 
 Module Bitset <: SET.
   Definition T := Int.
+  Definition eq (E: T) (E': T) := eq E E'.
   Definition empty := zero.
   Definition singleton := singleton.
   Definition compl := compl.
