@@ -27,6 +27,25 @@ Definition machine_repr
   exists bv, native_repr n bv /\ repr bv E.
 
 
+(** We go from Coq's [nat] to [Int] by (brutally) collapsing [nat]
+    to [int]: *)
+
+Extract Inductive nat => int [ "0" "succ" ]
+                             "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
+
+Axiom toInt: nat -> Int.
+
+Extract Inlined Constant toInt => "".
+
+Axiom toInt_def : forall n, toInt n = bitsToInt (# n).
+
+
+Axiom fromInt: Int -> nat.
+
+Extract Inlined Constant fromInt => "".
+
+Axiom fromInt_def : forall n, fromInt n = toNat (bitsFromInt n).
+
 (** ** Equality *)
 
 Lemma eq_repr: forall i i' E E', machine_repr i E -> machine_repr i' E' -> (eq i i') = (E == E').
@@ -50,10 +69,8 @@ Qed.
 
 (** ** Singleton *)
 
-Check lsl.
-
 Definition singleton (x: 'I_wordsize) :=
-  lsl one (bitsToInt #(x: nat)).
+  lsl one (toInt x).
 
 Lemma singleton_repr:
   forall (x: 'I_wordsize),
@@ -66,7 +83,8 @@ Proof.
     apply (leq_trans (n := x.+1))=> //.
     apply one_repr.
     apply/existsP; exists # (x); apply/andP; split=> //.
-    apply/eqIntP=> //.
+    apply/eqIntP.
+    rewrite toInt_def=> //.
   * rewrite getBit_shlBn=> //.
     apply singleton_repr.
 Qed.
@@ -132,7 +150,7 @@ Qed.
 (** ** Set creation *)
 
 Definition create (b: bool): Int
-  := if b then dec (bitsToInt #0) else (bitsToInt #0).
+  := if b then dec (toInt 0) else (toInt 0).
 
 Lemma create_repr:
   forall (b: bool),
@@ -144,15 +162,16 @@ Proof.
   * rewrite /create/create.create; case: b.
     + (* Case: b ~ true *)
       apply dec_repr.
-      by apply/eqIntP.
+      by rewrite toInt_def;
+         apply/eqIntP.
     + (* Case: b ~ false *)
-      by apply/eqIntP.
+      by rewrite toInt_def; apply/eqIntP.
 Qed.
 
 (** ** Querying *)
 
 Definition get (bs: Int) (k: 'I_wordsize): bool
-  := eq (land (lsr bs (bitsToInt #(k: nat))) one) one.
+  := eq (land (lsr bs (toInt k)) one) one.
 
 Lemma get_repr:
   forall i E (k: 'I_wordsize), machine_repr i E ->
@@ -169,6 +188,7 @@ Proof.
   apply lsr_repr=> //.
   apply (leq_trans (n := k.+1))=> //.
   apply/existsP; exists # (k); apply/andP; split=> //.
+  rewrite toInt_def.
   by apply/eqIntP.
 Qed.
 
@@ -212,11 +232,11 @@ Qed.
 (** ** Insertion *)
 
 Definition insert (bs: Int) k: Int
-  := lor bs (lsl (bitsToInt #1) k).
+  := lor bs (lsl (toInt 1) k).
 
 Lemma insert_repr:
   forall i (k: 'I_wordsize) E, machine_repr i E ->
-    machine_repr (insert i (bitsToInt #k)) (k |: E).
+    machine_repr (insert i (toInt k)) (k |: E).
 Proof.
   move=> i k E [bv [Hbv1 Hbv2]].
   exists (insert.insert bv k).
@@ -225,19 +245,19 @@ Proof.
   apply lor_repr=> //.
   apply lsl_repr=> //.
   apply (leq_trans (n := k.+1))=> //.
-  + by apply/eqIntP.
-  + apply/existsP; exists # (k); apply/andP; split=> //.
+  + by rewrite toInt_def; apply/eqIntP.
+  + rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
     by apply/eqIntP.
   by apply insert.insert_repr.
 Qed.
 
 (** ** Removal *)
 Definition remove (bs: Int) k: Int
-  := land bs (lnot (lsl (bitsToInt #1) k)).
+  := land bs (lnot (lsl (toInt 1) k)).
 
 Lemma remove_repr:
   forall i (k: 'I_wordsize) E, machine_repr i E ->
-    machine_repr (remove i (bitsToInt #k)) (E :\ k).
+    machine_repr (remove i (toInt k)) (E :\ k).
 Proof.
   move=> i k E [bv [Hbv1 Hbv2]].
   exists (remove.remove bv k).
@@ -247,8 +267,8 @@ Proof.
   apply lnot_repr=> //.
   apply lsl_repr=> //.
   apply (leq_trans (n := k.+1))=> //.
-  by apply/eqIntP.
-  apply/existsP; exists # (k); apply/andP; split=> //.
+  by rewrite toInt_def; apply/eqIntP.
+  rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
     by apply/eqIntP.
   by apply remove.remove_repr.
 Qed.
@@ -302,15 +322,13 @@ Qed.
 (** ** Cardinality *)
 
 Lemma fromInt_inj: forall x y,
-  bitsFromInt x = bitsFromInt y -> x = y.
+  fromInt x = fromInt y -> x = y.
 Proof.
   move=> x y H.
-  apply f_equal with (f := bitsToInt) in H.
-  rewrite -[x]bitsFromIntK -[y]bitsFromIntK //.
+  rewrite !fromInt_def in H.
+  apply toNat_inj in H.
+  by apply bitsFromInt_inj in H.
 Qed.
-
-Definition fromInt x := toNat (bitsFromInt x).
-Definition toInt x := bitsToInt #(x: nat).
 
 Module Int_as_OT <: OrderedType.
 
@@ -318,7 +336,7 @@ Module Int_as_OT <: OrderedType.
 
   Definition eq x y : Prop := (fromInt x) = (fromInt y).
 
-  Definition lt (x y: Int) : Prop := (fromInt x) < (fromInt y).
+  Definition lt x y : Prop := (fromInt x) < (fromInt y).
   Definition eq_refl x := @Logic.eq_refl nat (fromInt x).
   Definition eq_sym x y := @Logic.eq_sym nat (fromInt x) (fromInt y).
   Definition eq_trans x y z := @Logic.eq_trans nat (fromInt x) (fromInt y) (fromInt z).
@@ -393,7 +411,7 @@ Proof.
   set i' := land (lsr n (toInt (i * tableSize))) (dec (lsl one (toInt tableSize))).
   rewrite (M.find_1 (e := toInt (count_mem true (fromNat (n := tableSize) (fromInt i'))))).
   have ->: fromInt i' = toNat (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
-    rewrite /fromInt.
+    rewrite fromInt_def.
     have ->: bitsFromInt i' = andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize)).
       apply/eqP.
       rewrite -eq_adj.
@@ -404,7 +422,7 @@ Proof.
         apply/existsP.
         exists # (i * tableSize).
         rewrite /native_repr.
-        rewrite /toInt.
+        rewrite toInt_def.
         rewrite eq_refl andbT.
         by apply/eqIntP.
         apply dec_repr.
@@ -416,11 +434,11 @@ Proof.
         apply/existsP.
         exists #tableSize.
         rewrite eq_refl andbT.
-        rewrite /native_repr /toInt.
+        rewrite /native_repr toInt_def.
         by apply/eqIntP.
       by apply H.
     rewrite //.
-  rewrite /toInt.
+  rewrite toInt_def.
   apply/eqIntP=> //.
   rewrite /pop_table /pop_tableAux [_ (2^tableSize) _]/=.
   admit. (* Trivial, but painful *)
@@ -493,7 +511,7 @@ Proof.
   split=> //.
   rewrite subB_equiv_addB_negB.
   apply add_repr.
-  rewrite /toInt.
+  rewrite toInt_def.
   apply/eqIntP=> //.
   apply neg_repr.
   move: (cardinal.cardinal_repr _ tableSize (orB bv (negB bv)) E')=> H'.
