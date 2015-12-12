@@ -32,7 +32,7 @@ Definition bloomCheck (S: T) (H: seq (P -> 'I_wordsize)) (checked_elt: P) : bool
 
 End bloom_def.
 
-Bind Scope SET_scope with Int.
+Bind Scope SET_scope with Int32.
 Module bloom_Int := bloom_def Bitset.
 Export bloom_Int.
 Module bloom_Finset := bloom_def Finset.

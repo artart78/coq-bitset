@@ -13,7 +13,7 @@ Lemma fromInt_elim:
 Proof.
   move=> x.
   rewrite fromInt_def toInt_def toNatK.
-  exact: bitsFromIntK.
+  exact: bitsFromInt32K.
 Qed.
 
 Lemma ladd_repr:
@@ -21,17 +21,17 @@ Lemma ladd_repr:
 Proof.
   move=> x y.
   rewrite !toInt_def.
-  have H: bitsFromInt (add (bitsToInt # (x)) (bitsToInt # (y))) = bitsFromInt (bitsToInt # (x + y)).
-    have ->: bitsFromInt (bitsToInt #(x + y)) = #(x + y) by apply bitsToIntK.
-    have H: native_repr (add (bitsToInt # (x)) (bitsToInt # (y))) (addB # (x) # (y)).
+  have H: bitsFromInt32 (add (bitsToInt32 # (x)) (bitsToInt32 # (y))) = bitsFromInt32 (bitsToInt32 # (x + y)).
+    have ->: bitsFromInt32 (bitsToInt32 #(x + y)) = #(x + y) by apply bitsToInt32K.
+    have H: native_repr (add (bitsToInt32 # (x)) (bitsToInt32 # (y))) (addB # (x) # (y)).
       apply add_repr.
-      apply/eqIntP=> //.
-      apply/eqIntP=> //.
+      apply/eqInt32P=> //.
+      apply/eqInt32P=> //.
     rewrite -fromNat_addBn.
     apply/eqP.
     rewrite -eq_adj.
-    apply add_repr; apply/eqIntP=> //.
-  by apply bitsFromInt_inj.
+    apply add_repr; apply/eqInt32P=> //.
+  by apply bitsFromInt32_inj.
 Qed.
 
 Lemma fromInt_zero:
@@ -58,20 +58,20 @@ Lemma exists_repr:
   forall i, exists S, machine_repr i S.
 Proof.
   move=> i.
-  set bs := bitsFromInt i.
+  set bs := bitsFromInt32 i.
   exists [ set x : 'I_wordsize | getBit bs x ] .
   exists bs; split=> //.
-  apply/eqIntP.
-  apply bitsFromInt_inj.
-  by rewrite bitsFromIntK.
+  apply/eqInt32P.
+  apply bitsFromInt32_inj.
+  by rewrite bitsFromInt32K.
 Qed.
 
-Record pos := mkPos { ld: Int; 
-                      col: Int;
-                      rd: Int;
-                      full: Int;
-                      poss: Int;
-                      curCount: Int;
+Record pos := mkPos { ld: Int32; 
+                      col: Int32;
+                      rd: Int32;
+                      full: Int32;
+                      poss: Int32;
+                      curCount: Int32;
                       mode: bool;
                       Hinv: eq (land poss col) zero }.
 
@@ -128,10 +128,10 @@ Proof.
   rewrite /natural_repr in H.
   move/existsP: H=> [bs /andP [Hbs1 Hbs2]].
   rewrite /native_repr in Hbs1.
-  move/eqIntP: Hbs1=> Hbs1.
+  move/eqInt32P: Hbs1=> Hbs1.
   rewrite Hbs1.
   rewrite fromInt_def.
-  rewrite bitsToIntK.
+  rewrite bitsToInt32K.
   have ->: #|E| = toNat (fromNat (n := wordsize) (#|E|)).
     rewrite toNat_fromNatBounded=> //.
     apply (leq_ltn_trans (n := wordsize))=> //.
@@ -160,7 +160,7 @@ Proof.
     have Hposs': P <> set0.
       move/eqP =>Habs'.
       rewrite -(eq_repr (poss st) zero) in Habs'=> //.
-      move/eqIntP: Habs'=> Habs'.
+      move/eqInt32P: Habs'=> Habs'.
       by rewrite Habs' in Hposs.
       by apply zero_repr.
     move/eqP: Hposs'=> Hposs'.
@@ -184,7 +184,7 @@ Proof.
   have ->: X :&: C = set0.
     apply/eqP.
     rewrite -(eq_repr (land bit (col st)) zero).
-    apply/eqIntP.
+    apply/eqInt32P.
     apply Hbit.
     apply inter_repr=> //.
     apply zero_repr.
@@ -212,7 +212,7 @@ Proof.
     have Hposs': P <> set0.
       move/eqP =>Habs'.
       rewrite -(eq_repr (poss st) zero) in Habs'=> //.
-      move/eqIntP: Habs'=> Habs'.
+      move/eqInt32P: Habs'=> Habs'.
       by rewrite Habs' in Hposs.
       by apply zero_repr.
     move/eqP: Hposs'=> Hposs'.
@@ -247,9 +247,9 @@ Proof.
   by apply compl_repr.
 Qed.
 
-Definition countNQueensAux: pos -> Int.
-  refine (Fix nqueens_wf (fun _ => Int)
-    (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> Int) =>
+Definition countNQueensAux: pos -> Int32.
+  refine (Fix nqueens_wf (fun _ => Int32)
+    (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> Int32) =>
   match (mode st) as x return mode st = x -> _ with
     | true => fun H =>
       if (eq (col st) (full st)) then
@@ -320,7 +320,7 @@ Definition countNQueensAux: pos -> Int.
   move: (exists_repr (neg (poss st)))=> [N HN].
   move: (exists_repr (col st))=> [C HC].
   move: (exists_repr (full st))=> [F HF].
-  apply/eqIntP.
+  apply/eqInt32P.
   rewrite (eq_repr _ _ ((P :&: N) :&: C) set0).
   rewrite setIAC.
   have ->: P :&: C = set0.
@@ -368,7 +368,7 @@ Definition countNQueensAux: pos -> Int.
   apply zero_repr.
 Defined.
 
-Definition countNQueens (n: nat): Int.
+Definition countNQueens (n: nat): Int32.
   refine (countNQueensAux (mkPos zero zero zero (dec (lsl one (toInt n))) zero zero true _)).
   rewrite (eq_repr _ _ (set0 :&: set0) set0).
   apply/eqP.
@@ -1444,7 +1444,7 @@ Proof.
     move: (exists_repr (neg poss))=> [N HN].
     move: (exists_repr col)=> [C HC].
     move: (exists_repr full)=> [F HF].
-    apply/eqIntP.
+    apply/eqInt32P.
     rewrite (eq_repr _ _ ((P :&: N) :&: C) set0).
     rewrite setIAC.
     have ->: P :&: C = set0.
@@ -1609,7 +1609,7 @@ Proof.
   apply/existsP.
   exists # (n).
   apply/andP; split=> //.
-  apply/eqIntP.
+  apply/eqInt32P.
   apply toInt_def.
   apply spec.subset_repr.
   by rewrite leq_eqVlt ltn_n orbT.

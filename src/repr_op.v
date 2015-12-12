@@ -22,7 +22,7 @@ Require create get insert remove inter union symdiff compl keep_min min cardinal
  *)
 
 Definition machine_repr
-           (n: Int)
+           (n: Int32)
            (E: {set 'I_wordsize}): Prop :=
   exists bv, native_repr n bv /\ repr bv E.
 
@@ -33,18 +33,18 @@ Definition machine_repr
 Extract Inductive nat => int [ "0" "succ" ]
                              "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 
-Axiom toInt: nat -> Int.
+Axiom toInt: nat -> Int32.
 
 Extract Inlined Constant toInt => "".
 
-Axiom toInt_def : forall n, toInt n = bitsToInt (# n).
+Axiom toInt_def : forall n, toInt n = bitsToInt32 (# n).
 
 
-Axiom fromInt: Int -> nat.
+Axiom fromInt: Int32 -> nat.
 
 Extract Inlined Constant fromInt => "".
 
-Axiom fromInt_def : forall n, fromInt n = toNat (bitsFromInt n).
+Axiom fromInt_def : forall n, fromInt n = toNat (bitsFromInt32 n).
 
 (** ** Equality *)
 
@@ -83,7 +83,7 @@ Proof.
     apply (leq_trans (n := x.+1))=> //.
     apply one_repr.
     apply/existsP; exists # (x); apply/andP; split=> //.
-    apply/eqIntP.
+    apply/eqInt32P.
     rewrite toInt_def=> //.
   * rewrite getBit_shlBn=> //.
     apply singleton_repr.
@@ -135,7 +135,7 @@ Qed.
 
 (** ** Complement *)
 
-Definition compl (bs: Int): Int
+Definition compl (bs: Int32): Int32
   := lnot bs.
 
 Lemma compl_repr:
@@ -149,7 +149,7 @@ Qed.
 
 (** ** Set creation *)
 
-Definition create (b: bool): Int
+Definition create (b: bool): Int32
   := if b then dec (toInt 0) else (toInt 0).
 
 Lemma create_repr:
@@ -163,14 +163,14 @@ Proof.
     + (* Case: b ~ true *)
       apply dec_repr.
       by rewrite toInt_def;
-         apply/eqIntP.
+         apply/eqInt32P.
     + (* Case: b ~ false *)
-      by rewrite toInt_def; apply/eqIntP.
+      by rewrite toInt_def; apply/eqInt32P.
 Qed.
 
 (** ** Querying *)
 
-Definition get (bs: Int) (k: 'I_wordsize): bool
+Definition get (bs: Int32) (k: 'I_wordsize): bool
   := eq (land (lsr bs (toInt k)) one) one.
 
 Lemma get_repr:
@@ -189,12 +189,12 @@ Proof.
   apply (leq_trans (n := k.+1))=> //.
   apply/existsP; exists # (k); apply/andP; split=> //.
   rewrite toInt_def.
-  by apply/eqIntP.
+  by apply/eqInt32P.
 Qed.
 
 (** ** Intersection *)
 
-Definition inter (bs: Int) (bs': Int): Int
+Definition inter (bs: Int32) (bs': Int32): Int32
   := land bs bs'.
 
 Lemma inter_repr:
@@ -213,7 +213,7 @@ Qed.
 
 (** ** Minimal element *)
 
-Definition keep_min (bs: Int): Int
+Definition keep_min (bs: Int32): Int32
   := land bs (neg bs).
 
 Lemma keep_min_repr:
@@ -231,7 +231,7 @@ Qed.
 
 (** ** Insertion *)
 
-Definition insert (bs: Int) k: Int
+Definition insert (bs: Int32) k: Int32
   := lor bs (lsl (toInt 1) k).
 
 Lemma insert_repr:
@@ -245,14 +245,14 @@ Proof.
   apply lor_repr=> //.
   apply lsl_repr=> //.
   apply (leq_trans (n := k.+1))=> //.
-  + by rewrite toInt_def; apply/eqIntP.
+  + by rewrite toInt_def; apply/eqInt32P.
   + rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
-    by apply/eqIntP.
+    by apply/eqInt32P.
   by apply insert.insert_repr.
 Qed.
 
 (** ** Removal *)
-Definition remove (bs: Int) k: Int
+Definition remove (bs: Int32) k: Int32
   := land bs (lnot (lsl (toInt 1) k)).
 
 Lemma remove_repr:
@@ -267,15 +267,15 @@ Proof.
   apply lnot_repr=> //.
   apply lsl_repr=> //.
   apply (leq_trans (n := k.+1))=> //.
-  by rewrite toInt_def; apply/eqIntP.
+  by rewrite toInt_def; apply/eqInt32P.
   rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
-    by apply/eqIntP.
+    by apply/eqInt32P.
   by apply remove.remove_repr.
 Qed.
 
 (** ** Symmetrical difference *)
 
-Definition symdiff (bs: Int) (bs': Int): Int
+Definition symdiff (bs: Int32) (bs': Int32): Int32
   := lxor bs bs'.
 
 Lemma symdiff_repr:
@@ -291,7 +291,7 @@ Qed.
 
 (** ** Union *)
 
-Definition union (bs: Int) (bs': Int): Int
+Definition union (bs bs': Int32): Int32
   := lor bs bs'.
 
 Lemma union_repr:
@@ -307,7 +307,7 @@ Qed.
 
 (** ** Subset *)
 
-Lemma subset_repr: forall (bs bs': Int) E E',
+Lemma subset_repr: forall (bs bs': Int32) E E',
   machine_repr bs E -> machine_repr bs' E' ->
     (eq (land bs bs') bs) =
       (E \subset E').
@@ -327,12 +327,12 @@ Proof.
   move=> x y H.
   rewrite !fromInt_def in H.
   apply toNat_inj in H.
-  by apply bitsFromInt_inj in H.
+  by apply bitsFromInt32_inj in H.
 Qed.
 
 Module Int_as_OT <: OrderedType.
 
-  Definition t := Int.
+  Definition t := Int32.
 
   Definition eq x y : Prop := (fromInt x) = (fromInt y).
 
@@ -382,15 +382,15 @@ Module M := FMapList.Make(Int_as_OT).
 
 Definition tableSize := 4.
 
-Fixpoint pop_tableAux (i: nat) (m: M.t Int) :=
+Fixpoint pop_tableAux (i: nat) (m: M.t Int32) :=
   match i with
   | 0 => M.add zero zero m
   | i'.+1 => M.add (toInt i) (toInt (count_mem true (fromNat (n := tableSize) i))) (pop_tableAux i' m)
   end.
 
-Definition pop_table := pop_tableAux (2 ^ tableSize) (M.empty Int).
+Definition pop_table := pop_tableAux (2 ^ tableSize) (M.empty Int32).
 
-Definition pop_elem (bs: Int)(i: nat): Int
+Definition pop_elem (bs: Int32)(i: nat): Int32
   := let x := land (lsr bs (toInt (i * tableSize))) 
                             (dec (lsl one (toInt tableSize))) in
      match (M.find x pop_table) with
@@ -412,7 +412,7 @@ Proof.
   rewrite (M.find_1 (e := toInt (count_mem true (fromNat (n := tableSize) (fromInt i'))))).
   have ->: fromInt i' = toNat (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
     rewrite fromInt_def.
-    have ->: bitsFromInt i' = andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize)).
+    have ->: bitsFromInt32 i' = andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize)).
       apply/eqP.
       rewrite -eq_adj.
       have H: native_repr i' (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
@@ -424,7 +424,7 @@ Proof.
         rewrite /native_repr.
         rewrite toInt_def.
         rewrite eq_refl andbT.
-        by apply/eqIntP.
+        by apply/eqInt32P.
         apply dec_repr.
         apply lsl_repr.
         rewrite //.
@@ -435,17 +435,17 @@ Proof.
         exists #tableSize.
         rewrite eq_refl andbT.
         rewrite /native_repr toInt_def.
-        by apply/eqIntP.
+        by apply/eqInt32P.
       by apply H.
     rewrite //.
   rewrite toInt_def.
-  apply/eqIntP=> //.
+  apply/eqInt32P=> //.
   rewrite /pop_table /pop_tableAux [_ (2^tableSize) _]/=.
   admit. (* Trivial, but painful *)
   by apply toNat_andB.
 Admitted.
 
-Fixpoint popAux (bs: Int)(i: nat): Int :=
+Fixpoint popAux (bs: Int32)(i: nat): Int32 :=
   match i with
   | 0 => zero
   | i'.+1 => add (pop_elem bs i') (popAux bs i')
@@ -469,11 +469,11 @@ Proof.
   by apply IH.
 Qed.
 
-Definition cardinal (bs: Int): Int
+Definition cardinal (bs: Int32): Int32
   := popAux bs (wordsize %/ tableSize).
 
 Lemma cardinal_repr:
-  forall (bs: Int) E, machine_repr bs E ->
+  forall (bs: Int32) E, machine_repr bs E ->
     natural_repr (cardinal bs) #|E|.
 Proof.
   move=> bs E [bv [int_repr fin_repr]].
@@ -490,11 +490,11 @@ Qed.
 
 (* TODO: what do we use this one for? *)
 
-Definition ntz (bs: Int): Int
+Definition ntz (bs: Int32): Int32
   := add (toInt wordsize) (neg (cardinal (lor bs (neg bs)))).
 
 Lemma ntz_repr:
-  forall (bs: Int) x E, machine_repr bs E -> x \in E ->
+  forall (bs: Int32) x E, machine_repr bs E -> x \in E ->
     natural_repr (ntz bs) [arg min_(k < x in E) k].
 Proof.
   move=> bs x E [bv [Hbv1 Hbv2]] Hx.
@@ -512,7 +512,7 @@ Proof.
   rewrite subB_equiv_addB_negB.
   apply add_repr.
   rewrite toInt_def.
-  apply/eqIntP=> //.
+  apply/eqInt32P=> //.
   apply neg_repr.
   move: (cardinal.cardinal_repr _ tableSize (orB bv (negB bv)) E')=> H'.
   rewrite H'.
@@ -584,7 +584,7 @@ Module Finset <: SET.
 End Finset.
 
 Module Bitset <: SET.
-  Definition T := Int.
+  Definition T := Int32.
   Definition eq (E: T) (E': T) := eq E E'.
   Definition empty := zero.
   Definition singleton := singleton.
