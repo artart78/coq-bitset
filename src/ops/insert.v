@@ -6,11 +6,9 @@ From Bits
      Require Import bits.
 Require Import props.getbit spec.
 
-Definition insert {n}(bs: BITS n) k: BITS n
-  := orB bs (shlBn #1 k).
+Definition insert {n}(bs: BITS n) k: BITS n := orB bs (shlBn #1 k).
 
-Lemma insert_repr:
-  forall n (bs: BITS n) (k: 'I_n) E, repr bs E ->
+Lemma insert_repr: forall n (bs: BITS n) (k: 'I_n) E, repr bs E ->
     repr (insert bs k) (k |: E).
 Proof.
   move=> n bs k E HE.

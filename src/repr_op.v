@@ -21,9 +21,7 @@ Require create get insert remove inter union symdiff compl keep_min min cardinal
 
  *)
 
-Definition machine_repr
-           (n: Int32)
-           (E: {set 'I_wordsize}): Prop :=
+Definition machine_repr (n: Int32)(E: {set 'I_wordsize}): Prop :=
   exists bv, native_repr n bv /\ repr bv E.
 
 
@@ -135,11 +133,10 @@ Qed.
 
 (** ** Complement *)
 
-Definition compl (bs: Int32): Int32
-  := lnot bs.
+Definition compl (bs: Int32): Int32 := lnot bs.
 
-Lemma compl_repr:
-  forall i E, machine_repr i E -> machine_repr (compl i) (~: E).
+Lemma compl_repr: forall i E, 
+    machine_repr i E -> machine_repr (compl i) (~: E).
 Proof.
   move=> i E [bv [r_native r_set]].
   exists (invB bv); split.

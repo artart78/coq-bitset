@@ -14,21 +14,20 @@ Variable P: Type.
 Module bloom_def (S: SET).
 Import S.
 
-Fixpoint bloomSig_aux (curFilter: T) (H: seq (P -> 'I_wordsize)) (elem: P): T
+Fixpoint bloomSig_aux (curFilter: T)(H: seq (P -> 'I_wordsize))(e: P): T
  := match H with
     | [::] => curFilter
-    | h :: t => bloomSig_aux ((singleton (h elem)) \cup curFilter) t elem
+    | h :: H => bloomSig_aux ((singleton (h e)) \cup curFilter) H e
     end.
 
-Definition bloomSig (H: seq (P -> 'I_wordsize)) (elem: P): T
- := bloomSig_aux \emptyset H elem.
+Definition bloomSig (H: seq (P -> 'I_wordsize))(e: P): T
+ := bloomSig_aux \emptyset H e.
 
-Definition bloomAdd (S: T) (H: seq (P -> 'I_wordsize)) (add_elt: P) : T
+Definition bloomAdd (S: T)(H: seq (P -> 'I_wordsize))(add_elt: P): T
  := S \cup (bloomSig H add_elt).
 
-Definition bloomCheck (S: T) (H: seq (P -> 'I_wordsize)) (checked_elt: P) : bool
- := let sig := bloomSig H checked_elt in
-    (sig \cap S) = sig.
+Definition bloomCheck (S: T)(H: seq (P -> 'I_wordsize))(e: P) : bool
+ := let sig := bloomSig H e in (sig \cap S) = sig.
 
 End bloom_def.
 
