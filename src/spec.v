@@ -6,8 +6,7 @@ From Bits
      Require Import bits.
 Require Import props.bineqs props.getbit.
 
-Definition repr {n}(bs: BITS n) E :=
-  E = [ set x : 'I_n | getBit bs x ].
+Definition repr {n}(bs: BITS n) E := E = [ set x : 'I_n | getBit bs x ].
 
 Lemma repr_rec:
   forall n (bs: BITS n) E b, repr [tuple of b :: bs] E ->
