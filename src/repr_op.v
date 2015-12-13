@@ -134,7 +134,6 @@ Qed.
 (** ** Complement *)
 
 Definition compl (bs: Int32): Int32 := lnot bs.
-
 Lemma compl_repr: forall i E, 
     machine_repr i E -> machine_repr (compl i) (~: E).
 Proof.
