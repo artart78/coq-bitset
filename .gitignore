@@ -1,5 +1,6 @@
 # * Extraction
-extraction/
+queens/
+bloom/
 
 # * Opam
 opam/

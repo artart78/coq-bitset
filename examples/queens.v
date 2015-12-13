@@ -1615,8 +1615,10 @@ Proof.
   by rewrite leq_eqVlt ltn_n orbT.
 Qed.
 
-Cd "extraction".
+Cd "examples/queens".
 
 Require Import ExtrOcamlBasic.
 
 Separate Extraction countNQueens.
+
+Cd "../..".

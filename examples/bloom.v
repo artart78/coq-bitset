@@ -86,8 +86,10 @@ Proof.
     by rewrite Habs' in Hyp.
 Qed.
 
-Cd "bloom".
+Cd "examples/bloom".
 
 Require Import ExtrOcamlBasic.
 
 Extraction "bloom.ml" bloomAdd bloomCheck.
+
+Cd "../..".
