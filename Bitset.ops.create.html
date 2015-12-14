@@ -2,7 +2,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <link href="coqdoc.css" rel="stylesheet" type="text/css" />
 <title>Bitset.ops.create</title>
 </head>
@@ -33,20 +33,17 @@
 
 <br/>
 <span class="id" title="keyword">Lemma</span> <a name="create_repr"><span class="id" title="lemma">create_repr</span></a>:<br/>
-&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">n</span> (<span class="id" title="var">b</span>: <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a>), <a class="idref" href="Bitset.ops.create.html#n"><span class="id" title="variable">n</span></a> <span class="id" title="notation">&gt;</span> 0 <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">forall</span> <span class="id" title="var">n</span> (<span class="id" title="var">b</span>: <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a>), <a class="idref" href="Bitset.ops.create.html#n"><span class="id" title="variable">n</span></a> <span class="id" title="notation">&gt;</span> 0 <a class="idref" href="http://coq.inria.fr/distrib/8.5beta2/stdlib/Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">-&gt;</span></a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> (<a class="idref" href="Bitset.ops.create.html#create"><span class="id" title="definition">create</span></a> <a class="idref" href="Bitset.ops.create.html#b"><span class="id" title="variable">b</span></a>) (<span class="id" title="keyword">if</span> <a class="idref" href="Bitset.ops.create.html#b"><span class="id" title="variable">b</span></a> <span class="id" title="keyword">then</span> <span class="id" title="notation">[</span> <span class="id" title="notation">set</span> <span class="id" title="notation">:</span> <span class="id" title="notation">'</span><span class="id" title="notation">I_n</span> <span class="id" title="notation">]</span> <span class="id" title="keyword">else</span> <span class="id" title="definition">set0</span>).<br/>
 <span class="id" title="keyword">Proof</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">move</span>⇒ <span class="id" title="var">n</span> <span class="id" title="var">b</span> <span class="id" title="var">gtz_n</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> -<span class="id" title="lemma">setP</span> /<span class="id" title="definition">eq_mem</span>⇒ <span class="id" title="var">x</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">move</span>=&gt; <span class="id" title="var">n</span> <span class="id" title="var">b</span> <span class="id" title="var">gtz_n</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> /<a class="idref" href="Bitset.spec.html#repr"><span class="id" title="definition">repr</span></a> -<span class="id" title="lemma">setP</span> /<span class="id" title="definition">eq_mem</span>=&gt; <span class="id" title="var">x</span>.<br/>
 &nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> !<span class="id" title="lemma">fun_if</span> !<span class="id" title="lemma">in_set</span> !<span class="id" title="lemma">if_arg</span>.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> -<a class="idref" href="Bitset.props.bineqs.html#makeOnes"><span class="id" title="lemma">makeOnes</span></a> <a class="idref" href="Bitset.props.getbit.html#getBit_zero"><span class="id" title="lemma">getBit_zero</span></a> <a class="idref" href="Bitset.props.getbit.html#getBit_ones"><span class="id" title="lemma">getBit_ones</span></a>⇒ //.<br/>
-&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">case</span>: <span class="id" title="var">b</span>⇒ //.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">rewrite</span> -<a class="idref" href="Bitset.props.bineqs.html#makeOnes"><span class="id" title="lemma">makeOnes</span></a> <a class="idref" href="Bitset.props.getbit.html#getBit_zero"><span class="id" title="lemma">getBit_zero</span></a> <a class="idref" href="Bitset.props.getbit.html#getBit_ones"><span class="id" title="lemma">getBit_ones</span></a>=&gt; //.<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">by</span> <span class="id" title="tactic">case</span>: <span class="id" title="var">b</span>=&gt; //.<br/>
 <span class="id" title="keyword">Qed</span>.<br/>
 </div>
-</div>
-
-<div id="footer">
-<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+<hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
 </div>
 
 </div>
