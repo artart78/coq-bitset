@@ -21,18 +21,14 @@ Everything can be installed everything by using
 You first need to add some coq-related repositories:
 ```shell
 opam repo add coq-released https://coq.inria.fr/opam/released
+opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
 opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
 ```
 
-Then, you need to install coq-bits, the dependencies will be installed automatically:
+Then, you can directly install coq-bitset, coq-bits and the other dependencies will be
+installed automatically:
 ```shell
-opam pin add coq-bits https://github.com/artart78/coq-bits.git
-```
-(Note you may need to confirm by pressing Y.)
-
-Then, coq-bitset can be installed exactly the same way:
-```shell
-opam pin add coq-bitset https://github.com/artart78/coq-bitset.git
+opam install coq-bitset
 ```
 
 ### Installing by hand
@@ -71,3 +67,5 @@ Depending on your program, you may have to prove validity by proving a machine_r
 All of them can by proved by using the lemmas in src/repr_op.v from this repository, using the OP_repr lemmas,
 where OP is an "high-level" operation defined in the file using bitset operations (for example: get for getting
 a bit, inter for computing the intersection, etc.).
+
+You can also look at the examples/ directory for usage examples.
