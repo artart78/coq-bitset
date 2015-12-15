@@ -40,17 +40,6 @@ Proof.
   by case: m / H.
 Qed.
 
-(* TODO: merge makeOnes & makeOnes2? *)
-Lemma makeOnes:
-  forall n,
-    ones n = decB #0.
-Proof.
-  move=> n.
-  apply toNat_inj.
-  rewrite toNat_ones toNat_decB.
-  by have ->: fromNat (n := n) 0 == #0 by apply/eqP.
-Qed.
-
 Lemma toNat_tcast:
   forall n m (bs: BITS n)(H: n = m), toNat (tcast H bs) = toNat bs.
 Proof.

@@ -16,6 +16,6 @@ Proof.
   move=> n b gtz_n.
   rewrite /repr -setP /eq_mem=> x.
   rewrite !fun_if !in_set !if_arg.
-  rewrite -makeOnes getBit_zero getBit_ones=> //.
+  rewrite !fromNat0 !decB_zero -!fromNat0 getBit_zero getBit_ones=> //.
   by case: b=> //.
 Qed.
