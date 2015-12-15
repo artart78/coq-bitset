@@ -5,7 +5,7 @@ From MathComp
      Require Import tuple finset div.
 From Bits
      Require Import bits extraction.axioms32.
-Require Import props.bineqs props.getbit spec.
+Require Import spec.
 
 Require create get insert remove inter union symdiff compl keep_min min cardinal shift.
 

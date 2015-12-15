@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple finset.
 From Bits
      Require Import bits.
-Require Import props.bineqs props.getbit spec.
+Require Import spec.
 
 Definition get {n}(bs: BITS n)(k: 'I_n): bool
   := (andB (shrBn bs k) #1) == #1.

@@ -4,7 +4,6 @@ From MathComp
      Require Import tuple finset.
 From Bits
      Require Import bits.
-Require Import props.bineqs props.getbit.
 
 Definition repr {n}(bs: BITS n) E := E = [ set x : 'I_n | getBit bs x ].
 
@@ -59,7 +58,7 @@ Lemma subset_repr:
   forall k n, k <= n -> repr (decB (shlBn #1 k)) [set x : 'I_n | x < k].
 Proof.
   move=> k n le_k.
-  rewrite makeOnes2=> //.
+  rewrite makeOnes=> //.
   rewrite subnKC //.
   move=> ?.
   rewrite /repr -setP /eq_mem=> i.

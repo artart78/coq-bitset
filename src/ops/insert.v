@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple finset.
 From Bits
      Require Import bits.
-Require Import props.getbit spec.
+Require Import spec.
 
 Definition insert {n}(bs: BITS n) k: BITS n := orB bs (shlBn #1 k).
 

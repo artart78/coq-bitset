@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple finset.
 From Bits
      Require Import bits.
-Require Import props.getbit spec.
+Require Import spec.
 
 Definition inter {n} (bs: BITS n) (bs': BITS n): BITS n
   := andB bs bs'.

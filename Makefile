@@ -110,8 +110,6 @@ VFILES:=examples/bloom.v\
   src/ops/create.v\
   src/ops/compl.v\
   src/ops/cardinal.v\
-  src/props/getbit.v\
-  src/props/bineqs.v\
   src/repr_op.v\
   src/spec.v\
   src/bitset.v

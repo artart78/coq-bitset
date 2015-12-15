@@ -2,8 +2,6 @@
 src/bitset.v
 src/spec.v
 src/repr_op.v
-src/props/bineqs.v
-src/props/getbit.v
 src/ops/cardinal.v
 src/ops/compl.v
 src/ops/create.v

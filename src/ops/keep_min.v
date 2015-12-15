@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple finset.
 From Bits
      Require Import bits ssrextra.tuple.
-Require Import props.bineqs props.getbit spec min.
+Require Import spec min.
 
 Definition keep_min {n} (bs: BITS n): BITS n
   := andB bs (negB bs).

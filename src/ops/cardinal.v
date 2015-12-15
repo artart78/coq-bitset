@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple div finset ssralg zmodp.
 From Bits
      Require Import bits ssrextra.tuple.
-Require Import props.bineqs props.getbit spec.
+Require Import spec.
 
 (** * Cardinal through binary population count  *)
 
@@ -51,7 +51,7 @@ Proof.
     by rewrite subnKC.
   have H': k + (n - k) = n by rewrite -H.
   rewrite /pop_elem /pop_table.
-  rewrite makeOnes2=> //.
+  rewrite makeOnes=> //.
   set bs' := andB (shrBn bs (i * k)) (tcast H' (zero (n - k) ## ones k)).
   have toNat_bounded: toNat bs' < 2 ^ k.
     have ltn_ones: toNat (n := n) (tcast H' (zero (n - k) ## ones k)) < 2 ^ k.

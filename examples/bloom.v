@@ -5,7 +5,7 @@ From MathComp
 From Bits
      Require Import bits extraction.axioms32.
 
-Require Import bineqs repr_op.
+Require Import repr_op.
 
 (* Definition *)
 

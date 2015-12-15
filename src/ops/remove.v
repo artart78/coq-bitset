@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple finset.
 From Bits
      Require Import bits.
-Require Import props.getbit spec.
+Require Import spec.
 
 Definition remove {n}(bs: BITS n) k: BITS n
   := andB bs (invB (shlBn #1 k)).

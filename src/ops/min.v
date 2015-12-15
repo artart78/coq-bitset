@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple div finset.
 From Bits
      Require Import bits.
-Require Import props.bineqs cardinal spec.
+Require Import cardinal spec.
 
 (** * Smallest inhabitant of a set *)
 

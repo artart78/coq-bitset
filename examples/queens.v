@@ -6,7 +6,7 @@ From Bits
      Require Import bits extraction.axioms32.
 Require Import Relation_Operators Lexicographic_Product Wf_nat.
 
-Require Import bineqs repr_op.
+Require Import repr_op.
 
 Lemma fromInt_elim:
   forall x, toInt (fromInt x) = x.

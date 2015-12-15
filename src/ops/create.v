@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple zmodp div ssralg finset.
 From Bits
      Require Import bits.
-Require Import props.bineqs props.getbit spec.
+Require Import spec.
 
 Definition create {n} (b: bool): BITS n
   := if b then decB #0 else #0.

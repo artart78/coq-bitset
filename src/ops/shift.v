@@ -4,7 +4,7 @@ From MathComp
      Require Import tuple finset.
 From Bits
      Require Import bits.
-Require Import props.bineqs props.getbit spec.
+Require Import spec.
 
 Lemma getBit_joinlsb:
   forall n (bs: BITS n) i b, i > 0 -> getBit (joinlsb (bs, b)) i = getBit bs (i.-1).
