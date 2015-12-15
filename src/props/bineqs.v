@@ -22,8 +22,8 @@ Proof.
     by apply IH.
 Qed.
 
-Lemma count_true:
-  forall n, (count_mem true (nseq n true)) = n.
+Lemma count_ones:
+  forall n, (count_mem true (ones n)) = n.
 Proof.
   elim=> //=.
   auto with arith.

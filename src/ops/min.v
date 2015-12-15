@@ -94,7 +94,7 @@ Proof.
       have ->: fill_ntz [tuple of true :: bs] = [tuple of true :: ones n].
         apply val_inj.
         by rewrite /= size_tuple //.
-      by rewrite /= count_true addnC addn1 subnn.
+      by rewrite /= count_ones addnC addn1 subnn.
     - (* b ~ false *)
       have ->: fill_ntz [tuple of false :: bs] = [tuple of false :: (fill_ntz bs)]
         by apply val_inj.
