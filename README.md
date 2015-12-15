@@ -6,6 +6,9 @@ The purpose of this library is to help proving bit-level algorithms written in C
 by providing a trivial conversion from operations over bitsets to finite sets and efficient
 proved extraction to Caml.
 
+A paper describing this library has been accepted at FLOPS2016. The version used for the
+conference is tagged `flops`.
+
 A documentation of the library can be found [here](https://artart78.github.com/coq-bitset/).
 
 ## Installation
