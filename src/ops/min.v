@@ -1,7 +1,5 @@
-From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq fintype ssrfun.
-From MathComp
-     Require Import tuple div finset.
+Require Import mathcomp.ssreflect.ssreflect.
+From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple div finset.
 From Bits
      Require Import bits.
 Require Import cardinal spec.

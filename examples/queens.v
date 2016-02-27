@@ -1,7 +1,5 @@
-From Ssreflect
-     Require Import ssreflect ssrbool eqtype ssrnat seq fintype ssrfun.
-From MathComp
-     Require Import tuple finset.
+Require Import mathcomp.ssreflect.ssreflect.
+From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset.
 From Bits
      Require Import bits extraction.axioms32.
 Require Import Relation_Operators Lexicographic_Product Wf_nat.
@@ -274,6 +272,25 @@ Definition countNQueensAux: pos -> Int32.
             (add (curCount st) count) false _) _
       end Logic.eq_refl
   end Logic.eq_refl)).
+  rewrite /pos_order /= H.
+  apply right_lex.
+  by apply left_lex=> //.
+  rewrite /pos_order H.
+  apply right_lex.
+  apply right_lex.
+  apply/ltP.
+  apply cardinal_2.
+  move=> Habs.
+  have Habs': eq (land (poss st) (full st)) zero = false by assumption.
+  rewrite Habs in Habs'.
+  move: (exists_repr (full st))=> [F HF].
+  rewrite (eq_repr _ _ (set0 :&: F) set0) in Habs'.
+  rewrite set0I in Habs'.
+  by rewrite eq_refl in Habs'.
+  apply inter_repr=> //.
+  apply zero_repr.
+  apply zero_repr.
+  Unshelve.
   move: (exists_repr (ld st))=> [L HL].
   move: (exists_repr (rd st))=> [R HR].
   move: (exists_repr (col st))=> [C HC].
@@ -289,9 +306,6 @@ Definition countNQueensAux: pos -> Int32.
   apply union_repr=> //.
   apply union_repr=> //.
   apply zero_repr.
-  rewrite /pos_order /= H.
-  apply right_lex.
-  by apply left_lex=> //.
   move: (exists_repr (lor (col st) bit))=> [C HC].
   move: (exists_repr (poss st))=> [P HP].
   rewrite (eq_repr _ _ (set0 :&: C) set0).
@@ -350,21 +364,6 @@ Definition countNQueensAux: pos -> Int32.
   apply inter_repr=> //.
   apply inter_repr=> //.
   apply compl_repr=> //.
-  apply zero_repr.
-  rewrite /pos_order H.
-  apply right_lex.
-  apply right_lex.
-  apply/ltP.
-  apply cardinal_2.
-  move=> Habs.
-  have Habs': eq (land (poss st) (full st)) zero = false by assumption.
-  rewrite Habs in Habs'.
-  move: (exists_repr (full st))=> [F HF].
-  rewrite (eq_repr _ _ (set0 :&: F) set0) in Habs'.
-  rewrite set0I in Habs'.
-  by rewrite eq_refl in Habs'.
-  apply inter_repr=> //.
-  apply zero_repr.
   apply zero_repr.
 Defined.
 
