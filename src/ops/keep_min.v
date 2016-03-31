@@ -28,6 +28,6 @@ Proof.
                  liftUnOpCons tuple.theadCons !tuple.beheadCons liftBinOpCons andbF
                  -/andB -/invB -/incB -/negB IHn.
   move=> E x HE Hx.
-  rewrite (index_repr n bs x E)=> //.
+  rewrite (@index_repr n bs x E)=> //.
   by apply singleton_repr.
 Qed.

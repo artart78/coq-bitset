@@ -48,7 +48,7 @@ Lemma eq_repr: forall i i' E E', machine_repr i E -> machine_repr i' E' -> (eq i
 Proof.
   move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
   rewrite (axioms32.eq_repr _ _ bv bv')=> //.
-  by rewrite -(spec.eq_repr _ bv bv' E E').
+  by rewrite -(@spec.eq_repr _ bv bv' E E').
 Qed.
 
 (** ** Zero *)

@@ -5,15 +5,8 @@ From Bits
 Require Import spec.
 
 (** * Set complement  *)
+Definition compl {n} (bs: BITS n): BITS n := invB bs.
 
-Definition compl {n} (bs: BITS n): BITS n
-  := invB bs.
-
-Lemma compl_repr:
-  forall n (bs: BITS n) E, repr bs E ->
-    repr (compl bs) (~: E).
-Proof.
-  move=> n bs E HE.
-  rewrite /repr -setP /eq_mem=> x.
-  by rewrite in_setC HE !in_set getBit_liftUnOp.
-Qed.
+Lemma compl_repr n (bs: BITS n) E :
+  repr bs E -> repr (compl bs) (~: E).
+Proof. by move->; apply/setP=> i; rewrite !inE getBit_liftUnOp. Qed.

@@ -9,7 +9,6 @@ Require Import cardinal spec.
 (* TODO: explain the algorithm *)
 (* TODO: add ref to Hacker's delight *)
 
-
 (* Fill all the bits to 1 after the LSB *)
 
 Fixpoint fill_ntz_seq (xs: seq bool): seq bool :=
@@ -66,12 +65,12 @@ Lemma ntz_repr:
     ntz k bs = #[arg min_(k < x in E) k].
 Proof.
   move=> n bs k x E Hk gtz_k HE Hx.
-  rewrite -(index_repr n bs x E)=> //.
+  rewrite -(@index_repr n bs x E)=> //.
   rewrite /ntz fill_ntz_repr.
   set ntzE := [ set x : 'I_n | getBit (fill_ntz bs) x ].
   have H: repr (fill_ntz bs) ntzE=> //.
   rewrite (cardinal_repr n k (fill_ntz bs) ntzE)=> //.
-  rewrite -(count_repr n (fill_ntz bs) ntzE)=> //.
+  rewrite -(@count_repr n (fill_ntz bs) ntzE)=> //.
   clear x E Hx HE ntzE H.
   have H: forall n (bs: BITS n), count_mem true (fill_ntz bs) <= n.
     move=> n0 bs0.
