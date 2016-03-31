@@ -4,8 +4,12 @@ From Bits
      Require Import bits.
 Require Import spec.
 
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
 (** * Set complement  *)
-Definition compl {n} (bs: BITS n): BITS n := invB bs.
+Definition compl n (bs: BITS n): BITS n := invB bs.
 
 Lemma compl_repr n (bs: BITS n) E :
   repr bs E -> repr (compl bs) (~: E).

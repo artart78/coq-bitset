@@ -202,7 +202,7 @@ Proof.
   exists (inter.inter bv bv').
   split.
   apply land_repr=> //.
-  by apply (inter.inter_repr _ bv bv').
+  exact: inter.inter_repr.
 Qed.
 
 (** ** Minimal element *)
@@ -495,7 +495,7 @@ Proof.
   rewrite /natural_repr.
   apply/existsP.
   exists #[arg min_(k < x in E) k].
-  rewrite -(min.ntz_repr _ bv tableSize)=> //.
+  rewrite -(@min.ntz_repr _ bv tableSize)=> //.
   rewrite /ntz /min.ntz.
   set E' := [ set x : 'I_wordsize | getBit (min.fill_ntz bv) x ].
   have H: repr (orB bv (negB bv)) E'.
