@@ -48,7 +48,7 @@ Lemma eq_repr: forall i i' E E', machine_repr i E -> machine_repr i' E' -> (eq i
 Proof.
   move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
   rewrite (axioms32.eq_repr _ _ bv bv')=> //.
-  by rewrite -(spec.eq_repr _ bv bv' E E').
+  by rewrite -(@spec.eq_repr _ bv bv' E E').
 Qed.
 
 (** ** Zero *)
@@ -202,7 +202,7 @@ Proof.
   exists (inter.inter bv bv').
   split.
   apply land_repr=> //.
-  by apply (inter.inter_repr _ bv bv').
+  exact: inter.inter_repr.
 Qed.
 
 (** ** Minimal element *)
@@ -495,7 +495,7 @@ Proof.
   rewrite /natural_repr.
   apply/existsP.
   exists #[arg min_(k < x in E) k].
-  rewrite -(min.ntz_repr _ bv tableSize)=> //.
+  rewrite -(@min.ntz_repr _ bv tableSize)=> //.
   rewrite /ntz /min.ntz.
   set E' := [ set x : 'I_wordsize | getBit (min.fill_ntz bv) x ].
   have H: repr (orB bv (negB bv)) E'.

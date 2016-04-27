@@ -4,14 +4,12 @@ From Bits
      Require Import bits.
 Require Import spec.
 
-Definition inter {n} (bs: BITS n) (bs': BITS n): BITS n
-  := andB bs bs'.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
-Lemma inter_repr:
-  forall n (bs: BITS n) (bs': BITS n) E E', repr bs E -> repr bs' E' ->
+Definition inter n (bs bs': BITS n) : BITS n := andB bs bs'.
+
+Lemma inter_repr n (bs bs' : BITS n) E E' : repr bs E -> repr bs' E' ->
     repr (inter bs bs') (E :&: E').
-Proof.
-  move=> n bs bs' E E' HE HE'.
-  rewrite /repr -setP /eq_mem=> x.
-  by rewrite in_setI /inter /andB HE HE' !in_set getBit_liftBinOp.
-Qed.
+Proof. by move=> -> ->; apply/setP => i; rewrite !inE getBit_liftBinOp. Qed.
