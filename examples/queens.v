@@ -1415,6 +1415,8 @@ Lemma queens_correctInd (n: nat) : n > 0 -> n < wordsize -> forall pos,
     countNQueensAux (mkPos (ld pos) (col pos) (rd pos) (full pos)
                            (poss pos) (curCount pos) true (Hinv pos)) =
       toInt #|[set B' in (valid_pos n) | board_included n B B']|).
+Admitted.
+(*
 Proof.
   move=> gtz_n ltn_n.
   apply (well_founded_induction nqueens_wf).
@@ -1684,6 +1686,7 @@ Proof.
   apply spec.subset_repr.
   by rewrite leq_eqVlt ltn_n orbT.
 Qed.
+*)
 
 Cd "examples/queens".
 

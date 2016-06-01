@@ -9,6 +9,7 @@ Require Import spec.
 (* TODO: add ref. to Hacker's delight *)
 (* TODO: document the algorithm *)
 
+
 Definition pop_table {n}(k: nat) := mkseq (fun i => fromNat (n := n) (count_mem true (fromNat (n := k) i))) (2^k).
 
 Definition pop_elem {n}(k: nat)(bs: BITS n)(i: nat): BITS n
@@ -140,7 +141,7 @@ Lemma cardinal_repr:
     k %| n -> k > 0 -> repr bs E ->
         cardinal k bs = #(#|E|).
 Proof.
-  move=> n k bs E div_k_n gtz_k HE.
+  move=> div_k_n gtz_k HE.
   have Hcast1: n = n %/ k * k.
     by rewrite divnK=> //.
   rewrite /cardinal pop_rec=> //.
