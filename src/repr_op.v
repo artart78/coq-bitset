@@ -1,11 +1,12 @@
 Require Import FMapList OrderedType OrderedTypeEx Compare_dec Peano_dec.
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset div.
+From CoqEAL Require Import refinements hrel.
 From Bits
      Require Import bits extraction.axioms32.
 Require Import spec.
 
-Require create get insert remove inter union symdiff compl keep_min min cardinal shift.
+Require keep_min min cardinal shift.
 
 (** * A formalisation of bitsets using OCaml's integers *)
 
@@ -19,9 +20,15 @@ Require create get insert remove inter union symdiff compl keep_min min cardinal
 
  *)
 
-Definition machine_repr (n: Int32)(E: {set 'I_wordsize}): Prop :=
-  exists bv, native_repr n bv /\ repr bv E.
+Check refines_trans.
+Locate "\o".
+Check comp_hrel.
 
+(* XXX: FIX *)
+
+(*
+Definition machine_repr (n: Int32)(E: {set 'I_wordsize}): Prop :=
+  exists bv, native_repr n bv /\ Rfin bv E.
 
 (** We go from Coq's [nat] to [Int] by (brutally) collapsing [nat]
     to [int]: *)
@@ -48,7 +55,7 @@ Lemma eq_repr: forall i i' E E', machine_repr i E -> machine_repr i' E' -> (eq i
 Proof.
   move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
   rewrite (axioms32.eq_repr _ _ bv bv')=> //.
-  by rewrite -(@spec.eq_repr _ bv bv' E E').
+  by rewrite [_ == _]refines_eq.
 Qed.
 
 (** ** Zero *)
@@ -593,3 +600,4 @@ Module Bitset <: SET.
   Definition union := union.
   Definition cardinal (E: T) := fromInt (cardinal E).
 End Bitset.
+*)

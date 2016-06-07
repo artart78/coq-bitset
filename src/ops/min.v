@@ -1,5 +1,6 @@
 Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple div finset.
+From CoqEAL Require Import refinements hrel.
 From Bits
      Require Import bits.
 Require Import cardinal spec.
@@ -41,17 +42,25 @@ Qed.
 
 Definition ntz n (k: nat) (bs: BITS n) : BITS n := subB #n (cardinal k (orB bs (negB bs))).
 
-Lemma ntz_repr n (bs : BITS n) k x E : k %| n -> k > 0 -> repr bs E -> x \in E ->
+Lemma ntz_repr n (bs: BITS n) k x E:
+  k %| n -> k > 0 -> Rfin bs E -> x \in E ->
     ntz k bs = #[arg min_(k < x in E) k].
 Proof.
   move=> Hk gtz_k HE Hx.
   rewrite -(@index_repr n bs x E)=> //.
   rewrite /ntz fill_ntz_repr.
   set ntzE := [ set x : 'I_n | getBit (fill_ntz bs) x ].
-  have H: repr (fill_ntz bs) ntzE=> //.
-  rewrite (cardinal_repr n k (fill_ntz bs) ntzE)=> //.
-  rewrite -(@count_repr n (fill_ntz bs) ntzE)=> //.
+  have H: refines Rfin (fill_ntz bs) ntzE by rewrite refinesE. 
+  Local Hint Extern 0 (is_true (_ %| _)) => assumption : typeclass_instances.
+  Local Hint Extern 0 (is_true (_ < _)) => assumption : typeclass_instances.
+  Typeclasses eauto := debug.
+  rewrite [cardinal k _]refines_eq.
+  Local Hint Mode refines - - - - + : typeclass_instances.
+  (*rewrite -[#| _ |]/((fun (E : {set ordinal_finType n}) => #| E |) ntzE).*)
+  rewrite -[#|ntzE|]/(cardF ntzE).
+  rewrite -[cardF _]refines_eq.
   clear x E Hx HE ntzE H.
+  rewrite /countT.
   have H: forall n (bs: BITS n), count_mem true (fill_ntz bs) <= n.
     move=> n0 bs0.
     have {3}->: n0 = size (fill_ntz bs0) by rewrite size_tuple.

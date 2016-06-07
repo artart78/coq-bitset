@@ -11,11 +11,11 @@ Proof.
 Qed.
 
 Lemma sl_repr:
-  forall n (bs: BITS n) E (H: n.-1.+1 = n), repr bs E ->
-    repr (shlBn bs 1) [set i : 'I_n | 0 < i & cast_ord H (@inord n.-1 i.-1) \in E].
+  forall n (bs: BITS n) E (H: n.-1.+1 = n), Rfin bs E ->
+    Rfin (shlBn bs 1) [set i : 'I_n | 0 < i & cast_ord H (@inord n.-1 i.-1) \in E].
 Proof.
   move=> n bs E H HE.
-  rewrite /repr -setP /eq_mem=> i.
+  rewrite /Rfin -setP /eq_mem=> i.
   rewrite !in_set.
   rewrite /shlBn /iter.
   rewrite /shlB getBit_dropmsb.
@@ -30,7 +30,7 @@ Proof.
     have gtz_i: i > 0 by rewrite lt0n.
     rewrite getBit_joinlsb gtz_i=> //.
     rewrite andbC andbT.
-    rewrite /repr in HE.
+    rewrite /Rfin in HE.
     move/setP: HE=> HE.
     rewrite /eq_mem in HE.
     move: (HE (cast_ord H (inord i.-1)))=> HEi.
@@ -44,17 +44,17 @@ Proof.
 Qed.
 
 Lemma sr_repr:
-  forall n (bs: BITS n) E (H: n.-1.+1 = n), repr bs E ->
-    repr (shrBn bs 1) [set i : 'I_n | i < n.-1 & cast_ord H (@inord n.-1 i.+1) \in E].
+  forall n (bs: BITS n) E (H: n.-1.+1 = n), Rfin bs E ->
+    Rfin (shrBn bs 1) [set i : 'I_n | i < n.-1 & cast_ord H (@inord n.-1 i.+1) \in E].
 Proof.
   move=> n bs E H HE.
-  rewrite /repr -setP /eq_mem=> i.
+  rewrite /Rfin -setP /eq_mem=> i.
   rewrite !in_set /shrBn /=.
   elim: n bs E H HE i=> [//=|n IHn] /tupleP [b bs] E H HE i.
   rewrite /shrB.
   rewrite getBit_joinmsb /droplsb /splitlsb.
   rewrite tuple.beheadCons tuple.theadCons.
-  rewrite /repr in HE.
+  rewrite /Rfin in HE.
   rewrite HE in_set.
   rewrite {1}succnK.
   case ltn_i: (i < n).

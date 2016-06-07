@@ -2,78 +2,105 @@ Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset.
 From Bits
      Require Import bits extraction.axioms32.
+From CoqEAL
+     Require Import hrel param refinements.
+Import Refinements.Op.
+Require Import bineqs repr_op spec.
 
-Require Import repr_op.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
 (* Definition *)
 
-Variable P: Type.
+(* Unset Universe Polymorphism. *)
+(* Set Universe Polymorphism.  *)
+Section Bloom_generic.
 
-Module bloom_def (S: SET).
-Import S.
+Variables (Finset : Type)
+          (P: Type)
+          (I : Type).
 
-Fixpoint bloomSig_aux (curFilter: T)(H: seq (P -> 'I_wordsize))(e: P): T
+(* Realizer P as P_R := ?. *)
+
+Context `{eq_of Finset}.
+Context `{union_of Finset}.
+Context `{inter_of Finset}.
+Context `{singleton_of I Finset}.
+Context `{emptyset_of Finset}.
+
+Fixpoint bloomSig_aux (H: seq (P -> I))(e: P)(curFilter: Finset): Finset
  := match H with
     | [::] => curFilter
-    | h :: H => bloomSig_aux ((singleton (h e)) \cup curFilter) H e
+    | h :: H => bloomSig_aux H e (union_op (singleton_op (h e)) curFilter) 
     end.
 
-Definition bloomSig (H: seq (P -> 'I_wordsize))(e: P): T
- := bloomSig_aux \emptyset H e.
+Definition bloomSig (H: seq (P -> I))(e: P): Finset
+ := bloomSig_aux H e emptyset_op.
 
-Definition bloomAdd (S: T)(H: seq (P -> 'I_wordsize))(add_elt: P): T
- := S \cup (bloomSig H add_elt).
+Definition bloomAdd (H: seq (P -> I))(add_elt: P)(S: Finset): Finset
+ := union_op S (bloomSig H add_elt).
 
-Definition bloomCheck (S: T)(H: seq (P -> 'I_wordsize))(e: P) : bool
- := let sig := bloomSig H e in (sig \cap S) = sig.
+Definition bloomCheck (H: seq (P -> I))(e: P)(S: Finset) : bool
+ := let sig := bloomSig H e in ((inter_op sig S) == sig)%C.
 
-End bloom_def.
+End Bloom_generic.
 
-Bind Scope SET_scope with Int32.
-Module bloom_Int := bloom_def Bitset.
-Export bloom_Int.
-Module bloom_Finset := bloom_def Finset.
 
-Definition bloomSig_repr := bloom_Finset.bloomSig.
-Definition bloomSig_aux_repr := bloom_Finset.bloomSig_aux.
+Parametricity bloomSig_aux.
 
-(* Proof *)
 
-Lemma bloomSig_isRepr:
-  forall H T T' add, machine_repr T T' -> machine_repr (bloomSig_aux T H add) (bloomSig_aux_repr T' H add).
-Proof.
-  elim=> [//|a l IH] T T' add Hrepr.
-  rewrite /bloomSig /bloomSig_repr -/bloomSig -/bloomSig_repr.
-  apply IH.
-  apply union_repr=> //.
-  apply singleton_repr.
+Parameter Q : Type.
+
+Local Instance refl_Q (x : Q) : refines Logic.eq x x.
+rewrite refinesE //.
 Qed.
 
-Lemma bloom_correct: forall T T' H add check, machine_repr T T' ->
- (~ bloomCheck (bloomAdd T H add) H check) -> (~ bloomCheck T H check) /\ (add <> check).
+
+Local Instance refl_seqH (x : seq (Q -> 'I_wordsize)) : refines (list_R (Logic.eq ==> Logic.eq)%rel) x x.
+rewrite refinesE //.
+elim x=> //=; constructor=> //.
+move=> u v -> //.
+Qed.
+
+Lemma bloomSig_isRepr (H : seq (Q -> 'I_wordsize))(e : Q) : 
+  refines (@Rfin wordsize ==> Rfin)%rel (bloomSig_aux H e) (bloomSig_aux H e).
 Proof.
-  move=> T T' H add check Hrepr Hyp.
+  rewrite refinesE.
+  move=> f1 f2 R.
+  eapply bloomSig_aux_R with (P_R := Logic.eq)=> //;
+  move=> *; apply refinesP; do?eapply refines_apply; tc.
+Qed.
+
+Lemma bloom_correct: forall (H : seq (Q -> 'I_wordsize))(add check : Q)(fset: {set 'I_wordsize}), 
+  (~ bloomCheck H check  (bloomAdd H add fset)) ->
+    (~ bloomCheck H check fset) /\ (add <> check).
+Proof.
+  Local Arguments inter_op /.
+  Local Arguments inter.inter_Finset /.
+  Local Arguments union_op /.
+  Local Arguments union.union_Finset /.
+
+  move=> H add check T Hyp.
   split.
   * move=> Habs.
-    have Habs': bloomCheck (bloomAdd T H add) H check.
-      rewrite /bloomCheck in Habs.
-      rewrite /Bitset.eq (subset_repr _ _ (bloomSig_repr H check) T') in Habs=> //.
-      rewrite /bloomCheck.
-      rewrite /Bitset.eq (subset_repr _ _ (bloomSig_repr H check) (T' :|: (bloomSig_repr H add))).
-      rewrite (subset_trans (B := pred_of_set T')) //.
-      apply subsetUl.
-      apply bloomSig_isRepr.
-      apply zero_repr.
-      apply union_repr=> //.
-      apply bloomSig_isRepr.
-      apply zero_repr.
-      apply bloomSig_isRepr.
-      apply zero_repr.
-    by rewrite Habs' in Hyp.
+    rewrite /bloomCheck in Habs.
+    apply Hyp.
+    rewrite /bloomCheck/bloomAdd.
+    rewrite /= setIUr.
+    rewrite /= in Habs.
+    move/eqP: Habs => ->.
+    simpC.
+    apply/eqP/setUidPl.
+    apply subsetIl.
   * move=> Habs.
     rewrite Habs in Hyp.
-    have Habs': bloomCheck (bloomAdd T H check) H check.
-      rewrite /bloomCheck.
+    apply Hyp.
+    have Habs': bloomCheck  H check (bloomAdd H check T).
+    rewrite /bloomCheck.
+    simpC. rewrite /=.
+    apply/eqP.
+    
       rewrite /Bitset.eq (subset_repr _ _ (bloomSig_repr H check) (T' :|: (bloomSig_repr H check))).
       apply subsetUr.
       apply bloomSig_isRepr.
@@ -83,6 +110,8 @@ Proof.
       apply zero_repr.
     by rewrite Habs' in Hyp.
 Qed.
+
+(* TODO: translate high-level spec [bloom_correct] onto bit-level implementation *)
 
 Cd "examples/bloom".
 
