@@ -17,3 +17,4 @@ src/ops/union.v
 src/ops/ops.v
 examples/queens.v
 examples/bloom.v
+examples/enum_parts.v
