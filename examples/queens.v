@@ -245,52 +245,9 @@ Proof.
   by apply compl_repr.
 Qed.
 
-Definition countNQueensAux: pos -> Int32.
-  refine (Fix nqueens_wf (fun _ => Int32)
-    (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> Int32) =>
-  match (mode st) as x return mode st = x -> _ with
-    | true => fun H =>
-      if (eq (col st) (full st)) then
-        one
-      else
-        let poss := lnot (lor (lor (ld st) (rd st)) (col st)) in
-        countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss zero false _) _
-    | false => fun H =>
-      match (eq (land (poss st) (full st)) zero)
-        as x return (_ = x -> _) with
-      | true => fun H' => curCount st
-      | false => fun H' =>
-          let bit := land (poss st) (neg (poss st)) in
-          let count := countNQueensAux (mkPos
-                         (lsr (lor (ld st) bit) one)
-                         (lor (col st) bit)
-                         (lsl (lor (rd st) bit) one)
-                         (full st) zero zero true _) _ in
-          countNQueensAux (mkPos
-            (ld st) (col st) (rd st) (full st)
-            (land (poss st) (lnot bit))
-            (add (curCount st) count) false _) _
-      end Logic.eq_refl
-  end Logic.eq_refl)).
-  rewrite /pos_order /= H.
-  apply right_lex.
-  by apply left_lex=> //.
-  rewrite /pos_order H.
-  apply right_lex.
-  apply right_lex.
-  apply/ltP.
-  apply cardinal_2.
-  move=> Habs.
-  have Habs': eq (land (poss st) (full st)) zero = false by assumption.
-  rewrite Habs in Habs'.
-  move: (exists_repr (full st))=> [F HF].
-  rewrite (eq_repr _ _ (set0 :&: F) set0) in Habs'.
-  rewrite set0I in Habs'.
-  by rewrite eq_refl in Habs'.
-  apply inter_repr=> //.
-  apply zero_repr.
-  apply zero_repr.
-  Unshelve.
+Lemma Hinv1 st:
+  eq (land (lnot (lor (lor (ld st) (rd st)) (col st))) (col st)) zero.
+Proof.
   move: (exists_repr (ld st))=> [L HL].
   move: (exists_repr (rd st))=> [R HR].
   move: (exists_repr (col st))=> [C HC].
@@ -306,13 +263,99 @@ Definition countNQueensAux: pos -> Int32.
   apply union_repr=> //.
   apply union_repr=> //.
   apply zero_repr.
-  move: (exists_repr (lor (col st) bit))=> [C HC].
+Qed.
+
+Lemma Hinv2 st:
+  eq (land zero (lor (col st) (land (poss st) (neg (poss st))))) zero.
+Proof.
+  move: (exists_repr (lor (col st) (land (poss st) (neg (poss st)))))=> [C HC].
   move: (exists_repr (poss st))=> [P HP].
   rewrite (eq_repr _ _ (set0 :&: C) set0).
   rewrite set0I //.
   apply inter_repr=> //.
   apply zero_repr.
   apply zero_repr.
+Qed.
+
+Lemma Hinv3 st:
+  eq (land (land (poss st) (lnot (land (poss st) (neg (poss st))))) (col st)) zero.
+Proof.
+  move: (exists_repr (poss st))=> [P HP].
+  move: (exists_repr (land (poss st) (neg (poss st))))=> [B HB].
+  move: (exists_repr (col st))=> [C HC].
+  rewrite (eq_repr _ _ ((P :&: (~: B)) :&: C) set0).
+  rewrite setIAC.
+  have ->: P :&: C = set0.
+    apply/eqP.
+    rewrite -(eq_repr (land (poss st) (col st)) zero).
+    apply (Hinv st).
+    apply inter_repr=> //.
+    apply zero_repr.
+  apply/eqP.
+  apply set0I.
+  apply inter_repr=> //.
+  apply inter_repr=> //.
+  apply compl_repr=> //.
+  apply zero_repr.
+Qed.
+
+Lemma terminate1 st: forall Hinv, mode st = true -> pos_order
+     {|
+     ld := ld st;
+     col := col st;
+     rd := rd st;
+     full := full st;
+     poss := lnot (lor (lor (ld st) (rd st)) (col st));
+     curCount := zero;
+     mode := false;
+     Hinv := Hinv |} st.
+Proof.
+  move=> Hinv H.
+  rewrite /pos_order /= H.
+  apply right_lex.
+  by apply left_lex=> //.
+Qed.
+
+Lemma terminate2 st: forall Hinv count, mode st = false -> eq (land (poss st) (full st)) zero = false -> pos_order
+     {|
+     ld := ld st;
+     col := col st;
+     rd := rd st;
+     full := full st;
+     poss := land (poss st) (lnot (land (poss st) (neg (poss st))));
+     curCount := add (curCount st) count;
+     mode := false;
+     Hinv := Hinv |} st.
+Proof.
+  move=> Hinv count H H'.
+  rewrite /pos_order H.
+  apply right_lex.
+  apply right_lex.
+  apply/ltP.
+  apply cardinal_2.
+  move=> Habs.
+  rewrite Habs in H'.
+  move: (exists_repr (full st))=> [F HF].
+  rewrite (eq_repr _ _ (set0 :&: F) set0) in H'.
+  rewrite set0I in H'.
+  by rewrite eq_refl in H'.
+  apply inter_repr=> //.
+  apply zero_repr.
+  apply zero_repr.
+Qed.
+
+Lemma terminate3 st: forall Hinv, mode st = false -> eq (land (poss st) (full st)) zero = false -> pos_order
+     {|
+     ld := lsr (lor (ld st) (land (poss st) (neg (poss st)))) one;
+     col := lor (col st) (land (poss st) (neg (poss st)));
+     rd := lsl (lor (rd st) (land (poss st) (neg (poss st)))) one;
+     full := full st;
+     poss := zero;
+     curCount := zero;
+     mode := true;
+     Hinv := Hinv |} st.
+Proof.
+  move=> Hinv H H'.
   apply left_lex.
   apply/ltP.
   apply ltn_sub2l.
@@ -340,7 +383,7 @@ Definition countNQueensAux: pos -> Int32.
   have ->: P :&: C = set0.
     apply/eqP.
     rewrite -(eq_repr (land (poss st) (col st)) zero).
-    apply (Hinv st).
+    apply (Top.Hinv st).
     apply inter_repr=> //.
     apply zero_repr.
   apply/eqP.
@@ -348,23 +391,42 @@ Definition countNQueensAux: pos -> Int32.
   apply inter_repr=> //.
   apply inter_repr=> //.
   by apply zero_repr.
-  move: (exists_repr (poss st))=> [P HP].
-  move: (exists_repr bit)=> [B HB].
-  move: (exists_repr (col st))=> [C HC].
-  rewrite (eq_repr _ _ ((P :&: (~: B)) :&: C) set0).
-  rewrite setIAC.
-  have ->: P :&: C = set0.
-    apply/eqP.
-    rewrite -(eq_repr (land (poss st) (col st)) zero).
-    apply (Hinv st).
-    apply inter_repr=> //.
-    apply zero_repr.
-  apply/eqP.
-  apply set0I.
-  apply inter_repr=> //.
-  apply inter_repr=> //.
-  apply compl_repr=> //.
-  apply zero_repr.
+Qed.
+
+Definition countNQueensAux: pos -> Int32.
+  refine (Fix nqueens_wf (fun _ => Int32)
+    (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> Int32) =>
+  match (mode st) as x return mode st = x -> _ with
+    | true => fun H =>
+      if (eq (col st) (full st)) then
+        one
+      else
+        let poss := lnot (lor (lor (ld st) (rd st)) (col st)) in
+        countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss zero false _) _
+    | false => fun H =>
+      match (eq (land (poss st) (full st)) zero)
+        as x return (_ = x -> _) with
+      | true => fun H' => curCount st
+      | false => fun H' =>
+          let bit := land (poss st) (neg (poss st)) in
+          let count := countNQueensAux (mkPos
+                         (lsr (lor (ld st) bit) one)
+                         (lor (col st) bit)
+                         (lsl (lor (rd st) bit) one)
+                         (full st) zero zero true _) _ in
+          countNQueensAux (mkPos
+            (ld st) (col st) (rd st) (full st)
+            (land (poss st) (lnot bit))
+            (add (curCount st) count) false _) _
+      end Logic.eq_refl
+  end Logic.eq_refl)).
+  apply terminate1=> //.
+  apply terminate2=> //.
+  Unshelve.
+  apply Hinv1.
+  apply Hinv2.
+  apply terminate3=> //.
+  apply Hinv3.
 Defined.
 
 Definition countNQueens (n: nat): Int32.
@@ -1275,6 +1337,10 @@ Proof.
     by rewrite andbC andbF.
 Qed.
 
+Lemma Kbool : forall (x : bool) (p : x = _), p = erefl x. Admitted.
+
+Lemma arf (A : bool -> Type) : forall x (f : forall x, true = x -> A x) (g : forall x, false = x -> A x), (if x return _ = x -> A x then f x else g x) (erefl x) = match x as x in bool return A x with true => f true (erefl true) | false => g false (erefl false) end. Admitted.
+
 Lemma queens_correctInd (n: nat) : n > 0 -> n < wordsize -> forall pos,
   (forall B (curLine: 'I_wordsize) (P: {set 'I_wordsize}),
   mode pos = false ->
@@ -1473,6 +1539,10 @@ Proof.
     apply HP.
     apply Hqueen.
     by apply zero_repr.
+  move=> x f g Hfg.
+  (*
+  destruct (mode x).
+  *)
   admit. (* WTF is this? *)
   (****************************************************)
 
@@ -1528,6 +1598,7 @@ Proof.
     by rewrite /P !setCU -setIA subsetIl.
     by rewrite /P !setCU -setIAC subsetIr.
     by rewrite /P !setCU subsetIr.
+  move=> x f g Hfg.
   admit. (* Bleh *)
 Admitted.
 
