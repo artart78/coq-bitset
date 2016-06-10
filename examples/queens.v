@@ -90,13 +90,9 @@ Definition lt_npq : dep3 -> dep3 -> Prop :=
   (lexprod nat (fun a => dep2) Peano.lt (fun a:nat =>lt_pq)).
 
 Lemma wf_lexprod : well_founded lt_npq.
-  apply wf_lexprod.
+  apply wf_lexprod=> n.
   apply lt_wf.
-  move=> n.
-  apply wf_lexprod.
-  apply lt_wf.
-  move=> m.
-  by apply lt_wf.
+  by apply wf_lexprod=> m; apply lt_wf.
 Qed.
 
 Require Import Inverse_Image.
@@ -139,7 +135,6 @@ Proof.
   by move/eqP: Hbs2 ->.
 Qed.
 
-(* TODO: these are true only if bit is not in col / is in poss *)
 Lemma cardinal_1: forall st,
   (poss st) <> zero ->
   let bit := land (poss st) (neg (poss st)) in
@@ -356,16 +351,16 @@ Lemma terminate3 st: forall Hinv, mode st = false -> eq (land (poss st) (full st
      Hinv := Hinv |} st.
 Proof.
   move=> Hinv H H'.
+  move: (exists_repr (poss st))=> [P HP].
+  move: (exists_repr (neg (poss st)))=> [N HN].
+  move: (exists_repr (col st))=> [C HC].
+  move: (exists_repr (full st))=> [F HF].
   apply left_lex.
   apply/ltP.
   apply ltn_sub2l.
   rewrite fromInt_def.
   apply toNatBounded.
   rewrite cardinal_1 //.
-  move: (exists_repr (poss st))=> [P HP].
-  move: (exists_repr (neg (poss st)))=> [N HN].
-  move: (exists_repr (col st))=> [C HC].
-  move: (exists_repr (full st))=> [F HF].
   move=> Habs.
   rewrite Habs in H'.
   rewrite (eq_repr _ _ (set0 :&: F) set0) in H'.
@@ -373,10 +368,6 @@ Proof.
   apply inter_repr=> //.
   apply zero_repr.
   apply zero_repr.
-  move: (exists_repr (poss st))=> [P HP].
-  move: (exists_repr (neg (poss st)))=> [N HN].
-  move: (exists_repr (col st))=> [C HC].
-  move: (exists_repr (full st))=> [F HF].
   apply/eqInt32P.
   rewrite (eq_repr _ _ ((P :&: N) :&: C) set0).
   rewrite setIAC.
@@ -1474,57 +1465,10 @@ Proof.
     rewrite [(fromInt curCount) + _]addnC addnA.
     move: (nextLine_splitCase n B curLine P min HminP)=> [Hu Hi].
     rewrite Hu cardsU Hi cards0 subn0 //.
-    rewrite /pos_order Hmode.
-    apply right_lex.
-    apply right_lex.
-    apply/ltP.
-    apply cardinal_2=> //.
-    move => Habs.
-    move: Hend' => Habs'.
-    rewrite /poss Habs in Habs'.
-    move: (exists_repr full)=> [F HF].
-    rewrite (eq_repr _ _ (set0 :&: F) set0) in Habs'.
-    by rewrite set0I eq_refl in Habs'.
-    apply inter_repr=> //.
-    apply zero_repr.
-    apply zero_repr.
+
+    apply terminate2=> //.
     apply nextLine_P=> //.
-    rewrite /pos_order Hmode /=.
-    apply left_lex.
-    apply/ltP.
-    apply ltn_sub2l.
-    rewrite fromInt_def.
-    apply toNatBounded.
-    apply cardinal_1=> //.
-    move: (exists_repr (neg poss))=> [N HN].
-    move: (exists_repr col)=> [C HC].
-    move: (exists_repr full)=> [F HF].
-    move=> Habs.
-    rewrite /poss Habs in Hend'.
-    rewrite (eq_repr _ _ (set0 :&: F) set0) in Hend'.
-    rewrite set0I eq_refl in Hend'=> //.
-    apply inter_repr=> //.
-    apply zero_repr.
-    apply zero_repr.
-    move: (exists_repr (neg poss))=> [N HN].
-    move: (exists_repr col)=> [C HC].
-    move: (exists_repr full)=> [F HF].
-    apply/eqInt32P.
-    rewrite (eq_repr _ _ ((P :&: N) :&: C) set0).
-    rewrite setIAC.
-    have ->: P :&: C = set0.
-      apply/eqP.
-      rewrite -(eq_repr (land poss col) zero).
-      apply (Hinv st).
-      apply inter_repr=> //.
-      apply HP.
-      apply zero_repr.
-    apply/eqP.
-    apply set0I.
-    apply inter_repr=> //.
-    apply inter_repr=> //.
-    apply HP.
-    by apply zero_repr.
+    apply terminate3=> //.
     split.
     rewrite (nextLine_numCol n B curLine ld rd col full min P poss) //.
     apply HB'cor.
@@ -1540,6 +1484,11 @@ Proof.
     apply Hqueen.
     by apply zero_repr.
   move=> x f g Hfg.
+  have bla (A: bool -> Type): forall x (f : forall x, x = true -> A x) (g : forall x, x = false -> A x),
+  (if x return x = _ -> A x then f x else g x) (erefl x) =
+  match x as x in bool return A x with
+    true => f true (erefl true)
+  | false => g false (erefl false) end. by admit.
   (*
   destruct (mode x).
   *)
@@ -1585,15 +1534,11 @@ Proof.
     rewrite (IH1 _ _ _ _ _ _ _ _ _ B curLine P)=> //.
     rewrite fromInt_zero addn0.
     rewrite (nextLine_oneCase n B curLine ld rd col full) // => //.
-    rewrite /pos_order /=.
-    rewrite !Hmode /=.
-    by apply right_lex; apply left_lex.
+    apply terminate1=> //.
     split.
     apply compl_repr.
-    apply union_repr=> //.
     apply union_repr.
-    apply HB.
-    apply HB.
+    apply union_repr; apply HB.
     apply HB.
     by rewrite /P !setCU -setIA subsetIl.
     by rewrite /P !setCU -setIAC subsetIr.
