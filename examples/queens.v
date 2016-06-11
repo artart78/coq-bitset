@@ -350,7 +350,7 @@ Lemma terminate3 st: forall Hinv, mode st = false -> eq (land (poss st) (full st
      mode := true;
      Hinv := Hinv |} st.
 Proof.
-  move=> Hinv H H'.
+  move=> Hinv1 H H'.
   move: (exists_repr (poss st))=> [P HP].
   move: (exists_repr (neg (poss st)))=> [N HN].
   move: (exists_repr (col st))=> [C HC].
@@ -374,7 +374,7 @@ Proof.
   have ->: P :&: C = set0.
     apply/eqP.
     rewrite -(eq_repr (land (poss st) (col st)) zero).
-    apply (Top.Hinv st).
+    apply (Hinv st).
     apply inter_repr=> //.
     apply zero_repr.
   apply/eqP.
@@ -421,10 +421,22 @@ Defined.
 
 Definition countNQueensAux: pos -> Int32 := Fix nqueens_wf (fun _ => Int32) countNQueensAuxinner.
 
+Lemma arf {A : Type} (b : bool) (f f' : b = true -> A) (g g' : b = false -> A) : (forall p, f p = f' p) -> (forall q, g q = g' q) -> (if b as x return b = x -> A then f else g) (erefl b) = (if b as x return b = x -> A then f' else g') (erefl b).
+Proof.
+  move: b f f' g g'; by elim.
+Qed.
+
 Lemma countNQueens_indep: forall (x : pos) (f g : forall y : pos, pos_order y x -> Int32),
  (forall (y : pos) (p : pos_order y x), f y p = g y p) ->
  countNQueensAuxinner x f = countNQueensAuxinner x g.
-Admitted.
+Proof.
+rewrite /countNQueensAuxinner.
+case=> ld0 col0 rd0 full0 poss0 curCount0 mode0 Hinv0 /=.
+case: mode0=> // [|f g Hfg].
+case: (eq col0 full0)=> //.
+apply arf=> // q.
+by rewrite !Hfg.
+Qed.
 
 Lemma countNQueens_eq1 st: mode st = true -> eq (col st) (full st) -> countNQueensAux st = one.
 Proof.
@@ -1384,8 +1396,6 @@ Proof.
   + (* ~~ (is_complete n i && is_correct n n i && board_included n B i ) *)
     by rewrite andbC andbF.
 Qed.
-
-Lemma Kbool : forall (x : bool) (p : x = _), p = erefl x. Admitted.
 
 Lemma queens_correctInd (n: nat) : n > 0 -> n < wordsize -> forall pos,
   (forall B (curLine: 'I_wordsize) (P: {set 'I_wordsize}),
