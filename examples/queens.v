@@ -384,10 +384,8 @@ Proof.
   by apply zero_repr.
 Qed.
 
-Definition countNQueensAux: pos -> Int32.
-  refine (Fix nqueens_wf (fun _ => Int32)
-    (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> Int32) =>
-  match (mode st) as x return mode st = x -> _ with
+Definition countNQueensAuxinner: forall st: pos, (forall st': pos, pos_order st' st -> Int32) -> Int32.
+  refine (fun (st: pos) (countNQueensAux: forall st': pos, pos_order st' st -> Int32) => match (mode st) as x return mode st = x -> _ with
     | true => fun H =>
       if (eq (col st) (full st)) then
         one
@@ -410,7 +408,8 @@ Definition countNQueensAux: pos -> Int32.
             (land (poss st) (lnot bit))
             (add (curCount st) count) false _) _
       end Logic.eq_refl
-  end Logic.eq_refl)).
+  end Logic.eq_refl).
+Proof.
   apply terminate1=> //.
   apply terminate2=> //.
   Unshelve.
@@ -420,60 +419,63 @@ Definition countNQueensAux: pos -> Int32.
   apply Hinv3.
 Defined.
 
-Lemma arf (A : bool -> Type) : forall x (f : forall x, true = x -> A x) (g : forall x, false = x -> A x), (if x return _ = x -> A x then f x else g x) (erefl x) = match x as x in bool return A x with true => f true (erefl true) | false => g false (erefl false) end. Admitted.
+Definition countNQueensAux: pos -> Int32 := Fix nqueens_wf (fun _ => Int32) countNQueensAuxinner.
 
-Lemma bloop1 st: mode st = true -> eq (col st) (full st) -> countNQueensAux st = one.
-Proof.
-move=> H1 H2.
-rewrite /countNQueensAux //=.
-rewrite /Fix.
-destruct (nqueens_wf st).
-rewrite /=.
-rewrite H2 //=.
-move: (fun H : mode st = false => _).
-by rewrite H1.
-Qed.
-
-Lemma bloop2 st: exists q, mode st = true -> ~ (eq (col st) (full st)) ->
-  let poss := lnot (lor (lor (ld st) (rd st)) (col st)) in
-  countNQueensAux st = countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss zero false q).
-Proof.
-eexists.
-move=> H1 H2 poss.
-rewrite {1}/countNQueensAux //=.
-rewrite /Fix.
-destruct (nqueens_wf st).
-rewrite /=.
-have ->: eq (col st) (full st) = false. apply (introF (P := eq (col st) (full st)))=> //. apply idP.
-move: (fun H : mode st = false => _).
-Fail rewrite H1.
+Lemma countNQueens_indep: forall (x : pos) (f g : forall y : pos, pos_order y x -> Int32),
+ (forall (y : pos) (p : pos_order y x), f y p = g y p) ->
+ countNQueensAuxinner x f = countNQueensAuxinner x g.
 Admitted.
 
-Lemma bloop3 st: mode st = false -> eq (land (poss st) (full st)) zero ->
+Lemma countNQueens_eq1 st: mode st = true -> eq (col st) (full st) -> countNQueensAux st = one.
+Proof.
+move=> H1 H2.
+rewrite /countNQueensAux Fix_eq.
+by rewrite /countNQueensAuxinner H1 H2.
+apply countNQueens_indep.
+Qed.
+
+Lemma countNQueens_eq2 st: mode st = true -> ~ (eq (col st) (full st)) ->
+  let poss := lnot (lor (lor (ld st) (rd st)) (col st)) in
+  countNQueensAux st = countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss zero false (Hinv1 st)).
+Proof.
+move=> H1 H2 poss.
+rewrite {1}/countNQueensAux Fix_eq.
+rewrite /countNQueensAuxinner.
+rewrite H1.
+have ->: eq (col st) (full st) = false. apply (introF (P := eq (col st) (full st)))=> //. apply idP.
+by rewrite -/countNQueensAux.
+apply countNQueens_indep.
+Qed.
+
+Lemma countNQueens_eq3 st: mode st = false -> eq (land (poss st) (full st)) zero ->
   countNQueensAux st = curCount st.
 Proof.
 move=> H1 H2.
-rewrite /countNQueensAux /Fix //=.
-destruct (nqueens_wf st).
-rewrite //=.
-move: (fun H: mode st = true => _).
-Fail move: (fun H': eq (land (poss st) (full st)) zero = false => _).
-Fail rewrite H1.
-Fail rewrite H2.
-Admitted.
+rewrite /countNQueensAux Fix_eq.
+by rewrite /countNQueensAuxinner H1 H2.
+apply countNQueens_indep.
+Qed.
 
-Lemma bloop4 st: forall q r, mode st = false -> ~ (eq (land (poss st) (full st)) zero) ->
+Lemma countNQueens_eq4 st: mode st = false -> ~ (eq (land (poss st) (full st)) zero) ->
   let bit := land (poss st) (neg (poss st)) in
   let count := countNQueensAux (mkPos
                          (lsr (lor (ld st) bit) one)
                          (lor (col st) bit)
                          (lsl (lor (rd st) bit) one)
-                         (full st) zero zero true q) in
+                         (full st) zero zero true (Hinv2 st)) in
   countNQueensAux st = countNQueensAux (mkPos
             (ld st) (col st) (rd st) (full st)
             (land (poss st) (lnot bit))
-            (add (curCount st) count) false r).
-Admitted.
+            (add (curCount st) count) false (Hinv3 st)).
+Proof.
+move=> H1 H2 bit count.
+rewrite {1}/countNQueensAux Fix_eq.
+rewrite /countNQueensAuxinner H1.
+have ->: eq (land (poss st) (full st)) zero = false. apply (introF (P := eq (land (poss st) (full st)) zero))=> //. apply idP.
+rewrite -/countNQueensAux.
+by rewrite -/countNQueensAux.
+apply countNQueens_indep.
+Qed.
 
 Definition countNQueens (n: nat): Int32.
   refine (countNQueensAux (mkPos zero zero zero (dec (lsl one (toInt n))) zero zero true _)).
@@ -1448,7 +1450,7 @@ Proof.
   move=> B curLine P Hmode ltn_curLine Hqueen HP.
   case Hend: (eq (land poss full) zero).
   + (* (poss & full) == 0 *)
-    rewrite bloop3=> //.
+    rewrite countNQueens_eq3=> //.
     rewrite (eq_repr _ _ [set x in P | x < n] set0) in Hend.
     move/eqP: Hend=> Hend.
     have H1: forall x : 'I_wordsize, x \in P -> x >= n.
@@ -1476,10 +1478,7 @@ Proof.
     apply Hqueen.
     apply zero_repr.
   + (* (poss & full) != 0 *)
-    rewrite bloop4=> //.
-    apply Hinv2.
-    apply Hinv3.
-    move=> Hinv1 Hinv2.
+    rewrite countNQueens_eq4=> //=.
     have Hend': eq (land poss full) zero = false by trivial.
     rewrite (eq_repr _ _ [set x in P | x < n] set0) in Hend.
     move/eqP: Hend=> Hend.
@@ -1545,23 +1544,22 @@ Proof.
 
   move=> B curLine Hmode Hposs HcurCount HB.
   case Hend: (eq col full).
-  rewrite bloop1 //=.
-  have HcurLine2: n = curLine.
-    move: (r_col HB)=> Hcol.
-    rewrite /repr_col in Hcol.
-    rewrite (line_val HB).
-    rewrite {1}(size_full n)=> //.
-    have ->: (make_col n B) = [set x : 'I_wordsize | x < n].
-      apply/eqP.
-      rewrite -(eq_repr col full (make_col n B) [set x : 'I_wordsize | x < n ])=> //.
-    apply HB.
-    by trivial.
-  rewrite -(nextLine_end n B curLine ld rd col full)=> //.
-  by rewrite -[one]fromInt_elim fromInt_one.
-
-  rewrite bloop2 //=.
-  apply Hinv1.
-  move=> Hinv.
+  + (* eq col full *)
+    rewrite countNQueens_eq1 //=.
+    have HcurLine2: n = curLine.
+      move: (r_col HB)=> Hcol.
+      rewrite /repr_col in Hcol.
+      rewrite (line_val HB).
+      rewrite {1}(size_full n)=> //.
+      have ->: (make_col n B) = [set x : 'I_wordsize | x < n].
+        apply/eqP.
+        rewrite -(eq_repr col full (make_col n B) [set x : 'I_wordsize | x < n ])=> //.
+      apply HB.
+      by trivial.
+    rewrite -(nextLine_end n B curLine ld rd col full)=> //.
+    by rewrite -[one]fromInt_elim fromInt_one.
+  + (* ~(eq col full) *)
+    rewrite countNQueens_eq2 //=.
     set P := (~: (((make_ld n B curLine) :|: (make_rd n B curLine)) :|: (make_col n B))).
     have ltn_curLine: curLine < n.
       rewrite (eq_repr _ _ (make_col n B) [set x : 'I_wordsize | x < n]) in Hend=> //.
