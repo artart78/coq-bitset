@@ -428,17 +428,38 @@ move=> H1 H2.
 rewrite /countNQueensAux //=.
 rewrite /Fix.
 destruct (nqueens_wf st).
-rewrite /Fix_F.
+rewrite /=.
 rewrite H2 //=.
-Admitted.
+move: (fun H : mode st = false => _).
+by rewrite H1.
+Qed.
 
-Lemma bloop2 st: forall q, mode st = true -> ~ (eq (col st) (full st)) ->
+Lemma bloop2 st: exists q, mode st = true -> ~ (eq (col st) (full st)) ->
   let poss := lnot (lor (lor (ld st) (rd st)) (col st)) in
   countNQueensAux st = countNQueensAux (mkPos (ld st) (col st) (rd st) (full st) poss zero false q).
+Proof.
+eexists.
+move=> H1 H2 poss.
+rewrite {1}/countNQueensAux //=.
+rewrite /Fix.
+destruct (nqueens_wf st).
+rewrite /=.
+have ->: eq (col st) (full st) = false. apply (introF (P := eq (col st) (full st)))=> //. apply idP.
+move: (fun H : mode st = false => _).
+Fail rewrite H1.
 Admitted.
 
 Lemma bloop3 st: mode st = false -> eq (land (poss st) (full st)) zero ->
   countNQueensAux st = curCount st.
+Proof.
+move=> H1 H2.
+rewrite /countNQueensAux /Fix //=.
+destruct (nqueens_wf st).
+rewrite //=.
+move: (fun H: mode st = true => _).
+Fail move: (fun H': eq (land (poss st) (full st)) zero = false => _).
+Fail rewrite H1.
+Fail rewrite H2.
 Admitted.
 
 Lemma bloop4 st: forall q r, mode st = false -> ~ (eq (land (poss st) (full st)) zero) ->
