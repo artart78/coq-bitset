@@ -27,47 +27,6 @@ Lemma srn_repr:
 Proof.
 Admitted.
 
-(*
-(* TODO: move to ops/*.v *)
-Definition set_next_g {n} (S: {set 'I_n.+1}) := [arg min_(x < ord0 | ((x \notin S) && [exists y, (y \in S) && (y < x)])) x].
-
-Lemma ripple_repr_1:
-  forall n (bs: BITS n.+1) E, spec.repr bs E -> set_next_g E <> ord0 ->
-    spec.repr (addB (keep_min.keep_min bs) bs) ((set_next_g E) |: [set x in E | set_next_g E < x]).
-Proof.
-  elim=> [/tupleP[b bs]|n IHn /tupleP[b bs]] E H Hnext.
-  + apply/setP=> x.
-    have ->: x = ord0 by admit.
-    rewrite !inE.
-    rewrite !tuple0 /=.
-    rewrite /keep_min.keep_min /andB /negB /incB /invB /adcB /=.
-    rewrite liftUnOpCons.
-    rewrite !tuple.beheadCons !tuple.theadCons.
-    rewrite ltn0 andbF orbF.
-    case: b H=> H; rewrite /joinlsb !tuple.beheadCons !tuple.theadCons /getBit /=; rewrite eq_sym; by apply/eqP.
-  + apply/setP=> x.
-    rewrite !inE.
-    case: b H=> H.
-    rewrite /keep_min.keep_min.
-    rewrite /andB /negB /incB /invB /adcB /=.
-    rewrite liftUnOpCons.
-    rewrite !tuple.beheadCons !tuple.theadCons /=.
-    rewrite liftBinOpCons.
-    rewrite !tuple.beheadCons /=.
-    rewrite -/andB.
-    rewrite -/invB -/negB.
-    rewrite -/incB.
-(* TODO: move to repr_op *)
-Lemma ripple_repr:
-  forall i S, machine_repr i S -> machine_repr (add (keep_min i) i) (set_next S |: [set x in S | set_next S < x]).
-Proof.
-  move=> i S [bv [r_native r_set]].
-  exists (addB (keep_min.keep_min bv) bv); split.
-  apply add_repr=> //.
-  apply land_repr=> //.
-  apply neg_repr=> //.
-*)
-
 Definition set_next_g {n} (S: {set 'I_n.+1}) x := [arg min_(y < ord0 | ((y \notin S) && (y > x))) y].
 
 Lemma ripple_repr_1:
@@ -93,7 +52,24 @@ Proof.
 move=> Hnext Hi.
 have repr_ripple: machine_repr (add (keep_min i) i)
      (set_next S |: [set x0 in S | set_next S < x0]).
-  by admit.
+  have ->: (set_next S |: [set x0 in S | set_next S < x0]) = ((set_next_g S (set_min S e)) |: [set y in S | y < (set_min S e)] :|: [set y in S | y > set_next_g S (set_min S e)]).
+    have ->: [set y in S | y < set_min S e] = set0.
+      apply/setP=> x; rewrite !inE.
+      rewrite /set_min.
+      case: arg_minP=> //.
+      move=> j Hj /(_ x) Hj'.
+      case Hx: (x \in S); rewrite andbC.
+      rewrite andbT.
+      apply negbTE.
+      rewrite -leqNgt.
+      by apply Hj'.
+      by rewrite andbF.
+    rewrite setU0.
+    by have ->: set_next S = set_next_g S (set_min S e) by admit.
+  apply ripple_repr=> //.
+  apply keep_min_repr=> //.
+  rewrite /set_min.
+  case: arg_minP=> //.
 apply union_repr=> //.
 have ->: add (toInt 2) (ntz i) = toInt (2 + set_min S e).
   by admit.
@@ -128,7 +104,7 @@ have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S e - 2] =
     apply ltn_sub2r=> //.
     rewrite addnC.
     apply (leq_ltn_trans (n := set_next S))=> //.
-  admit.
+  admit. (* if set_min S e <= i < set_next S, then i \in S *)
 apply srn_repr.
 set E' := (set_next S |: [set x0 in S | set_next S < x0]).
 have ->: (set_next S |: [set x0 in S | x0 < set_next S]) = (S :\: E') :|: (E' :\: S).
@@ -154,6 +130,7 @@ have ->: (set_next S |: [set x0 in S | x0 < set_next S]) = (S :\: E') :|: (E' :\
   case: pickP=> [y //= Ha _ /eqP->|//].
   by move/andP: Ha => [/andP [-> _] _].
 apply symdiff_repr=> //.
+admit. (* Case where the shift gives set0 *)
 Admitted.
 
 Cd "examples/enum_parts".
