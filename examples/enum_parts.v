@@ -65,7 +65,35 @@ have repr_ripple: machine_repr (add (keep_min i) i)
       by apply Hj'.
       by rewrite andbF.
     rewrite setU0.
-    by have ->: set_next S = set_next_g S (set_min S e) by admit.
+    have ->: set_next S = set_next_g S (set_min S e).
+      rewrite /set_next /set_next_g.
+      rewrite /arg_min.
+      rewrite (eq_pick (Q := [pred i0 | (i0 \notin S) && (set_min S e < i0) & [
+                 forall (j | (j \notin S) && (set_min S e < j)),
+                   i0 <= j]])) //.
+      move=> x /=.
+      have Heq: forall x, [exists y, (y \in S) && (y < x)] = (set_min S e < x).
+        move=> x0.
+        rewrite /set_min.
+        case: arg_minP=> //= j Hj Hj'.
+        case Hx: (j < x0).
+        + apply/existsP.
+          exists j.
+          by rewrite Hj Hx.
+        + apply negbTE; rewrite negb_exists.
+          apply/forallP=> y.
+          rewrite negb_and.
+          case Hy: (y \in S)=> //=.
+          + move: (Hj' y Hy)=> Hy'.
+            rewrite -leqNgt.
+            apply (leq_trans (n := j))=> //.
+            by rewrite leqNgt Hx.
+      rewrite Heq.
+      have ->: [forall (j | (j \notin S) && [exists y, (y \in S) && (y < j)]), x <= j] = [forall (j | (j \notin S) && (set_min S e < j)), x <= j].
+        apply eq_forallb=> y.
+        by rewrite Heq.
+      rewrite //.
+      rewrite //.
   apply ripple_repr=> //.
   apply keep_min_repr=> //.
   rewrite /set_min.
@@ -85,7 +113,17 @@ have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S e - 2] =
     apply (leq_trans (n := wordsize - (2 + set_min S e)))=> //.
     apply leq_subr.
     rewrite andbC andbT inordK.
-    have {2}->: set_next S = inord (set_next S - set_min S e - 2 + (2 + set_min S e)) by admit.
+    have {2}->: set_next S = inord (set_next S - set_min S e - 2 + (2 + set_min S e)).
+      apply ord_inj.
+      rewrite inordK.
+      rewrite -subnDA.
+      rewrite [_ + 2]addnC.
+      rewrite subnK //.
+      rewrite addnC //.
+      rewrite -subnDA.
+      rewrite [_ + 2]addnC.
+      rewrite subnK //.
+      rewrite addnC //.
     rewrite inordK.
     by rewrite leq_add2r.
     rewrite -subnDA.
