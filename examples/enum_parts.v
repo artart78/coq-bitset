@@ -45,13 +45,14 @@ Proof.
   by apply ripple_repr_1.
 Qed.  
 
-Lemma enumNext_correct (i: Int32) (S: {set 'I_wordsize}) e (H: e \in S) :
-  set_next S <> ord0 ->
-  machine_repr i S -> machine_repr (enumNext i) (enumNext_set S e H).
+(* TODO: move from queens to somewhere else *)
+Lemma ladd_repr:
+  forall x y, add (toInt x) (toInt y) = toInt (x + y).
+Admitted.
+
+Lemma min_ripple_repr i (S: {set 'I_wordsize}) e (H: e \in S): machine_repr i S ->
+  machine_repr (add (keep_min i) i) (set_next S |: [set x in S | set_next S < x]).
 Proof.
-move=> Hnext Hi.
-have repr_ripple: machine_repr (add (keep_min i) i)
-     (set_next S |: [set x0 in S | set_next S < x0]).
   have ->: (set_next S |: [set x0 in S | set_next S < x0]) = ((set_next_g S (set_min S e)) |: [set y in S | y < (set_min S e)] :|: [set y in S | y > set_next_g S (set_min S e)]).
     have ->: [set y in S | y < set_min S e] = set0.
       apply/setP=> x; rewrite !inE.
@@ -94,13 +95,59 @@ have repr_ripple: machine_repr (add (keep_min i) i)
         by rewrite Heq.
       rewrite //.
       rewrite //.
+  move=> Hi.
   apply ripple_repr=> //.
   apply keep_min_repr=> //.
   rewrite /set_min.
   case: arg_minP=> //.
+Qed.
+
+Lemma enumNext_correct (i: Int32) (S: {set 'I_wordsize}) e (H: e \in S):
+  set_next S <> ord0 ->
+  machine_repr i S -> machine_repr (enumNext i) (enumNext_set S e H).
+Proof.
+move=> Hnext Hi.
 apply union_repr=> //.
+apply (min_ripple_repr _ _ _ H)=> //.
 have ->: add (toInt 2) (ntz i) = toInt (2 + set_min S e).
-  by admit.
+  have ->: ntz i = toInt (set_min S e).
+    move: (ntz_repr i e S Hi H)=> Hntz.
+    rewrite /natural_repr in Hntz.
+    move: Hntz=> /existsP [x /andP [Hx1 Hx2]].
+    rewrite /native_repr in Hx1.
+    move: Hx1=> /eqInt32P Hx1.
+    rewrite Hx1.
+    move: Hx2=> /eqP Hx2.
+    rewrite -Hx2.
+    by rewrite toInt_def.
+  by rewrite ladd_repr.
+have Hrepr: machine_repr (lxor i (add (keep_min i) i))
+     (set_next S |: [set x in S | x < set_next S]).
+  set E' := (set_next S |: [set x0 in S | set_next S < x0]).
+  have ->: (set_next S |: [set x0 in S | x0 < set_next S]) = (S :\: E') :|: (E' :\: S).
+    apply/setP=> x; rewrite !inE.
+    rewrite negb_or negb_and.
+    rewrite andb_orr.
+    rewrite andb_orl.
+    rewrite -andbA.
+    rewrite andNb andbF.
+    symmetry.
+    rewrite -orbA orbC orbF.
+    rewrite andb_orr.
+    rewrite orbA.
+    rewrite andbA.
+    rewrite andNb orbF.
+    rewrite -leqNgt.
+    rewrite -ltn_neqAle.
+    rewrite orbC.
+    rewrite andb_idl.
+    by rewrite andbC.
+    move: Hnext.
+    rewrite /set_next /arg_min.
+    case: pickP=> [y //= Ha _ /eqP->|//].
+    by move/andP: Ha => [/andP [-> _] _].
+  apply symdiff_repr=> //.
+  by apply (min_ripple_repr _ _ _ H)=> //.
 case: ifP=> Hnext'.
 have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S e - 2] =
 [set i : 'I_wordsize | i < wordsize - (2 + set_min S e) & @inord wordsize.-1 (i + (2 + set_min S e)) \in ([set set_next S] :|: [set x in S | x < set_next S])].
@@ -110,8 +157,8 @@ have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S e - 2] =
   rewrite -leq_eqVlt.
   case Hx: (x < wordsize - (2 + set_min S e)).
   + have Hx': x < wordsize.
-    apply (leq_trans (n := wordsize - (2 + set_min S e)))=> //.
-    apply leq_subr.
+      apply (leq_trans (n := wordsize - (2 + set_min S e)))=> //.
+      by apply leq_subr.
     rewrite andbC andbT inordK.
     have {2}->: set_next S = inord (set_next S - set_min S e - 2 + (2 + set_min S e)).
       apply ord_inj.
@@ -143,32 +190,32 @@ have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S e - 2] =
     rewrite addnC.
     apply (leq_ltn_trans (n := set_next S))=> //.
   admit. (* if set_min S e <= i < set_next S, then i \in S *)
-apply srn_repr.
-set E' := (set_next S |: [set x0 in S | set_next S < x0]).
-have ->: (set_next S |: [set x0 in S | x0 < set_next S]) = (S :\: E') :|: (E' :\: S).
+apply srn_repr=> //.
+have ->: set0 = [set i : 'I_wordsize | i < wordsize - (2 + set_min S e) & @inord wordsize.-1 (i + (2 + set_min S e)) \in ([set set_next S] :|: [set x in S | x < set_next S])].
   apply/setP=> x; rewrite !inE.
-  rewrite negb_or negb_and.
-  rewrite andb_orr.
-  rewrite andb_orl.
-  rewrite -andbA.
-  rewrite andNb andbF.
-  symmetry.
-  rewrite -orbA orbC orbF.
-  rewrite andb_orr.
-  rewrite orbA.
-  rewrite andbA.
-  rewrite andNb orbF.
-  rewrite -leqNgt.
-  rewrite -ltn_neqAle.
-  rewrite orbC.
-  rewrite andb_idl.
-  by rewrite andbC.
-  move: Hnext.
-  rewrite /set_next /arg_min.
-  case: pickP=> [y //= Ha _ /eqP->|//].
-  by move/andP: Ha => [/andP [-> _] _].
-apply symdiff_repr=> //.
-admit. (* Case where the shift gives set0 *)
+  case Hx: (x < wordsize - (2 + set_min S e)); last by rewrite andbC andbF.
+  rewrite andbC andbT.
+  rewrite ltn_subRL addnC in Hx.
+  case Hx': (inord (x + (2 + set_min S e)) == set_next S).
+  + exfalso.
+    move: Hx'=> /eqP Hx'.
+    have Hx'': x + (2 + set_min S e) = set_next S.
+      rewrite -Hx'.
+      rewrite inordK=> //.
+      rewrite -Hx'' in Hnext'.
+      rewrite addnC in Hnext'.
+      by rewrite leq_addl in Hnext'.
+  + rewrite /=.
+    have ->: (@inord wordsize.-1 (x + (2 + set_min S e)) < set_next S) = false.
+      rewrite inordK=> //.
+      rewrite ltnNge.
+      apply negbF.
+      apply (leq_trans (n := set_min S e + 2)).
+      apply ltnW.
+      by rewrite ltnNge Hnext'.
+      by rewrite addnC leq_addl.
+    by rewrite andbF.
+apply srn_repr=> //.
 Admitted.
 
 Cd "examples/enum_parts".
