@@ -105,9 +105,41 @@ Qed.
 Definition set_next_g {n} (S: {set 'I_n.+1}) x := [arg min_(y < ord0 | ((y \notin S) && (y > x))) y].
 
 Lemma ripple_repr_1:
-  forall n (bs: BITS n.+1) bs' E x, spec.repr bs E -> spec.repr bs' [set x] -> x \in E ->
+  forall n (bs: BITS n.+1) bs' E x, spec.repr bs E -> spec.repr bs' [set x] -> x \in E -> set_next_g E x <> ord0 ->
     spec.repr (addB bs' bs) ((set_next_g E x) |: [set y in E | y < x] :|: [set y in E | y > set_next_g E x]).
 Proof.
+  elim=> [|n HI] /tupleP[b bs] /tupleP[b' bs'] E x Hbs Hbs' Hx1 Hx2.
+  + (* n.+1 = 1 *)
+    exfalso.
+    have Hx': x = ord0 by admit.
+    have HE: E = [set ord0] by admit.
+    rewrite HE Hx' in Hx2.
+    apply Hx2.
+    admit.
+  + (* n.+1 ~ n.+2 *)
+    case: b' Hbs'=> Hbs'.
+    + (* b' = true, ie x = 0 *)
+      have Hx: x = ord0 by admit.
+      have ->: bs' = spec.zero n.+1 by admit.
+      case: b Hbs=> Hbs.
+      + (* b = true *)
+        have ->: addB [tuple of true :: spec.zero n.+1] [tuple of true :: bs] = [tuple of false :: (addB [tuple of true :: spec.zero n] bs)].
+          rewrite /adcB /=.
+          rewrite !tuple.beheadCons !tuple.theadCons.
+          rewrite /=.
+          rewrite /joinlsb /=.
+          have ->: spec.zero n.+1 = [tuple of false :: spec.zero n] by admit.
+          rewrite !tuple.beheadCons.
+          by admit.
+        admit. (* Apply HI *)
+      + (* b = false *)
+        have ->: addB [tuple of true :: spec.zero n.+1] [tuple of false :: bs] = [tuple of true :: bs].
+          by admit.
+        admit.
+    + (* b' = false *)
+      have ->: addB [tuple of false :: bs'] [tuple of b :: bs] = [tuple of b :: (addB bs' bs)].
+        by admit.
+      admit.
 Admitted.
 
 Lemma ripple_repr:
