@@ -20,12 +20,87 @@ Definition enumNext_set (S: {set 'I_wordsize}) e (H: e \in S) :=
   let s_next := set_next S in
   [set s_next] :|: [set x in S | x > s_next] :|: (if s_next >= s_min + 2 then [set x in 'I_wordsize | x <= (s_next - s_min - 2)] else set0).
 
+(* TODO: move to ops/*.v *)
+Lemma srn_repr_1:
+  forall n (bs: BITS n) E (H: n.-1.+1 = n), spec.repr bs E -> forall k,
+    spec.repr (shrBn bs k) [set i : 'I_n | i < n - k & cast_ord H (@inord n.-1 (i + k)) \in E].
+Proof.
+  move=> n bs E H HE.
+  elim=> [|k Hk].
+  + (* k = 0 *)
+    rewrite /=.
+    have ->: [set i : 'I_n | i < n - 0 & cast_ord H (inord (i + 0)) \in E] = E.
+      apply/setP=> x; rewrite !inE.
+      rewrite subn0 ltn_ord /=.
+      rewrite addn0.
+      have ->: cast_ord H (inord x) = x.
+        apply ord_inj.
+        rewrite nat_cast_ord inordK //.
+        by rewrite H.
+      rewrite //.
+    rewrite //.
+  + (* k~k.+1 *)
+    rewrite /shrBn /= -/shrBn.
+    have ->: [set i : 'I_n | i < n - k.+1 & cast_ord H (inord (i + k.+1)) \in E]
+           = [set i : 'I_n | i < n.-1 & cast_ord H (@inord n.-1 i.+1) \in [set i : 'I_n | i < n - k & cast_ord H (inord (i + k)) \in E]].
+      apply/setP=> x; rewrite !inE.
+      case Hx: (x < n.-1)=> /=.
+      + (* x < n.-1 *)
+        have ->: (x < n - k.+1) = (@inord n.-1 x.+1 < n - k).
+          rewrite inordK=> //.
+          rewrite -[k.+1]addn1.
+          rewrite subnDA.
+          rewrite ltn_subRL.
+          by rewrite addnC addn1.
+        apply andb_id2l=> _.
+        rewrite -[k.+1]addn1 -[x.+1]addn1.
+        have ->: x + (k + 1) = @inord n.-1 (x + 1) + k.
+          rewrite inordK.
+          by rewrite -[x + 1 + k]addnA [k + 1]addnC.
+          by rewrite -[n.-1.+1]addn1 ltn_add2r.
+        rewrite //=.
+      + (* x >= n.-1 *)
+        have ->: x < n - k.+1 = false.
+          rewrite ltnNge.
+          apply negbF.
+          apply (leq_trans (n := n.-1)).
+          by rewrite -subn1 leq_sub2l.
+          by rewrite leqNgt Hx.
+        by rewrite /=.
+    by apply shift.sr_repr.
+Qed.
+
+(* TODO: move somewhere *)
+Lemma natural_repr_toInt: forall v, natural_repr (toInt v) v.
+Proof.
+  move=> v.
+  apply/existsP.
+  exists #v.
+  rewrite eq_refl andbT.
+  rewrite toInt_def /native_repr.
+  by apply/eqInt32P.
+Qed.
+
 (* TODO: move to repr_op *)
 Lemma srn_repr:
-  forall i E s, machine_repr i E ->
+  forall i E s, s <= wordsize -> machine_repr i E ->
     machine_repr (lsr i (toInt s)) [set i : 'I_wordsize | i < wordsize - s & @inord wordsize.-1 (i + s) \in E].
 Proof.
-Admitted.
+  move=> i E s Hs [bv [r_native r_set]].
+  exists (shrBn bv s); split.
+  apply lsr_repr=> //.
+  apply natural_repr_toInt.
+  have H: wordsize.-1.+1 = wordsize by trivial.
+  have ->: [set i0 : 'I_wordsize | i0 < wordsize - s & inord (i0 + s) \in E]
+         = [set i0 : 'I_wordsize | i0 < wordsize - s & cast_ord H (inord (i0 + s)) \in E].
+    apply/setP=> x; rewrite !inE.
+    apply andb_id2l=> _.
+    have {1}->: inord (x + s) = (cast_ord H (inord (x + s))).
+      apply ord_inj.
+      by rewrite nat_cast_ord.
+    rewrite //.
+  by apply srn_repr_1.
+Qed.
 
 Definition set_next_g {n} (S: {set 'I_n.+1}) x := [arg min_(y < ord0 | ((y \notin S) && (y > x))) y].
 
@@ -43,7 +118,7 @@ Proof.
   exists (addB bv' bv); split.
   apply add_repr=> //.
   by apply ripple_repr_1.
-Qed.  
+Qed.
 
 (* TODO: move from queens to somewhere else *)
 Lemma ladd_repr:
