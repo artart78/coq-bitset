@@ -177,11 +177,45 @@ Proof.
   case: arg_minP=> //.
 Qed.
 
+Lemma enumNext_cont (j : 'I_wordsize) (S: {set 'I_wordsize}) e (He: e \in S):
+  set_next S <> ord0 -> set_min S e <= j -> j < set_next S -> j \in S.
+Proof.
+  move=> Hnext Hj1 Hj2.
+  case Hjmin: (set_min S e == j).
+  + move: Hjmin=> /eqP Hjmin.
+    rewrite -Hjmin.
+    rewrite /set_min.
+    case: arg_minP=> //.
+  + have Hj1': set_min S e < j.
+    rewrite ltn_neqAle.
+    apply/andP; split=> //.
+    apply negbT=> //.
+    rewrite /set_min in Hj1.
+    move: Hj1.
+    case: arg_minP=> //.
+    move=> i Hi1 Hi2 Hij.
+    rewrite /set_next in Hj2.
+    move: Hj2.
+    case: arg_minP.
+    admit. (* This goal should be eliminated by 'set_next S <> ord0' but I don't know how... *)
+    move=> k /andP [Hk1 Hk2] Hk3 Hjk.
+    move: (Hk3 j)=> Hminj.
+    rewrite leqNgt Hjk /= in Hminj.
+    case HjS: (j \in S)=> //.
+    rewrite HjS /= in Hminj.
+    apply Hminj.
+    apply/existsP.
+    exists (set_min S e).
+    apply/andP; split=> //.
+    rewrite /set_min.
+    case: arg_minP=> //.
+Admitted.
+
 Lemma enumNext_correct (i: Int32) (S: {set 'I_wordsize}) e (H: e \in S):
-  set_next S <> ord0 ->
+  set_next S <> ord0 -> 2 + set_min S e <= wordsize ->
   machine_repr i S -> machine_repr (enumNext i) (enumNext_set S e H).
 Proof.
-move=> Hnext Hi.
+move=> Hnext Hlimit Hi.
 apply union_repr=> //.
 apply (min_ripple_repr _ _ _ H)=> //.
 have ->: add (toInt 2) (ntz i) = toInt (2 + set_min S e).
@@ -228,13 +262,12 @@ have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S e - 2] =
 [set i : 'I_wordsize | i < wordsize - (2 + set_min S e) & @inord wordsize.-1 (i + (2 + set_min S e)) \in ([set set_next S] :|: [set x in S | x < set_next S])].
   apply/setP=> x; rewrite !inE.
   rewrite andbC andbT.
-  rewrite [in _ || (_ && _)]andb_idl.
-  rewrite -leq_eqVlt.
   case Hx: (x < wordsize - (2 + set_min S e)).
   + have Hx': x < wordsize.
       apply (leq_trans (n := wordsize - (2 + set_min S e)))=> //.
       by apply leq_subr.
-    rewrite andbC andbT inordK.
+    rewrite [in _ || (_ && _)]andb_idl.
+    rewrite -leq_eqVlt /=.
     have {2}->: set_next S = inord (set_next S - set_min S e - 2 + (2 + set_min S e)).
       apply ord_inj.
       rewrite inordK.
@@ -246,14 +279,19 @@ have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S e - 2] =
       rewrite [_ + 2]addnC.
       rewrite subnK //.
       rewrite addnC //.
-    rewrite inordK.
+    rewrite !inordK.
     by rewrite leq_add2r.
     rewrite -subnDA.
     rewrite [set_min S e + 2]addnC.
     rewrite subnK=> //.
     by rewrite addnC.
-    rewrite addnC.
-    rewrite -ltn_subRL=> //.
+    rewrite addnC -ltn_subRL=> //.
+    move=> Hx''.
+    apply (enumNext_cont _ _ e)=> //.
+    rewrite inordK.
+    rewrite addnA.
+    by rewrite leq_addl.
+    rewrite addnC -ltn_subRL=> //.
   + rewrite andbC andbF.
     rewrite leqNgt.
     apply negbF.
@@ -264,7 +302,6 @@ have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S e - 2] =
     apply ltn_sub2r=> //.
     rewrite addnC.
     apply (leq_ltn_trans (n := set_next S))=> //.
-  admit. (* if set_min S e <= i < set_next S, then i \in S *)
 apply srn_repr=> //.
 have ->: set0 = [set i : 'I_wordsize | i < wordsize - (2 + set_min S e) & @inord wordsize.-1 (i + (2 + set_min S e)) \in ([set set_next S] :|: [set x in S | x < set_next S])].
   apply/setP=> x; rewrite !inE.
@@ -290,8 +327,8 @@ have ->: set0 = [set i : 'I_wordsize | i < wordsize - (2 + set_min S e) & @inord
       by rewrite ltnNge Hnext'.
       by rewrite addnC leq_addl.
     by rewrite andbF.
-apply srn_repr=> //.
-Admitted.
+by apply srn_repr.
+Qed.
 
 Cd "examples/enum_parts".
 
