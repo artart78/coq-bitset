@@ -143,10 +143,10 @@ Proof.
 Admitted.
 
 Lemma ripple_repr:
-  forall i j S x, machine_repr i S -> machine_repr j [set x] -> x \in S ->
+  forall i j S x, machine_repr i S -> machine_repr j [set x] -> x \in S -> set_next_g S x <> ord0 ->
     machine_repr (add j i) ((set_next_g S x) |: [set y in S | y < x] :|: [set y in S | y > set_next_g S x]).
 Proof.
-  move=> i j S x [bv [r_native r_set]] [bv' [r_native' r_set']] Hx.
+  move=> i j S x [bv [r_native r_set]] [bv' [r_native' r_set']] Hx1 Hx2.
   exists (addB bv' bv); split.
   apply add_repr=> //.
   by apply ripple_repr_1.
@@ -157,9 +157,38 @@ Lemma ladd_repr:
   forall x y, add (toInt x) (toInt y) = toInt (x + y).
 Admitted.
 
-Lemma min_ripple_repr i (S: {set 'I_wordsize}) e (H: e \in S): machine_repr i S ->
+Lemma min_ripple_repr i (S: {set 'I_wordsize}) e (H: e \in S): set_next S <> ord0 -> machine_repr i S ->
   machine_repr (add (keep_min i) i) (set_next S |: [set x in S | set_next S < x]).
 Proof.
+  have HS: set_next S = set_next_g S (set_min S e).
+    rewrite /set_next /set_next_g.
+    rewrite /arg_min.
+    rewrite (eq_pick (Q := [pred i0 | (i0 \notin S) && (set_min S e < i0) & [
+               forall (j | (j \notin S) && (set_min S e < j)),
+                 i0 <= j]])) //.
+    move=> x /=.
+    have Heq: forall x, [exists y, (y \in S) && (y < x)] = (set_min S e < x).
+      move=> x0.
+      rewrite /set_min.
+      case: arg_minP=> //= j Hj Hj'.
+      case Hx: (j < x0).
+      + apply/existsP.
+        exists j.
+        by rewrite Hj Hx.
+      + apply negbTE; rewrite negb_exists.
+        apply/forallP=> y.
+        rewrite negb_and.
+        case Hy: (y \in S)=> //=.
+        + move: (Hj' y Hy)=> Hy'.
+          rewrite -leqNgt.
+          apply (leq_trans (n := j))=> //.
+          by rewrite leqNgt Hx.
+    rewrite Heq.
+    have ->: [forall (j | (j \notin S) && [exists y, (y \in S) && (y < j)]), x <= j] = [forall (j | (j \notin S) && (set_min S e < j)), x <= j].
+      apply eq_forallb=> y.
+      by rewrite Heq.
+    rewrite //.
+  move=> Hnext.
   have ->: (set_next S |: [set x0 in S | set_next S < x0]) = ((set_next_g S (set_min S e)) |: [set y in S | y < (set_min S e)] :|: [set y in S | y > set_next_g S (set_min S e)]).
     have ->: [set y in S | y < set_min S e] = set0.
       apply/setP=> x; rewrite !inE.
@@ -172,41 +201,13 @@ Proof.
       rewrite -leqNgt.
       by apply Hj'.
       by rewrite andbF.
-    rewrite setU0.
-    have ->: set_next S = set_next_g S (set_min S e).
-      rewrite /set_next /set_next_g.
-      rewrite /arg_min.
-      rewrite (eq_pick (Q := [pred i0 | (i0 \notin S) && (set_min S e < i0) & [
-                 forall (j | (j \notin S) && (set_min S e < j)),
-                   i0 <= j]])) //.
-      move=> x /=.
-      have Heq: forall x, [exists y, (y \in S) && (y < x)] = (set_min S e < x).
-        move=> x0.
-        rewrite /set_min.
-        case: arg_minP=> //= j Hj Hj'.
-        case Hx: (j < x0).
-        + apply/existsP.
-          exists j.
-          by rewrite Hj Hx.
-        + apply negbTE; rewrite negb_exists.
-          apply/forallP=> y.
-          rewrite negb_and.
-          case Hy: (y \in S)=> //=.
-          + move: (Hj' y Hy)=> Hy'.
-            rewrite -leqNgt.
-            apply (leq_trans (n := j))=> //.
-            by rewrite leqNgt Hx.
-      rewrite Heq.
-      have ->: [forall (j | (j \notin S) && [exists y, (y \in S) && (y < j)]), x <= j] = [forall (j | (j \notin S) && (set_min S e < j)), x <= j].
-        apply eq_forallb=> y.
-        by rewrite Heq.
-      rewrite //.
-      rewrite //.
+    by rewrite setU0 HS.
   move=> Hi.
   apply ripple_repr=> //.
   apply keep_min_repr=> //.
   rewrite /set_min.
   case: arg_minP=> //.
+  by rewrite -HS.
 Qed.
 
 Lemma enumNext_cont (j : 'I_wordsize) (S: {set 'I_wordsize}) e (He: e \in S):
