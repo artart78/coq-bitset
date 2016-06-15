@@ -104,23 +104,164 @@ Proof.
   by apply srn_repr_1.
 Qed.
 
-(*
-Definition set_isNext_g {n} (S: {set 'I_n.+1}) y x := (y \notin S) && (y > x).
+Definition set_isNext_g {n} (S: {set 'I_n.+1}) y x := (y \notin S) && (y >= x).
 
 Definition set_next_g {n} (S: {set 'I_n.+1}) f x := [arg min_(y < f | set_isNext_g S y x) y].
 
 Lemma ripple_repr_1':
-  forall n (bs: BITS n.+1) E f, spec.repr bs E -> ord0 \in E -> set_isNext_g E f (@ord0 n) ->
+  forall n (bs: BITS n.+1) E f, spec.repr bs E -> set_isNext_g E f (@ord0 n) ->
     spec.repr (addB [tuple of true :: spec.zero n] bs) ((set_next_g E f (@ord0 n)) |: [set y in E | y > set_next_g E f (@ord0 n)]).
 Proof.
-  elim=> [|n IHn] /tupleP[b bs] E f Hbs HE1 HE2.
+  elim=> [|n IHn] /tupleP[b bs] E f Hbs HE.
+  + (* n = 1 *)
+    have Hf: f = ord0 by admit.
+    rewrite (tuple0 bs) /=.
+    rewrite /adcB /adcBmain /=.
+    rewrite !tuple.theadCons /=.
+    rewrite /joinlsb /=.
+    case: b Hbs=> Hbs.
+    + rewrite !tuple.theadCons !tuple.beheadCons /=.
+      rewrite /spec.repr /=.
+      apply/setP=> x.
+      have Hx: x = ord0 by admit.
+      rewrite !inE /getBit Hx /=.
+      have ->: (ord0 == set_next_g E f 0) = false.
+        apply/eqP=> Habs.
+        rewrite /set_next_g in Habs.
+        move: Habs.
+        case: arg_minP=> //.
+        move=> i Hi Hmin Hi'.
+        rewrite -Hi' /set_isNext_g /= leqnn andbT in Hi.
+        move: Hbs=> /setP /(_ ord0).
+        rewrite inE /getBit /= => Habs.
+        by rewrite Habs in Hi.
+      rewrite /=.
+      by rewrite ltn0 andbF.
+    + rewrite !tuple.theadCons !tuple.beheadCons /=.
+      rewrite /spec.repr /=.
+      apply/setP=> x.
+      have Hx: x = ord0 by admit.
+      rewrite !inE /getBit Hx /=.
+      have ->: ord0 == set_next_g E f 0.
+        rewrite /set_next_g.
+        case: arg_minP=> //.
+        move=> i Hi Hmin.
+        apply/eqP.
+        apply ord_inj.
+        rewrite /=.
+        apply/eqP.
+        rewrite eq_sym -leqn0.
+        apply (Hmin ord0).
+        by rewrite Hf in HE.
+      by rewrite /=.
+  + (* n.+1 ~ n.+2 *)
+    case: b Hbs=> Hbs.
+    + have ->: addB [tuple of true :: spec.zero n.+1] [tuple of true :: bs] = [tuple of false :: (addB [tuple of true :: spec.zero n] bs)].
+        by admit.
+      have Hbs': ord0 \in E.
+        move: Hbs=> /setP /(_ ord0) ->.
+        by rewrite inE /getBit.
+      set E' := [set x : 'I_n.+1 | inord(x.+1) \in E ].
+      set f' := @inord n f.-1.
+      have HE': spec.repr bs E'.
+        by apply (spec.repr_rec (b := true)).
+      have Hf': set_isNext_g E' f' (@ord0 n.+1).
+        rewrite /set_isNext_g.
+        rewrite /= leq0n andbT.
+        apply/negP=> Habs.
+        rewrite inE in Habs.
+        have Hf1: f > 0.
+          rewrite lt0n.
+          apply/negP=> /eqP Habs'.
+          have Habs'': f = ord0 by apply ord_inj.
+          rewrite Habs'' in HE.
+          move: HE=> /andP[Habs''' _].
+          by rewrite Hbs' in Habs'''.
+        have Hf': inord f'.+1 = f.
+          rewrite inordK.
+          rewrite prednK=> //.
+          apply ord_inj.
+          by rewrite inordK.
+          apply (leq_trans (n := f)).
+          rewrite -subn1.
+          rewrite -{2}[nat_of_ord f]subn0.
+          apply ltn_sub2l=> //.
+          by rewrite -ltnS.
+        rewrite Hf' in Habs.
+        move: HE=> /andP [HE _].
+        by rewrite Habs in HE.
+      move: (IHn bs E' f' HE' Hf')=> /setP IHn'.
+      apply/setP=> i; rewrite !inE.
+      case Hi: (i == ord0).
+      + move: Hi=> /eqP ->.
+        rewrite /getBit /=.
+        rewrite ltn0 andbF orbF.
+        apply/eqP.
+        rewrite /set_next_g.
+        case: arg_minP=> //.
+        move=> i0 Hi0 Hmin.
+        move=> Habs.
+        rewrite -Habs in Hi0.
+        move: Hi0=> /andP[Habs' _].
+        by rewrite Hbs' in Habs'.
+      + have ->: i = inord i.-1.+1 by admit.
+        have Hi': i > 0 by admit.
+        have ->: getBit [tuple of false :: addB [tuple of true :: spec.zero n] bs] (inord i.-1.+1)
+               = getBit (addB [tuple of true :: spec.zero n] bs) i.-1 by admit.
+        move: (IHn' (inord i.-1))=> IHn''.
+        rewrite !inE /= inordK in IHn''.
+        rewrite -IHn''.
+        have Hnext: set_next_g E f 0 = inord (set_next_g E' f' 0).+1.
+          by admit.
+        have ->: (inord i.-1.+1 == set_next_g E f 0) = (inord i.-1 == set_next_g E' f' 0).
+          rewrite Hnext.
+          by admit.
+        have ->: (set_next_g E f 0 < @inord n.+1 i.-1.+1) = (set_next_g E' f' 0 < i.-1).
+          rewrite Hnext.
+          by admit.
+        rewrite //.
+        apply (leq_trans (n := i)).
+        rewrite -subn1.
+        rewrite -{2}[nat_of_ord i]subn0.
+        apply ltn_sub2l=> //.
+        by rewrite -ltnS.
+    + have ->: addB [tuple of true :: spec.zero n.+1] [tuple of false :: bs] = [tuple of true :: bs].
+        by admit.
+      have Hbs': ord0 \notin E.
+        move: Hbs=> /setP /(_ ord0) Hbs.
+        rewrite Hbs.
+        by rewrite inE /getBit /=.
+      have ->: set_next_g E f (@ord0 n.+1) = @ord0 n.+1.
+        rewrite /set_next_g.
+        case: arg_minP=> //.
+        move=> i Hi Hmin.
+        apply ord_inj.
+        rewrite /=.
+        apply/eqP.
+        rewrite -leqn0.
+        apply (Hmin ord0).
+        rewrite /set_isNext_g /= leqnn.
+        by rewrite Hbs'.
+      apply/setP=> x; rewrite !inE.
+      case Hx: (x == ord0).
+      + move: Hx=> /eqP ->.
+        by rewrite /getBit.
+      + have ->: ord0 < x by admit.
+        rewrite andbT /=.
+        move: Hbs=> /setP /(_ x) ->.
+        rewrite inE.
+        rewrite /getBit /=.
+        have ->: x = inord x.-1.+1 by admit.
+        rewrite inordK //.
+        rewrite prednK=> //.
+        admit. (* meh *)
 Admitted.
 
 Lemma ripple_repr_1:
-  forall n (bs: BITS n.+1) bs' E x f, spec.repr bs E -> spec.repr bs' [set x] -> x \in E -> set_isNext_g E f x ->
+  forall n (bs: BITS n.+1) bs' E x f, spec.repr bs E -> spec.repr bs' [set x] -> set_isNext_g E f x ->
     spec.repr (addB bs' bs) ((set_next_g E f x) |: [set y in E | y < x] :|: [set y in E | y > set_next_g E f x]).
 Proof.
-  move=> n bs bs' E x f Hbs Hbs' Hx1 Hx2.
+  move=> n bs bs' E x f Hbs Hbs' Hx.
   have Hcast: n.+1 = x + (n.+1 - x).
     rewrite subnKC=> //.
     by apply ltnW.
@@ -133,26 +274,6 @@ Proof.
          = tcast (esym Hcast) ((addB (high (n.+1 - x) (tcast Hcast bs')) (high (n.+1 - x) (tcast Hcast bs))) ## low x (tcast Hcast bs)).
     by admit.
   admit. (* Use ripple_repr_1' *)
-Admitted.
-
-Lemma ripple_repr:
-  forall i j S x f, machine_repr i S -> machine_repr j [set x] -> x \in S -> set_isNext_g S f x ->
-    machine_repr (add j i) ((set_next_g S f x) |: [set y in S | y < x] :|: [set y in S | y > set_next_g S f x]).
-Proof.
-  move=> i j S x f [bv [r_native r_set]] [bv' [r_native' r_set']] Hx1 Hx2.
-  exists (addB bv' bv); split.
-  apply add_repr=> //.
-  by apply ripple_repr_1.
-Qed.
-*)
-
-Definition set_isNext_g {n} (S: {set 'I_n.+1}) y x := (y \notin S) && (y >= x).
-
-Definition set_next_g {n} (S: {set 'I_n.+1}) f x := [arg min_(y < f | set_isNext_g S y x) y].
-
-Lemma ripple_repr_1:
-  forall n (bs: BITS n.+1) bs' E x f, spec.repr bs E -> spec.repr bs' [set x] -> set_isNext_g E f x ->
-    spec.repr (addB bs' bs) ((set_next_g E f x) |: [set y in E | y < x] :|: [set y in E | y > set_next_g E f x]).
 Admitted.
 
 Lemma ripple_repr:
