@@ -440,7 +440,14 @@ Admitted.
 
 Lemma addB_tcast m n b1 b2 (Hcast: m = n): addB (tcast Hcast b2) b1 = tcast Hcast (addB b2 (tcast (esym Hcast) b1)).
 Proof.
-Admitted.
+  apply toNat_inj.
+  rewrite toNat_tcast.
+  rewrite !toNat_addB.
+  rewrite !toNat_tcast.
+  move: (toNat b2 + toNat b1)=> x.
+  clear b1 b2.
+  by rewrite Hcast.
+Qed.
 
 Lemma ripple_repr_1:
   forall n (bs: BITS n.+1) bs' E x f, spec.repr bs E -> spec.repr bs' [set x] -> set_isNext_g E f x ->
