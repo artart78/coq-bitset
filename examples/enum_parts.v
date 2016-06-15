@@ -107,12 +107,47 @@ Qed.
 Lemma addB_zero_tt {n} (bs: BITS n.+1):
   addB [tuple of true :: spec.zero n.+1] [tuple of true :: bs]
 = [tuple of false :: (addB [tuple of true :: spec.zero n] bs)].
-Admitted.
+Proof.
+  apply toNat_inj.
+  rewrite toNat_addB.
+  rewrite /=.
+  have ->: toNat [tuple of false :: addB [tuple of true :: nseq n false] bs]
+         = (toNat (addB [tuple of true :: nseq n false] bs)).*2.
+    by rewrite /toNat /= add0n.
+  rewrite toNat_addB.
+  rewrite -muln2.
+  rewrite div.muln_modl=> //.
+  have ->: toNat [tuple of true :: spec.zero n.+1] = 1 + (toNat [tuple of spec.zero n.+1]).*2 by trivial.
+  have ->: toNat [tuple of true :: spec.zero n] = 1 + (toNat (spec.zero n)).*2 by trivial.
+  have ->: toNat [tuple of true :: bs] = 1 + (toNat bs).*2 by trivial.
+  rewrite expnSr.
+  rewrite !toNat_zero.
+  rewrite double0 addn0.
+  rewrite -muln2 //.
+Qed.
 
 Lemma addB_zero_tf {n} (bs: BITS n.+1):
   addB [tuple of true :: spec.zero n.+1] [tuple of false :: bs]
 = [tuple of true :: bs].
-Admitted.
+Proof.
+  apply toNat_inj.
+  rewrite toNat_addB.
+  have ->: toNat [tuple of true :: spec.zero n.+1] = 1 + (toNat (spec.zero n.+1)).*2 by trivial.
+  rewrite toNat_zero double0 addn0.
+  have ->: toNat [tuple of false :: bs] = (toNat bs).*2 by trivial.
+  have ->: toNat [tuple of true :: bs] = 1 + (toNat bs).*2 by trivial.
+  rewrite div.modn_small //.
+  rewrite -addn1.
+  rewrite addnC addnA.
+  have ->: 1 + 1 = 2 by trivial.
+  rewrite -muln2.
+  rewrite -{1}[2]mul1n.
+  rewrite -mulnDl.
+  rewrite expnSr.
+  rewrite leq_mul2r.
+  rewrite addnC addn1.
+  by rewrite toNatBounded.
+Qed.
 
 Definition set_isNext_g {n} (S: {set 'I_n.+1}) y x := (y \notin S) && (y >= x).
 
@@ -403,6 +438,10 @@ Proof.
   by rewrite expn_gt0.
 Admitted.
 
+Lemma addB_tcast m n b1 b2 (Hcast: m = n): addB (tcast Hcast b2) b1 = tcast Hcast (addB b2 (tcast (esym Hcast) b1)).
+Proof.
+Admitted.
+
 Lemma ripple_repr_1:
   forall n (bs: BITS n.+1) bs' E x f, spec.repr bs E -> spec.repr bs' [set x] -> set_isNext_g E f x ->
     spec.repr (addB bs' bs) ((set_next_g E f x) |: [set y in E | y < x] :|: [set y in E | y > set_next_g E f x]).
@@ -548,7 +587,8 @@ Proof.
       rewrite /bs1.
       move: (high (n.+1 - x) (tcast Hcast bs))=> b1.
       move: ([tuple of true :: spec.zero (n - x)])=> b2.
-      by admit.
+      rewrite addB_tcast getBit_tcast /getBit inordK //.
+      rewrite (Hlt i)=> //.
     rewrite -H.
     rewrite !Hf'2.
     have ->: (@inord (n - x) (i - x) == inord (set_next_g E f x - x)) = (i == set_next_g E f x).
@@ -603,7 +643,7 @@ Proof.
     rewrite //.
     rewrite (Hlt i)=> //.
     rewrite (Hlt (set_next_g E f x))=> //.
-Admitted.
+Qed.
 
 Lemma ripple_repr:
   forall i j S x f, machine_repr i S -> machine_repr j [set x] -> set_isNext_g S f x ->
