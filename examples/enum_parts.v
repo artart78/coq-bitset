@@ -104,6 +104,7 @@ Proof.
   by apply srn_repr_1.
 Qed.
 
+(*
 Definition set_isNext_g {n} (S: {set 'I_n.+1}) y x := (y \notin S) && (y > x).
 
 Definition set_next_g {n} (S: {set 'I_n.+1}) f x := [arg min_(y < f | set_isNext_g S y x) y].
@@ -143,8 +144,8 @@ Proof.
   apply add_repr=> //.
   by apply ripple_repr_1.
 Qed.
+*)
 
-(*
 Definition set_isNext_g {n} (S: {set 'I_n.+1}) y x := (y \notin S) && (y >= x).
 
 Definition set_next_g {n} (S: {set 'I_n.+1}) f x := [arg min_(y < f | set_isNext_g S y x) y].
@@ -153,7 +154,16 @@ Lemma ripple_repr_1:
   forall n (bs: BITS n.+1) bs' E x f, spec.repr bs E -> spec.repr bs' [set x] -> set_isNext_g E f x ->
     spec.repr (addB bs' bs) ((set_next_g E f x) |: [set y in E | y < x] :|: [set y in E | y > set_next_g E f x]).
 Admitted.
-*)
+
+Lemma ripple_repr:
+  forall i j S x f, machine_repr i S -> machine_repr j [set x] -> set_isNext_g S f x ->
+    machine_repr (add j i) ((set_next_g S f x) |: [set y in S | y < x] :|: [set y in S | y > set_next_g S f x]).
+Proof.
+  move=> i j S x f [bv [r_native r_set]] [bv' [r_native' r_set']] Hx.
+  exists (addB bv' bv); split.
+  apply add_repr=> //.
+  by apply ripple_repr_1.
+Qed.
 
 (* TODO: move from queens to somewhere else *)
 Lemma ladd_repr:
@@ -167,8 +177,8 @@ Proof.
   have HS: set_next S f = set_next_g S f (set_min S e).
     rewrite /set_next /set_next_g.
     rewrite /arg_min.
-    rewrite (eq_pick (Q := [pred i0 | (i0 \notin S) && (set_min S e < i0) & [
-               forall (j | (j \notin S) && (set_min S e < j)),
+    rewrite (eq_pick (Q := [pred i0 | set_isNext_g S i0 (set_min S e) & [
+               forall (j | set_isNext_g S j (set_min S e)),
                  i0 <= j]])) //.
     move=> x /=.
     have Heq: forall x, [exists y, (y \in S) && (y < x)] = (set_min S e < x).
@@ -178,7 +188,7 @@ Proof.
       case Hx: (j < x0).
       + apply/existsP.
         exists j.
-        by rewrite Hj Hx.
+        by rewrite Hj.
       + apply negbTE; rewrite negb_exists.
         apply/forallP=> y.
         rewrite negb_and.
@@ -188,11 +198,28 @@ Proof.
           apply (leq_trans (n := j))=> //.
           by rewrite leqNgt Hx.
     rewrite /set_isNext Heq.
-    have ->: [forall (j | (j \notin S) && [exists y, (y \in S) && (y < j)]), x <= j] = [forall (j | (j \notin S) && (set_min S e < j)), x <= j].
+    have Hhandy: forall y, (y \notin S) && (set_min S e < y) = (y \notin S) && (set_min S e <= y).
+      move=> y.
+      apply andb_id2l=> Hy.
+      rewrite [set_min S e <= y]leq_eqVlt.
+      have Habs: set_min S e \in S.
+        rewrite /set_min.
+        case: arg_minP=> //.
+      have ->: (nat_of_ord (set_min S e) == nat_of_ord y) = false.
+        apply negbTE.
+        apply/eqP=> Habs'.
+        have Habs'': set_min S e = y by apply ord_inj.
+        rewrite Habs'' in Habs.
+        by rewrite Habs in Hy.
+      by rewrite /=.
+    have ->: [forall (j | (j \notin S) && [exists y, (y \in S) && (y < j)]), x <= j]
+           = [forall (j | (j \notin S) && (set_min S e <= j)), x <= j].
       apply eq_forallb=> y.
-      by rewrite Heq.
+      rewrite Heq.
+      by rewrite Hhandy.
+    rewrite /set_isNext_g.
+    rewrite Hhandy.
     rewrite //.
-  move=> Hnext.
   have ->: (set_next S f |: [set x0 in S | set_next S f < x0]) = ((set_next_g S f (set_min S e)) |: [set y in S | y < (set_min S e)] :|: [set y in S | y > set_next_g S f (set_min S e)]).
     have ->: [set y in S | y < set_min S e] = set0.
       apply/setP=> x; rewrite !inE.
@@ -206,17 +233,18 @@ Proof.
       by apply Hj'.
       by rewrite andbF.
     by rewrite setU0 HS.
+  move=> H.
   apply ripple_repr=> //.
   apply keep_min_repr=> //.
-  rewrite /set_min.
-  case: arg_minP=> //.
+  rewrite /set_isNext_g.
   move: Hf=> /andP [Hf1 /existsP [y /andP [Hy1 Hy2]]].
   apply/andP; split=> //.
-  apply (leq_ltn_trans (n := y))=> //.
+  apply (leq_trans (n := y))=> //.
   rewrite /set_min.
   case: arg_minP=> //.
   move=> x Hx /(_ y) Hy.
   by apply Hy.
+  by apply ltnW.
 Qed.
 
 Lemma enumNext_cont (j : 'I_wordsize) (S: {set 'I_wordsize}) e (He: e \in S) f (Hf: set_isNext S f):
