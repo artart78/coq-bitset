@@ -114,7 +114,7 @@ Lemma ripple_repr_1':
 Proof.
   elim=> [|n IHn] /tupleP[b bs] E f Hbs HE.
   + (* n = 1 *)
-    have Hf: f = ord0 by admit.
+    have Hf: f = ord0 by apply ord_inj; elim f; elim.
     rewrite (tuple0 bs) /=.
     rewrite /adcB /adcBmain /=.
     rewrite !tuple.theadCons /=.
@@ -123,7 +123,7 @@ Proof.
     + rewrite !tuple.theadCons !tuple.beheadCons /=.
       rewrite /spec.repr /=.
       apply/setP=> x.
-      have Hx: x = ord0 by admit.
+      have Hx: x = ord0 by apply ord_inj; elim x; elim.
       rewrite !inE /getBit Hx /=.
       have ->: (ord0 == set_next_g E f 0) = false.
         apply/eqP=> Habs.
@@ -140,7 +140,7 @@ Proof.
     + rewrite !tuple.theadCons !tuple.beheadCons /=.
       rewrite /spec.repr /=.
       apply/setP=> x.
-      have Hx: x = ord0 by admit.
+      have Hx: x = ord0 by apply ord_inj; elim x; elim.
       rewrite !inE /getBit Hx /=.
       have ->: ord0 == set_next_g E f 0.
         rewrite /set_next_g.
@@ -204,21 +204,114 @@ Proof.
         rewrite -Habs in Hi0.
         move: Hi0=> /andP[Habs' _].
         by rewrite Hbs' in Habs'.
-      + have ->: i = inord i.-1.+1 by admit.
-        have Hi': i > 0 by admit.
-        have ->: getBit [tuple of false :: addB [tuple of true :: spec.zero n] bs] (inord i.-1.+1)
-               = getBit (addB [tuple of true :: spec.zero n] bs) i.-1 by admit.
+      + move: Hi=> /eqP Hi''.
+        have Hi': i > 0.
+          rewrite lt0n.
+          apply/eqP=> H.
+          have Habs: i = ord0 by apply ord_inj.
+          by rewrite Habs in Hi''.
+        have Hi''': i.-1 < i.
+          rewrite -subn1.
+          rewrite -{2}[nat_of_ord i]subn0.
+          apply ltn_sub2l=> //.
+        have ->: i = inord i.-1.+1.
+          apply ord_inj.
+          rewrite inordK.
+          rewrite prednK=> //.
+          by rewrite prednK=> //.
+        have ->: getBit [tuple of false :: addB [tuple of true :: spec.zero n] bs] (@inord n.+1 i.-1.+1)
+               = getBit (addB [tuple of true :: spec.zero n] bs) i.-1.
+          rewrite /getBit inordK=> //.
+          by rewrite prednK=> //.
         move: (IHn' (inord i.-1))=> IHn''.
         rewrite !inE /= inordK in IHn''.
         rewrite -IHn''.
         have Hnext: set_next_g E f 0 = inord (set_next_g E' f' 0).+1.
-          by admit.
+          rewrite /set_next_g.
+          case: arg_minP=> //.
+          move=> i0 Hi0 Hi0'.
+          case: arg_minP=> //.
+          move=> i1 Hi1 Hi1'.
+          apply ord_inj.
+          apply/eqP.
+          rewrite eqn_leq.
+          apply/andP; split.
+          apply (Hi0' (inord i1.+1))=> //.
+          rewrite /set_isNext_g leq0n andbT.
+          rewrite /set_isNext_g leq0n andbT in Hi1.
+          apply/negP=> Habs.
+          have Habs': i1 \in E'.
+            by rewrite inE.
+          by rewrite Habs' in Hi1.
+          rewrite inordK.
+          have Hi0'': i0 > 0.
+            rewrite lt0n.
+            apply/eqP=> Habs.
+            have Hi0'': i0 = ord0 by apply ord_inj.
+            rewrite Hi0'' in Hi0.
+            move: Hi0=> /andP [Habs' _].
+            by rewrite Hbs' in Habs'.
+          have Hok: i1 <= @inord n i0.-1.
+            apply Hi1'.
+            rewrite /set_isNext_g leq0n andbT.
+            rewrite /set_isNext_g leq0n andbT in Hi0.
+            apply/negP=> Habs.
+            move: Hi0=> /negP Hi0.
+            apply Hi0.
+            rewrite inE inordK prednK in Habs=> //.
+            by rewrite inord_val in Habs.
+            by rewrite -ltnS.
+          apply (leq_ltn_trans (n := @inord n i0.-1))=> //.
+          rewrite inordK=> //.
+          rewrite -subn1.
+          rewrite -{2}[nat_of_ord i0]subn0.
+          apply ltn_sub2l=> //.
+          rewrite prednK=> //.
+          rewrite -ltnS=> //.
+          rewrite -addn1 -[n.+2]addn1.
+          rewrite leq_add2r=> //.
         have ->: (inord i.-1.+1 == set_next_g E f 0) = (inord i.-1 == set_next_g E' f' 0).
           rewrite Hnext.
-          by admit.
+          apply/eqP.
+          case H: (inord i.-1 == set_next_g E' f' 0).
+          + move/eqP: H=> H.
+            apply ord_inj.
+            rewrite !inordK=> //.
+            apply/eqP.
+            rewrite eqSS.
+            rewrite -H.
+            rewrite inordK=> //.
+            apply (leq_trans (n := i))=> //.
+            rewrite -ltnS=> //.
+            rewrite -[(set_next_g E' f' 0).+1]addn1 -[n.+2]addn1.
+            by rewrite ltn_add2r.
+            rewrite prednK=> //.
+          + move/eqP: H=> H.
+            move=> Habs.
+            have Habs': inord i.-1 = set_next_g E' f' 0.
+              apply ord_inj.
+              rewrite inordK.
+              apply/eqP.
+              rewrite -(eqn_add2r 1).
+              rewrite !addn1.
+              apply/eqP.
+              have ->: i.-1.+1 = @inord n.+1 i.-1.+1.
+                rewrite inordK=> //.
+                by rewrite prednK.
+              rewrite Habs.
+              rewrite inordK=> //.
+              by rewrite -[(set_next_g E' f' 0).+1]addn1 -[n.+2]addn1 ltn_add2r.
+              apply (leq_trans (n := i))=> //.
+              rewrite -ltnS=> //.
+            by rewrite Habs' in H.
         have ->: (set_next_g E f 0 < @inord n.+1 i.-1.+1) = (set_next_g E' f' 0 < i.-1).
           rewrite Hnext.
-          by admit.
+          rewrite !inordK.
+          rewrite -addn1 -[i.-1.+1]addn1.
+          by rewrite leq_add2r.
+          rewrite prednK=> //.
+          rewrite -addn1 -[n.+2]addn1.
+          by rewrite leq_add2r.
         rewrite //.
         apply (leq_trans (n := i)).
         rewrite -subn1.
@@ -246,15 +339,22 @@ Proof.
       case Hx: (x == ord0).
       + move: Hx=> /eqP ->.
         by rewrite /getBit.
-      + have ->: ord0 < x by admit.
+      + have Hx': 0 < x.
+          rewrite lt0n.
+          apply/eqP=> Habs.
+          have Habs': x = ord0.
+            by apply ord_inj.
+          by rewrite Habs' in Hx.
+        rewrite /= Hx'.
         rewrite andbT /=.
         move: Hbs=> /setP /(_ x) ->.
         rewrite inE.
         rewrite /getBit /=.
-        have ->: x = inord x.-1.+1 by admit.
+        have ->: x = inord x.-1.+1.
+          apply ord_inj.
+          rewrite inordK prednK=> //.
         rewrite inordK //.
         rewrite prednK=> //.
-        admit. (* meh *)
 Admitted.
 
 Lemma ripple_repr_1:
