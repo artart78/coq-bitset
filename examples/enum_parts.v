@@ -448,16 +448,33 @@ Proof.
       by rewrite ltnn in Habs''.
     by rewrite (Hbs i) inE.
   + (* i >= x *)
-    have Hcast2: (n - x).+1 = n.+1 - x by admit.
+    have Hcast2: (n - x).+1 = n.+1 - x.
+      rewrite -subSn=> //.
+      by rewrite -ltnS.
     have Hbs'1: high (n.+1 - x) (tcast Hcast bs') = tcast Hcast2 [tuple of true :: spec.zero (n - x)].
       apply allBitsEq=> i0 Hi0.
       rewrite getBit_high !getBit_tcast.
       case: i0 Hi0=> [Hi0|i0 Hi0].
       + rewrite add0n /getBit /=.
-        admit.
+        move: (Hbs' x)=> Hbs'1.
+        by rewrite !inE eq_refl /getBit in Hbs'1.
       + rewrite {2}/getBit /=.
         rewrite nth_nseq if_same.
-        admit.
+        move: (Hbs' (inord (i0.+1 + x)))=> Hbs'1.
+          rewrite !inE in Hbs'1.
+          have Hi0': (inord (i0.+1 + x) == x) = false.
+            apply/negP=> /eqP Habs.
+            have Habs': i0.+1 + x = nat_of_ord x.
+              rewrite -{2}Habs inordK=> //.
+              rewrite addnC -ltn_subRL=> //.
+            move: Habs'=> /eqP Habs'.
+            rewrite gtn_eqF in Habs'=> //.
+            rewrite -{1}[nat_of_ord x]add0n.
+            rewrite ltn_add2r=> //.
+          rewrite Hi0' in Hbs'1.
+          rewrite Hbs'1.
+          rewrite /getBit inordK //.
+          rewrite addnC -ltn_subRL //.
     rewrite Hbs'1.
     rewrite andbF orbF.
     set E' := [set i in 'I_(n - x).+1 | inord (i + x) \in E].
@@ -491,8 +508,39 @@ Proof.
       rewrite /set_next_g.
       apply ord_inj.
       rewrite inordK.
-      admit.
-      admit.
+      case: arg_minP=> //.
+      move=> i0 /andP [Hi0 _] Hi0'.
+      case: arg_minP=> //.
+      move=> i1 /andP [Hi1 Hi1''] Hi1'.
+      apply/eqP.
+      rewrite eqn_leq.
+      apply/andP; split.
+      + have ->: i1 - x = nat_of_ord (@inord (n - x) (i1 - x)).
+          rewrite inordK //.
+          rewrite (Hlt i1)=> //.
+        apply (Hi0' (inord (i1 - x))).
+        rewrite /set_isNext_g leq0n andbT.
+        rewrite inE /= inordK.
+        rewrite subnK=> //.
+        by rewrite inord_val Hi1.
+        rewrite (Hlt i1)=> //.
+      + rewrite leq_subLR.
+        have Hxi0: x + i0 < n.+1.
+          apply (leq_trans (n := x + (n - x).+1)).
+          rewrite ltn_add2l=> //.
+          rewrite -subSn.
+          rewrite subnKC=> //.
+          rewrite ltnW=> //.
+          rewrite -ltnS=> //.
+        have ->: x + i0 = nat_of_ord (@inord n (x + i0)).
+          rewrite inordK //.
+        apply (Hi1' (@inord n (x + i0))).
+        rewrite /set_isNext_g.
+        rewrite inE /= addnC in Hi0.
+        rewrite Hi0 /=.
+        rewrite inordK=> //.
+        by rewrite leq_addr=> //.
+      rewrite (Hlt [arg min_(y < f | set_isNext_g E y x) y])=> //.
     move: (ripple_repr_1' (n - x) bs1 E' f' Hbs1 Hf')=> /setP /(_ (inord (i - x))) H.
     rewrite !inE /= in H.
     have ->: getBit (addB (tcast Hcast2 [tuple of true :: spec.zero (n - x)])
@@ -535,12 +583,18 @@ Proof.
     have ->: (set_next_g E f x - x < i - x) = (set_next_g E f x < i).
       case Hi': (set_next_g E f x < i).
       + rewrite ltn_sub2r=> //.
-        admit. (* ? *)
+        move: Hi'.
+        rewrite /set_next_g.
+        case: arg_minP=> //.
+        move=> i0 /andP[_ Hi0] Hmin Hi0'.
+        apply (leq_ltn_trans (n := i0))=> //.
       + apply/negP=> Habs.
         have Habs': set_next_g E f x < i.
           have ->: nat_of_ord (set_next_g E f x) = set_next_g E f x - x + x.
             rewrite subnK=> //.
-            admit.
+            rewrite /set_next_g.
+            case: arg_minP=> //.
+            by move=> i0 /andP[_ Hi0] _.
           have ->: nat_of_ord i = i - x + x.
             rewrite subnK=> //.
             by rewrite leqNgt Hi.
