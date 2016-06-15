@@ -115,29 +115,78 @@ Proof.
   elim=> [|n HI] /tupleP[b bs] /tupleP[b' bs'] E x f Hbs Hbs' Hx1 Hx2.
   + (* n.+1 = 1 *)
     exfalso.
-    have Hx': x = ord0 by admit.
-    have Hf: f = ord0 by admit.
+    have Hx': x = ord0.
+      elim x; elim=> [i|i Hi] //; by apply ord_inj.
+    have Hf: f = ord0.
+      elim f; elim=> [i|i Hi] //; by apply ord_inj.
     by rewrite Hx' Hf /set_isNext_g ltn0 andbF in Hx2.
   + (* n.+1 ~ n.+2 *)
     case: b' Hbs'=> Hbs'.
     + (* b' = true, ie x = 0 *)
-      have Hx: x = ord0 by admit.
-      have ->: bs' = spec.zero n.+1 by admit.
-      case: b Hbs=> Hbs.
-      + (* b = true *)
-        have ->: addB [tuple of true :: spec.zero n.+1] [tuple of true :: bs] = [tuple of false :: (addB [tuple of true :: spec.zero n] bs)].
-          rewrite /adcB /=.
-          rewrite !tuple.beheadCons !tuple.theadCons.
-          rewrite /=.
-          rewrite /joinlsb /=.
-          have ->: spec.zero n.+1 = [tuple of false :: spec.zero n] by admit.
-          rewrite !tuple.beheadCons.
+      have Hx: x = ord0.
+        rewrite /spec.repr in Hbs'.
+        move: Hbs'=> /setP /(_ ord0) Hbs'.
+        rewrite !inE /getBit /= in Hbs'.
+        by apply/eqP; rewrite eq_sym Hbs'.
+      rewrite Hx in Hx1 Hx2 Hbs'.
+      rewrite Hx.
+      have Hb: b = true.
+        move: Hbs=> /setP /(_ ord0) Hbs.
+        by rewrite Hx1 inE /getBit /= in Hbs.
+      rewrite Hb.
+      have ->: bs' = spec.zero n.+1.
+        apply allBitsEq=> i Hi.        
+        rewrite /spec.repr in Hbs'.
+        move: Hbs'=> /setP Hbs'.
+        have ->: getBit bs' i = getBit [tuple of true :: bs'] i.+1 by trivial.
+        rewrite -fromNat0 getBit_zero.
+        move: (Hbs' (inord i.+1))=> Hbs'1.
+        rewrite !inE inordK in Hbs'1.
+        rewrite -Hbs'1.
+        apply/eqP=> H.
+        have: nat_of_ord (@inord n.+1 i.+1) = nat_of_ord (@ord0 n.+1) by rewrite H.
+        rewrite inordK=> //.
+        by rewrite -[i.+1]addn1 -[n.+2]addn1 ltn_add2r.
+      have ->: addB [tuple of true :: spec.zero n.+1] [tuple of true :: bs] = [tuple of false :: (addB [tuple of true :: spec.zero n] bs)].
+        apply allBitsEq.
+        elim=> [Hi|i HIi Hi].
+        rewrite {2}/getBit /adcB /=.
+        rewrite !tuple.beheadCons !tuple.theadCons /=.
+        by admit.
+        have ->: getBit [tuple of false :: addB [tuple of true :: spec.zero n] bs] i.+1 = getBit (addB [tuple of true :: spec.zero n] bs) i.
           by admit.
+        rewrite {1}/adcB /adcBmain /=.
+        rewrite !tuple.beheadCons !tuple.theadCons /=.
+        by admit.
+      rewrite /spec.repr.
+      apply/setP=> y; rewrite !inE.
+      have Hy: y = ord0 \/ y = inord y.-1.+1 by admit.
+      case Hy.
+      + (* y = ord0 *)
+        move ->.
+        rewrite /getBit ltn0 andbF !orbF /=.
+        rewrite /set_next_g.
+        case: arg_minP=> //.
+        + move=> i /andP[_ Hi] _.
+          apply negbTE.
+          by rewrite neq_ltn Hi.
+      + (* y = inord z.+1 *)
+        move ->.
+        have ->: getBit [tuple of false :: addB [tuple of true :: spec.zero n] bs] (@inord n.+1 y.-1.+1)
+               = getBit (addB [tuple of true :: spec.zero n] bs) (@inord n.+1 y.-1).
+          by admit.
+        set E' := [set x : 'I_n.+1 | inord(x.+1) \in E].
+        set f' := @inord n f.
+        set x' := @ord0 n.
+        have HI': spec.repr (addB [tuple of true :: spec.zero n] bs) (set_next_g E' f' x' |: [set y in E' | y < x'] :|: [set y in E' | set_next_g E' f' x' < y]).
+          apply HI.
+          by apply (spec.repr_rec (b := b)).
+          by admit. (* Trivial *)
+          admit.
+          admit.
+        move: (HI bs [tuple of true :: spec.zero n] [set x : 'I_n.+1 | inord(x.+1) \in E] ord0 (inord f))=> HI1.
+        rewrite {3}/spec.repr in HI1.
         admit. (* Apply HI *)
-      + (* b = false *)
-        have ->: addB [tuple of true :: spec.zero n.+1] [tuple of false :: bs] = [tuple of true :: bs].
-          by admit.
-        admit.
     + (* b' = false *)
       have ->: addB [tuple of false :: bs'] [tuple of b :: bs] = [tuple of b :: (addB bs' bs)].
         by admit.
