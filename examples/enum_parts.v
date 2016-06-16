@@ -431,12 +431,33 @@ Proof.
   rewrite div.mod0n addn0.
   rewrite addnA -mulnDl.
   rewrite div.muln_modl.
-  rewrite -expnD subnK.
+  have Hx: x <= n by rewrite Hcast -{1}[x]addn0 leq_add2l.
+  rewrite -expnD subnK=> //.
   move: (n1 + n2)=> n4.
-  admit. (* Should be easy with H! *)
-  by rewrite Hcast -{1}[x]addn0 leq_add2l.
+  rewrite (div.divn_eq n4 (2 ^ (n - x))).
+  rewrite mulnDl.
+  rewrite -mulnA.
+  rewrite -expnD subnK=> //.
+  rewrite -addnA.
+  rewrite !div.modnMDl.
+  rewrite ![div.modn _ (2 ^ n)]div.modn_small //.
+  have ->: 2 ^ n = 2 ^ (n - x) * 2 ^ x by rewrite -expnD subnK.
+  rewrite ltn_mul2r.
+  apply/andP; split.
+  rewrite expn_gt0=> //.
+  rewrite div.ltn_mod expn_gt0 //.
+  apply (leq_trans (n := div.modn n4 (2 ^ (n - x)) * 2 ^ x + 2 ^ x)).
+  rewrite ltn_add2l //.
+  have {2}->: 2 ^ x = 1 * 2 ^ x by rewrite mul1n.
+  rewrite -mulnDl.
+  have ->: 2 ^ n = 2 ^ (n - x) * 2 ^ x by rewrite -expnD subnK.
+  rewrite leq_mul2r.
+  apply/orP; right.
+  rewrite addn1.
+  rewrite div.ltn_mod.
   by rewrite expn_gt0.
-Admitted.
+  by rewrite expn_gt0.
+Qed.
 
 Lemma addB_tcast m n b1 b2 (Hcast: m = n): addB (tcast Hcast b2) b1 = tcast Hcast (addB b2 (tcast (esym Hcast) b1)).
 Proof.
