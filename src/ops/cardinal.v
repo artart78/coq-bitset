@@ -1,16 +1,44 @@
 Require Import mathcomp.ssreflect.ssreflect.
 From CoqEAL Require Import refinements hrel.
 From Bits
-     Require Import bits ssrextra.tuple. 
+     Require Import bits ops ssrextra.tuple. 
 Require Import ops spec.
+
+Import Refinements.Op.
+Import Logical.Op.
 
 (** * Cardinal through binary population count  *)
 
 (* TODO: compute the table only once *)
 
-Definition pop_table {n}(k: nat) := 
-  mkseq (fun i => fromNat (n := n) (count_mem true (fromNat (n := k) i))) (2^k).
+Section Operations.
 
+Variables (Bits : Type).
+
+Context `{eq_of Bits}.
+Context `{sub_of Bits}.
+Context `{zero_of Bits}.
+Context `{one_of Bits}.
+Context `{mul_of Bits}.
+Context `{implem_of nat Bits}.
+Context `{spec_of Bits nat}.
+
+Context `{not_of Bits}.
+Context `{or_of Bits}.
+Context `{and_of Bits}.
+Context `{xor_of Bits}.
+Context `{shl_of Bits}.
+Context `{shr_of Bits}.
+
+Definition pop_table (k: Bits): seq Bits
+  := mkseq (fun i => implem (count_mem true (fromNat (n := spec k) i))) (2^(spec k)).
+
+Definition pop_elem (k: Bits)(bs: Bits)(i: Bits): Bits
+  := (let x := (bs >> (i * k)) && ((shl_op 1 k) - 1) in
+     nth 0 (pop_table k) (spec x))%C.
+
+
+(*
 Definition pop_elem {n}(k: nat)(bs: BITS n)(i: nat): BITS n
   := let x := andB (shrBn bs (i * k)) (decB (shlBn #1 k)) in
      nth (zero n) (pop_table k) (toNat x).
@@ -241,3 +269,4 @@ Proof.
   rewrite -[count_mem true bs]/(countT bs).
   by rewrite [countT bs]refines_eq.
 Qed.
+*)

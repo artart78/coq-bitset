@@ -3,10 +3,15 @@ Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset div.
 From CoqEAL Require Import refinements hrel.
 From Bits
-     Require Import bits extraction.axioms32.
-Require Import spec.
+     Require Import bits ops extraction.axioms32.
+Require Import ops spec.
 
-Require keep_min min cardinal shift.
+(*Require keep_min min cardinal shift.*)
+
+Import Refinements.Op.
+Import Logical.Op.
+
+Local Open Scope rel_scope.
 
 (** * A formalisation of bitsets using OCaml's integers *)
 
@@ -20,83 +25,89 @@ Require keep_min min cardinal shift.
 
  *)
 
-Check refines_trans.
-Locate "\o".
-Check comp_hrel.
+Definition Rmachine: Int32 -> {set 'I_wordsize} -> Type 
+  := Rnative \o (@Rfin wordsize).
 
-(* XXX: FIX *)
+Definition Rord : Int32 -> 'I_wordsize -> Type
+  := Rnative \o Rord.
 
+
+Global Instance eq_Rmachine: 
+  refines (Rmachine ==> Rmachine ==> param.bool_R) eq eq_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance zero_Rmachine: 
+  refines Rmachine 0%C empty_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance singleton_repr:
+  refines (Rord ==> Rmachine) singleton singleton_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance compl_Rmachine: 
+  refines (Rmachine ==> Rmachine) ~%C compl_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance empty_Rmachine:
+  refines Rmachine 0%C empty_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance full_Rmachine:
+  refines Rmachine (0 - 1)%C full_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance get_Rmachine:
+  refines (Rord ==> Rmachine ==> param.bool_R) get get_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance inter_Rmachine:
+  refines (Rmachine ==> Rmachine ==> Rmachine) inter inter_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance union_Rmachine:
+  refines (Rmachine ==> Rmachine ==> Rmachine) union union_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance insert_Rmachine:
+  refines (Rord ==> Rmachine ==> Rmachine) insert set_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance remove_Rmachine:
+  refines (Rmachine ==> Rord ==> Rmachine) remove remove_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance symdiff_Rmachine:
+  refines (Rmachine ==> Rmachine ==> Rmachine) symdiff symdiff_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Global Instance subset_Rmachine:
+  refines (Rmachine ==> Rmachine ==> param.bool_R) subset subset_op.
+Proof. eapply refines_trans; tc. Qed.
+
+Lemma min_Rmachine:
+  forall i E x, Rmachine i E -> x \in E ->
+    Rmachine (spec.min i) [set [arg min_(k < x in E) k]].
+Admitted.
 (*
-Definition machine_repr (n: Int32)(E: {set 'I_wordsize}): Prop :=
-  exists bv, native_repr n bv /\ Rfin bv E.
-
-(** We go from Coq's [nat] to [Int] by (brutally) collapsing [nat]
-    to [int]: *)
-
-Extract Inductive nat => int [ "0" "succ" ]
-                             "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
-
-Axiom toInt: nat -> Int32.
-
-Extract Inlined Constant toInt => "".
-
-Axiom toInt_def : forall n, toInt n = bitsToInt32 (# n).
-
-
-Axiom fromInt: Int32 -> nat.
-
-Extract Inlined Constant fromInt => "".
-
-Axiom fromInt_def : forall n, fromInt n = toNat (bitsFromInt32 n).
-
-(** ** Equality *)
-
-Lemma eq_repr: forall i i' E E', machine_repr i E -> machine_repr i' E' -> (eq i i') = (E == E').
 Proof.
-  move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
-  rewrite (axioms32.eq_repr _ _ bv bv')=> //.
-  by rewrite [_ == _]refines_eq.
-Qed.
-
-(** ** Zero *)
-
-Lemma zero_repr:
-  machine_repr zero set0.
-Proof.
-  exists (spec.zero wordsize).
+  move=> i E x H Hx.
+  move: H=> [bv [Hbv1 Hbv2]].
+  exists (keep_min.keep_min bv).
   split.
-  rewrite -fromNat0.
-  apply zero_repr.
-  exact: empty_repr.
+  apply land_repr=> //.
+  apply neg_repr=> //.
+  by apply keep_min.keep_min_repr.
 Qed.
+*)
 
-(** ** Singleton *)
-
-Definition singleton (x: 'I_wordsize) :=
-  lsl one (toInt x).
-
-Lemma singleton_repr:
-  forall (x: 'I_wordsize),
-    machine_repr (singleton x) [set x].
-Proof.
-  move=> x.
-  exists (shlBn #1 x).
-  split.
-  * apply lsl_repr=> //.
-    apply (leq_trans (n := x.+1))=> //.
-    apply one_repr.
-    apply/existsP; exists # (x); apply/andP; split=> //.
-    apply/eqInt32P.
-    rewrite toInt_def=> //.
-  * rewrite getBit_shlBn=> //.
-    apply singleton_repr.
-Qed.
 
 (** ** Left & right shift *)
 
 Lemma sl_repr:
-  forall i E, machine_repr i E ->
-    machine_repr (lsl i one) [set i : 'I_wordsize | 0 < i & @inord wordsize.-1 i.-1 \in E].
+  forall i E, Rmachine i E ->
+    Rmachine (lsl i one) [set i : 'I_wordsize | 0 < i & @inord wordsize.-1 i.-1 \in E].
+Admitted.
+(*
 Proof.
   move=> i E [bv [r_native r_set]].
   exists (shlBn bv 1); split.
@@ -114,10 +125,13 @@ Proof.
       by rewrite //.
     by apply shift.sl_repr.
 Qed.
+*)
 
 Lemma sr_repr:
-  forall i E, machine_repr i E ->
-    machine_repr (lsr i one) [set i : 'I_wordsize | i < wordsize.-1 & @inord wordsize.-1 i.+1 \in E].
+  forall i E, Rmachine i E ->
+    Rmachine (lsr i one) [set i : 'I_wordsize | i < wordsize.-1 & @inord wordsize.-1 i.+1 \in E].
+Admitted.
+(*
 Proof.
   move=> i E [bv [r_native r_set]].
   exists (shrBn bv 1); split.
@@ -135,202 +149,44 @@ Proof.
       by rewrite //.
     by apply shift.sr_repr.
 Qed.
-
-(** ** Complement *)
-
-Definition compl (bs: Int32): Int32 := lnot bs.
-Lemma compl_repr: forall i E, 
-    machine_repr i E -> machine_repr (compl i) (~: E).
-Proof.
-  move=> i E [bv [r_native r_set]].
-  exists (invB bv); split.
-  * rewrite /compl; apply lnot_repr => //.
-  * apply compl.compl_repr => //.
-Qed.
-
-(** ** Set creation *)
-
-Definition create (b: bool): Int32
-  := if b then dec (toInt 0) else (toInt 0).
-
-Lemma create_repr:
-  forall (b: bool),
-    machine_repr (create b) (if b then [ set : 'I_wordsize ] else set0).
-Proof.
-  move=> b.
-  exists (create.create b). split; last first.
-  * apply create.create_repr => //.
-  * rewrite /create/create.create; case: b.
-    + (* Case: b ~ true *)
-      apply dec_repr.
-      by rewrite toInt_def;
-         apply/eqInt32P.
-    + (* Case: b ~ false *)
-      by rewrite toInt_def; apply/eqInt32P.
-Qed.
-
-(** ** Querying *)
-
-Definition get (bs: Int32) (k: 'I_wordsize): bool
-  := eq (land (lsr bs (toInt k)) one) one.
-
-Lemma get_repr:
-  forall i E (k: 'I_wordsize), machine_repr i E ->
-    get i k = (k \in E).
-Proof.
-  move=> i E k H.
-  rewrite /get.
-  move: H=> [bv [Hbv1 Hbv2]].
-  rewrite (axioms32.eq_repr _ _ (andB (shrBn bv k) #1) #1);
-    last by apply one_repr.
-  apply get.get_repr=> //.
-  apply land_repr;
-     last by apply one_repr.
-  apply lsr_repr=> //.
-  apply (leq_trans (n := k.+1))=> //.
-  apply/existsP; exists # (k); apply/andP; split=> //.
-  rewrite toInt_def.
-  by apply/eqInt32P.
-Qed.
-
-(** ** Intersection *)
-
-Definition inter (bs: Int32) (bs': Int32): Int32
-  := land bs bs'.
-
-Lemma inter_repr:
-  forall i i' E E', machine_repr i E -> machine_repr i' E' ->
-    machine_repr (inter i i') (E :&: E').
-Proof.
-  move=> i i' E E' H H'.
-  rewrite /machine_repr.
-  move: H=> [bv [Hbv1 Hbv2]].
-  move: H'=> [bv' [Hbv'1 Hbv'2]].
-  exists (inter.inter bv bv').
-  split.
-  apply land_repr=> //.
-  exact: inter.inter_repr.
-Qed.
-
-(** ** Minimal element *)
-
-Definition keep_min (bs: Int32): Int32
-  := land bs (neg bs).
-
-Lemma keep_min_repr:
-  forall i E x, machine_repr i E -> x \in E ->
-    machine_repr (keep_min i) [set [arg min_(k < x in E) k]].
-Proof.
-  move=> i E x H Hx.
-  move: H=> [bv [Hbv1 Hbv2]].
-  exists (keep_min.keep_min bv).
-  split.
-  apply land_repr=> //.
-  apply neg_repr=> //.
-  by apply keep_min.keep_min_repr.
-Qed.
-
-(** ** Insertion *)
-
-Definition insert (bs: Int32) k: Int32
-  := lor bs (lsl (toInt 1) k).
-
-Lemma insert_repr:
-  forall i (k: 'I_wordsize) E, machine_repr i E ->
-    machine_repr (insert i (toInt k)) (k |: E).
-Proof.
-  move=> i k E [bv [Hbv1 Hbv2]].
-  exists (insert.insert bv k).
-  split.
-  rewrite /insert /insert.insert.
-  apply lor_repr=> //.
-  apply lsl_repr=> //.
-  apply (leq_trans (n := k.+1))=> //.
-  + by rewrite toInt_def; apply/eqInt32P.
-  + rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
-    by apply/eqInt32P.
-  by apply insert.insert_repr.
-Qed.
-
-(** ** Removal *)
-Definition remove (bs: Int32) k: Int32
-  := land bs (lnot (lsl (toInt 1) k)).
-
-Lemma remove_repr:
-  forall i (k: 'I_wordsize) E, machine_repr i E ->
-    machine_repr (remove i (toInt k)) (E :\ k).
-Proof.
-  move=> i k E [bv [Hbv1 Hbv2]].
-  exists (remove.remove bv k).
-  split.
-  rewrite /remove /remove.remove.
-  apply land_repr=> //.
-  apply lnot_repr=> //.
-  apply lsl_repr=> //.
-  apply (leq_trans (n := k.+1))=> //.
-  by rewrite toInt_def; apply/eqInt32P.
-  rewrite toInt_def; apply/existsP; exists # (k); apply/andP; split=> //.
-    by apply/eqInt32P.
-  by apply remove.remove_repr.
-Qed.
-
-(** ** Symmetrical difference *)
-
-Definition symdiff (bs: Int32) (bs': Int32): Int32
-  := lxor bs bs'.
-
-Lemma symdiff_repr:
-  forall i i' E E', machine_repr i E -> machine_repr i' E' ->
-    machine_repr (symdiff i i') ((E :\: E') :|: (E' :\: E)).
-Proof.
-  move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
-  exists (symdiff.symdiff bv bv').
-  split.
-  apply lxor_repr=> //.
-  by apply symdiff.symdiff_repr.
-Qed.
-
-(** ** Union *)
-
-Definition union (bs bs': Int32): Int32
-  := lor bs bs'.
-
-Lemma union_repr:
-  forall i i' E E', machine_repr i E -> machine_repr i' E' ->
-    machine_repr (union i i') (E :|: E').
-Proof.
-  move=> i i' E E' [bv [Hbv1 Hbv2]] [bv' [Hbv'1 Hbv'2]].
-  exists (union.union bv bv').
-  split.
-  apply lor_repr=> //.
-  by apply union.union_repr.
-Qed.
-
-(** ** Subset *)
-
-Lemma subset_repr: forall (bs bs': Int32) E E',
-  machine_repr bs E -> machine_repr bs' E' ->
-    (eq (land bs bs') bs) =
-      (E \subset E').
-Proof.
-  move=> bs bs' E E' HE HE'.
-  rewrite (eq_repr _ _ (E :&: E') E)=> //.
-  apply/eqP.
-  case: setIidPl=> //=.
-  apply inter_repr=> //.
-Qed.
+*)
 
 (** ** Cardinality *)
 
+
+(* TODO: get rid of this section *)
+(** We go from Coq's [nat] to [Int] by (brutally) collapsing [nat]
+    to [int]: *)
+Extract Inductive nat => int [ "0" "succ" ]
+                             "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
+
+Axiom toInt: nat -> Int32.
+
+Extract Inlined Constant toInt => "".
+
+Axiom toInt_def : forall n, toInt n = bitsToInt32 (# n).
+
+
+Axiom fromInt: Int32 -> nat.
+
+Extract Inlined Constant fromInt => "".
+
+Axiom fromInt_def : forall n, fromInt n = toNat (bitsFromInt32 n).
+
+
 Lemma fromInt_inj: forall x y,
   fromInt x = fromInt y -> x = y.
+Admitted.
+(*
 Proof.
   move=> x y H.
   rewrite !fromInt_def in H.
   apply toNat_inj in H.
   by apply bitsFromInt32_inj in H.
 Qed.
+*)
 
+(*
 Module Int_as_OT <: OrderedType.
 
   Definition t := Int32.
@@ -393,7 +249,7 @@ Definition pop_table := pop_tableAux (2 ^ tableSize) (M.empty Int32).
 
 Definition pop_elem (bs: Int32)(i: nat): Int32
   := let x := land (lsr bs (toInt (i * tableSize))) 
-                            (dec (lsl one (toInt tableSize))) in
+                            (sub (lsl one (toInt tableSize)) 1%C) in
      match (M.find x pop_table) with
      | None => zero
      | Some x => x
@@ -401,23 +257,25 @@ Definition pop_elem (bs: Int32)(i: nat): Int32
 
 Lemma pop_elem_repr: 
   forall n bs i,
-    i * tableSize <= wordsize ->
-    native_repr n bs ->
-    native_repr (pop_elem n i) (cardinal.pop_elem tableSize bs i).
+    (i * tableSize <= wordsize)%nat ->
+    Rnative n bs ->
+    Rnative (pop_elem n i) (cardinal.pop_elem tableSize bs i).
+Admitted.
+(*
 Proof.
   move=> n bs i ? ?.
   rewrite /pop_elem/cardinal.pop_elem.
   rewrite /cardinal.pop_table.
   rewrite nth_mkseq.
-  set i' := land (lsr n (toInt (i * tableSize))) (dec (lsl one (toInt tableSize))).
+  set i' := land (lsr n (toInt (i * tableSize))) ((lsl one (toInt tableSize)) - 1)%C.
   rewrite (M.find_1 (e := toInt (count_mem true (fromNat (n := tableSize) (fromInt i'))))).
   have ->: fromInt i' = toNat (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
     rewrite fromInt_def.
     have ->: bitsFromInt32 i' = andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize)).
       apply/eqP.
       rewrite -eq_adj.
-      have H: native_repr i' (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
-        apply land_repr.
+      have H: Rnative i' (andB (shrBn bs (i * tableSize)) (decB (shlBn # (1) tableSize))).
+        apply land_Rnative.
         apply lsr_repr=> //.
         rewrite /natural_repr.
         apply/existsP.
@@ -445,6 +303,7 @@ Proof.
   admit. (* Trivial, but painful *)
   by apply toNat_andB.
 Admitted.
+*)
 
 Fixpoint popAux (bs: Int32)(i: nat): Int32 :=
   match i with
@@ -454,40 +313,48 @@ Fixpoint popAux (bs: Int32)(i: nat): Int32 :=
 
 Definition popAux_repr:
   forall n bs i,
-    i * tableSize <= wordsize ->
-    native_repr n bs ->
-    native_repr (popAux n i) (cardinal.popAux tableSize bs i).
+    (i * tableSize <= wordsize)%nat ->
+    Rnative n bs ->
+    Rnative (popAux n i) (cardinal.popAux tableSize bs i).
+Admitted.
+(*
 Proof.
   move=> n bs i Hi ?.
   elim: i Hi=> [Hi //=|i IH Hi].
   rewrite -fromNat0.
   apply axioms32.zero_repr.
-  have Hi': i * tableSize <= wordsize.
+  have Hi': (i * tableSize <= wordsize)%nat.
     apply (leq_trans (n := i.+1 * tableSize))=> //.
     rewrite leq_pmul2r=> //.
   apply add_repr=> //.
   apply (pop_elem_repr _ bs)=> //.
   by apply IH.
 Qed.
+*)
+
 
 Definition cardinal (bs: Int32): Int32
   := popAux bs (wordsize %/ tableSize).
 
 Lemma cardinal_repr:
-  forall (bs: Int32) E, machine_repr bs E ->
+  forall (bs: Int32) E, Rmachine bs E ->
     natural_repr (cardinal bs) #|E|.
+Admitted.
+(*
 Proof.
   move=> bs E [bv [int_repr fin_repr]].
   rewrite /natural_repr.
   apply/existsP.
   exists # (#|E|).
   apply/andP; split=> //.
-  rewrite - (@cardinal.cardinal_repr _ tableSize bv) => //.
+  rewrite -cardinal.cardinal_Rfin.
+  rewrite - (@cardinal.cardinal_Rfin _ tableSize bv) => //.
   (* Refold [cardinal], for the proof's sake (and my sanity) *)
   rewrite -[cardinal _]/(popAux bs (wordsize %/ tableSize)).
   rewrite /cardinal.cardinal -[div.divn _ _]/(wordsize %/ tableSize).
   by apply (popAux_repr _ bv).
 Qed.
+*)
 
 (* TODO: what do we use this one for? *)
 
@@ -495,8 +362,10 @@ Definition ntz (bs: Int32): Int32
   := add (toInt wordsize) (neg (cardinal (lor bs (neg bs)))).
 
 Lemma ntz_repr:
-  forall (bs: Int32) x E, machine_repr bs E -> x \in E ->
+  forall (bs: Int32) x E, Rmachine bs E -> x \in E ->
     natural_repr (ntz bs) [arg min_(k < x in E) k].
+Admitted.
+(*
 Proof.
   move=> bs x E [bv [Hbv1 Hbv2]] Hx.
   rewrite /natural_repr.
@@ -517,7 +386,7 @@ Proof.
   apply neg_repr.
   move: (cardinal.cardinal_repr _ tableSize (orB bv (negB bv)) E')=> H'.
   rewrite H'.
-  have Hok: machine_repr (lor bs (neg bs)) E'.
+  have Hok: Rmachine (lor bs (neg bs)) E'.
     exists (orB bv (negB bv)).
     split.
     apply lor_repr.
@@ -532,6 +401,7 @@ Proof.
   trivial.
   trivial.
 Qed.
+*)
 
 (** printing \emptyset $\emptyset$ #Ø# *)
 (** printing \cap $\cap$ #∩# *)

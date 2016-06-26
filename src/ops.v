@@ -11,6 +11,7 @@ Class remove_of e fset := remove_op : fset -> e -> fset.
 Class symdiff_of fset := symdiff_op : fset -> fset -> fset.
 Class union_of fset := union_op : fset -> fset -> fset.
 Class singleton_of e fset := singleton_op : e -> fset.
+Class subset_of fset := subset_op : fset -> fset -> bool.
 
 (* TODO: add notations *)
 
