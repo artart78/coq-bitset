@@ -919,6 +919,63 @@ have ->: set0 = [set i : 'I_wordsize | i < wordsize - (2 + set_min S e) & @inord
 by apply srn_repr.
 Qed.
 
+Definition setToBs (E: {set 'I_wordsize}) : BITS wordsize := [tuple (i \in E) | i < wordsize].
+
+Definition lt E1 E2 := toNat (setToBs E1) < toNat (setToBs E2).
+
+Lemma reverse_orB (A: {set 'I_wordsize}) (B: {set 'I_wordsize}): setToBs (A :|: B) = orB (setToBs A) (setToBs B).
+Admitted.
+
+Definition disj (bs: BITS wordsize) (bs': BITS wordsize) := forall i, getBit bs i -> ~ (getBit bs' i) /\ getBit bs' i -> ~ (getBit bs i).
+
+Lemma orB_disj (bs: BITS wordsize) bs' : disj bs bs' -> toNat (orB bs bs') = (toNat bs) + (toNat bs').
+Admitted.
+
+Lemma enumNext_isNext (i: Int32) (S: {set 'I_wordsize}) e (H: e \in S) f (Hf: set_isNext S f):
+  set_min S e + 2 <= set_next S f ->
+  lt S (enumNext_set S e f) /\ (forall y, y <> enumNext_set S e f -> #|y| = #|S| -> lt S y -> lt (enumNext_set S e f) y).
+Proof.
+  move=> Hlimit.
+  split.
+  (****)
+  rewrite /lt.
+  rewrite /enumNext_set.
+  rewrite reverse_orB.
+  rewrite reverse_orB.
+  rewrite Hlimit.
+  have {1}->: S = [set x in S | set_next S f < x] :|: [set x in S | set_next S f > x].
+    apply/setP=> x; rewrite !inE.
+    rewrite -andb_orr.
+    case Hx: (x \in S)=> //=.
+    rewrite -neq_ltn.
+    apply/eqP.
+    rewrite eq_sym.
+    rewrite eqb_id.
+    apply/eqP=> Habs.
+    have Habs': x = set_next S f.
+      by apply ord_inj.
+    rewrite Habs' in Hx.
+    move: Hx.
+    rewrite /set_next.
+    case: arg_minP=> //.
+    move=> y /andP [Habs1 _] Hmin Habs2.
+    by rewrite Habs2 in Habs1.
+  rewrite reverse_orB.
+  rewrite !orB_disj.
+  rewrite [toNat (setToBs [set set_next S f]) + toNat (setToBs [set x in S | set_next S f < x])]addnC.
+  rewrite -addnA.
+  rewrite ltn_add2l.
+  admit.
+  admit.
+  admit.
+  admit.
+  (****)
+  move=> y Hy1 Hy2 Hy3.
+  (* If y contains bigger than [set s_next f] :|: [set x in S | x > s_next f], then ok *)
+  (* Otherwise, it must be bigger than enumNext_set because it is bigger than the set {0, 1, ...} *)
+  admit.  
+Admitted.
+
 Cd "examples/enum_parts".
 
 Require Import ExtrOcamlBasic.
