@@ -25,6 +25,57 @@ Local Open Scope rel_scope.
 
  *)
 
+
+From Bits 
+     Require Import axioms32.
+
+Global Instance get_Rnative: 
+  refines (Rnative ==> Rnative ==> param.bool_R)%rel get get.
+Proof. param (get_R (Bits_R := Rnative)). Qed.
+
+Global Instance singleton_Rnative: 
+  refines (Rnative ==> Rnative)%rel singleton singleton.
+Proof. param singleton_R. Qed.
+
+Global Instance compl_Rnative: 
+  refines (Rnative ==> Rnative)%rel compl compl.
+Proof. param compl_R. Qed.
+
+Global Instance create_Rnative: 
+  refines (param.bool_R ==> Rnative)%rel create create.
+Proof. param create_R. Qed.
+
+Global Instance inter_Rnative: 
+  refines (Rnative ==> Rnative ==> Rnative)%rel inter inter.
+Proof. param inter_R. Qed.
+
+Global Instance union_Rnative: 
+  refines (Rnative ==> Rnative ==> Rnative)%rel union union.
+Proof. param union_R. Qed.
+
+Global Instance min_Rnative: 
+  refines (Rnative ==> Rnative)%rel min min.
+Proof. param min_R. Qed.
+
+Global Instance insert_Rnative: 
+  refines (Rnative ==> Rnative ==> Rnative)%rel insert insert.
+Proof. param insert_R. Qed.
+
+Global Instance remove_Rnative: 
+  refines (Rnative ==> Rnative ==> Rnative)%rel remove remove.
+Proof. param remove_R. Qed.
+
+Global Instance symdiff_Rnative: 
+  refines (Rnative ==> Rnative ==> Rnative)%rel symdiff symdiff.
+Proof. param symdiff_R. Qed.
+
+Global Instance subset_Rnative: 
+  refines (Rnative ==> Rnative ==> param.bool_R)%rel subset subset.
+Proof. param (subset_R (Bits_R := Rnative)). Qed.
+
+
+
+
 Definition Rmachine: Int32 -> {set 'I_wordsize} -> Type 
   := Rnative \o (@Rfin wordsize).
 

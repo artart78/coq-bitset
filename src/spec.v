@@ -2,7 +2,7 @@ Require Import mathcomp.ssreflect.ssreflect.
 From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset.
 From CoqEAL Require Import hrel param refinements.
 From Bits
-     Require Import bits ops axioms32 spec.notations.
+     Require Import bits ops spec.notations.
 Require Import ops props.bineqs props.getbit.
 
 Set Implicit Arguments.
@@ -14,6 +14,16 @@ Import Logical.Op.
 
 Local Open Scope rel_scope.
 
+(** * Generic set-theoretic operations *)
+
+(**
+
+  The following operations are defined parametrically wrt. the
+  underlying implementation of bitvectors. This means that we can
+  instantiate them to [BITS n] and later to, say, Int32. This also
+  means that we can use domain-specific notations for defining them.
+
+ *)
 
 Section Operations.
 
@@ -90,62 +100,273 @@ Parametricity remove.
 Parametricity symdiff.
 Parametricity subset.
 
-Global Instance get_Rnative: 
-  refines (Rnative ==> Rnative ==> param.bool_R)%rel get get.
-Proof. param (get_R (Bits_R := Rnative)). Qed.
-
-Global Instance singleton_Rnative: 
-  refines (Rnative ==> Rnative)%rel singleton singleton.
-Proof. param singleton_R. Qed.
-
-Global Instance compl_Rnative: 
-  refines (Rnative ==> Rnative)%rel compl compl.
-Proof. param compl_R. Qed.
-
-Global Instance create_Rnative: 
-  refines (param.bool_R ==> Rnative)%rel create create.
-Proof. param create_R. Qed.
-
-Global Instance inter_Rnative: 
-  refines (Rnative ==> Rnative ==> Rnative)%rel inter inter.
-Proof. param inter_R. Qed.
-
-Global Instance union_Rnative: 
-  refines (Rnative ==> Rnative ==> Rnative)%rel union union.
-Proof. param union_R. Qed.
-
-Global Instance min_Rnative: 
-  refines (Rnative ==> Rnative)%rel min min.
-Proof. param min_R. Qed.
-
-Global Instance insert_Rnative: 
-  refines (Rnative ==> Rnative ==> Rnative)%rel insert insert.
-Proof. param insert_R. Qed.
-
-Global Instance remove_Rnative: 
-  refines (Rnative ==> Rnative ==> Rnative)%rel remove remove.
-Proof. param remove_R. Qed.
-
-Global Instance symdiff_Rnative: 
-  refines (Rnative ==> Rnative ==> Rnative)%rel symdiff symdiff.
-Proof. param symdiff_R. Qed.
-
-Global Instance subset_Rnative: 
-  refines (Rnative ==> Rnative ==> bool_R)%rel subset subset.
-Proof. param (subset_R (Bits_R := Rnative)). Qed.
-
 (** * Refinement relation *)
+
+(**
+
+  This is the key refinement relation, relating mathematical finite
+  sets and bit vectors.
+
+ *)
 
 (* TODO: switch to extensional version *)
 
-Definition Rfin {n} (bs: BITS n) E :=
+Definition Rfin {n} (bs: BITS n)(E: {set 'I_n}) :=
   E = [ set x : 'I_n | getBit bs x ].
+
+(* TODO: use [fun_hrel] *)
+Check fun_hrel.
+Definition Rord {n m}(k: BITS n)(i: 'I_m): Type := toNat k = i.
+
+Definition Rnat {n}(k: BITS n)(n: nat): Type := toNat k = n.
 
 
 (** * Operations *)
 
+(** ** Equality *)
+
+Global Instance eq_Finset {n} : eq_of {set 'I_n} := fun x y => x == y.
+
+Global Instance eq_repr {n} : 
+  refines (@Rfin n ==> Rfin ==> param.bool_R)%rel eqtype.eq_op eqtype.eq_op.
+Proof.
+  rewrite refinesE=> bs E H bs' E' H'.
+  rewrite /Rfin in H, H'.
+  case Heq: (E == E').
+  + (* E == E' *)
+    have ->: bs == bs'; last by exact: bool_Rxx.
+    apply/eqP.
+    apply allBitsEq=> i ltn_i.
+    move/eqP: Heq=> Heq.
+    move/setP: Heq=> Heq.
+    move: (Heq (Ordinal ltn_i))=> Heqi.
+    rewrite H H' !in_set in Heqi.
+    by apply Heqi.
+  + (* E <> E' *)
+    case Hbs: (bs == bs')=> //.
+    move/eqP: Hbs=> Hbs.
+    have Habs: E == E'.
+      apply/eqP.
+      rewrite -setP /eq_mem=> i.
+      rewrite H H' !in_set.
+      by rewrite Hbs.
+    by rewrite Habs in Heq.
+Qed.
+
+(** ** Membership test *)
+
+Global Instance get_Bitset {n} : get_of (BITS n) (BITS n) := get. 
+Global Instance get_Finset {n} : get_of 'I_n {set 'I_n} := (fun k E => k \in E).
+
+Global Instance get_Rfin {n}: 
+  refines (Rord ==> @Rfin n.+1 ==> param.bool_R) (get (Bits := BITS n.+1)) get_op.
+Proof.
+  Local Arguments one_op /.
+  Local Arguments one_Bits /.
+  Local Arguments eq_op /.
+  Local Arguments eq_Bits /.
+  Local Arguments get_op /.
+  Local Arguments get_Finset /.
+  Local Arguments get_Bitset /.
+
+  rewrite refinesE=> bs1 k Hbs1 bs2 E HE /=.
+  rewrite /get/and_op/and_Bits/shr_op/shr_Bits andB_mask1 getBit_shrBn addn0 Hbs1=> //.
+  rewrite HE in_set /one_op/one_Bits/eq_op/eq_Bits.
+  case: (getBit bs2 k).
+  + (* getBit bs k = true *)    
+    by rewrite eq_refl.
+  + (* getBit bs k = false *)
+    by case H: (#0 == #1)=> //.
+Qed.
+
+
+(** ** Singleton *)
+
+Global Instance singleton_Bitset {n} : singleton_of (BITS n) (BITS n) 
+  := (fun k => singleton k).
+Global Instance singleton_Finset {n} : singleton_of 'I_n {set 'I_n}
+  := (fun k => [set k]).
+
+Global Instance singleton_repr {n}:
+    refines (Rord ==> @Rfin n) singleton_op singleton_op.
+Proof.
+  rewrite refinesE=> bs k Hbsk.
+  rewrite /Rfin -setP 
+          /singleton_op/singleton_Finset/singleton_Bitset
+          /singleton/one_op/one_Bits/shl_op/shl_Bits Hbsk /eq_mem=> x.
+  rewrite !in_set.
+  case x_eq_k: (x == k).
+  + (* x == k *)
+    move/eqP: x_eq_k ->.
+    by rewrite getBit_shlBn_true.
+  + (* x <> k *)
+    rewrite getBit_shlBn_false //.
+    apply not_eq_sym=> x_is_k.
+    move/eqP: x_eq_k=>x_eq_k.
+    apply x_eq_k.
+    by apply ord_inj.
+Qed.
+
+(** ** Set complement  *)
+
+Global Instance compl_Bitset {n} : compl_of (BITS n) := invB.
+Global Instance compl_Finset {n} : compl_of {set 'I_n} := (@setC _).
+
+Global Instance compl_Rfin {n}: refines (@Rfin n ==> Rfin) compl_op compl_op.
+Proof.
+  rewrite refinesE /Rfin=> bs E HE.
+  rewrite -setP /eq_mem=> x.
+  by rewrite in_setC HE !in_set getBit_liftUnOp.
+Qed.
+
+(** ** Full and empty set *)
+
+Global Instance full_Bitset {n} : full_of (BITS n) := create (Bits := BITS n) true.
+Global Instance full_Finset {n} : full_of {set 'I_n} := [set : 'I_n ].
+
+Global Instance full_Rfin {n} : refines (@Rfin n) full_op full_op.
+Proof.
+  Local Arguments full_op /.
+  Local Arguments full_Finset /.
+  Local Arguments full_Bitset /.
+
+  rewrite refinesE.
+  rewrite /Rfin /= -setP /eq_mem=> x.
+  rewrite !in_set.
+  rewrite /sub_op/sub_Bits/sub/zero_op/zero_Bits.
+  by rewrite subB1 -fromNat0 -makeOnes getBit_ones=> //.
+Qed.
+
+Global Instance empty_Bitset {n} : empty_of (BITS n) := create (Bits := BITS n) false.
+Global Instance empty_Finset {n} : empty_of {set 'I_n} := set0.
+
+Global Instance emptyset_Rfin {n} : refines (@Rfin n) empty_op empty_op.
+Proof.
+  Local Arguments empty_op /.
+  Local Arguments empty_Finset /.
+  Local Arguments empty_Bitset /.
+  Local Arguments zero_op /.
+  Local Arguments zero_Bits /.
+  Local Arguments create /.
+
+  rewrite refinesE //= /Rfin -setP /eq_mem=> i.
+  by rewrite in_set in_set0 /empty_op/empty_Bitset/create -fromNat0 getBit_zero.
+Qed.
+
+(** ** Element insertion *)
+
+Global Instance set_Finset {n} : set_of 'I_n {set 'I_n} := (fun k E => k |: E).
+Global Instance set_Bitset {n} : set_of (BITS n) (BITS n) := insert.
+
+Global Instance insert_Rfin {n}:
+  refines (Rord ==> @Rfin n ==> Rfin) insert set_op.
+Proof.
+  rewrite refinesE.
+  move=> bs k Hbsk bs' E HE /=.
+  rewrite /Rfin -setP /eq_mem=> x.
+  rewrite /set_op/set_Finset/set_Bitset
+          /insert/one_op/one_Bits/or_op/or_Bits/shl_op/shl_Bits.
+  rewrite in_set Hbsk getBit_set_true=> //.
+  rewrite fun_if.
+  case H: (x == k).
+    + (* Case: x == k *)
+      move/eqP: H ->.
+      by rewrite eq_refl setU11.
+    + (* Case: x <> k *)
+      rewrite ifF=> //.
+      by rewrite in_setU1 H HE in_set.
+Qed.
+
+(** ** Element removal *)
+
+Global Instance remove_Bitset {n} : remove_of (BITS n) (BITS n) := remove.
+Global Instance remove_Finset {n} : remove_of 'I_n {set 'I_n} := (fun A a => A :\ a).
+
+Global Instance remove_Rfin {n}:
+  refines (@Rfin n ==> Rord ==> Rfin) remove_op remove_op.
+Proof.
+  rewrite refinesE.
+  move=> bs E HE bs' k Hbsk.
+  rewrite /Rfin -setP /eq_mem=> x.
+  rewrite /remove_op/remove_Bitset/remove/and_op/and_Bits/shl_op/shl_Bits Hbsk.
+  rewrite in_set getBit_set_false=> //.
+  rewrite fun_if.
+  case H: (x == k).
+    + (* Case: x == k *)
+      move/eqP: H ->.
+      rewrite ifT=> //.
+      by rewrite setD11.
+    + (* Case: x <> k *)
+      rewrite ifF=> //.
+      by rewrite in_setD1 H HE in_set.
+Qed.
+
+(** ** Set intersection *)
+
+Global Instance inter_Bitset {n} : inter_of (BITS n) := inter.
+Global Instance inter_Finset {n} : inter_of {set 'I_n} := @setI _.
+
+Global Instance inter_Rfin {n} :
+  refines (@Rfin n ==> Rfin ==> Rfin) inter_op inter_op.
+Proof.
+  rewrite refinesE.
+  move=> bs E HE bs' E' HE'.
+  rewrite /Rfin -setP /eq_mem=> x.
+  by rewrite in_setI /inter /andB HE HE' !in_set getBit_liftBinOp.
+Qed.
+
+(** ** Set union *)
+
+Global Instance union_Bitset {n} : union_of (BITS n) := union.
+Global Instance union_Finset {n} : union_of {set 'I_n} := @setU _.
+
+Global Instance union_repr {n}:
+  refines (@Rfin n ==> Rfin ==> Rfin)%rel union_op union_op.
+Proof.
+  rewrite refinesE.
+  move=> bs E HE bs' E' HE'.
+  rewrite /Rfin -setP /eq_mem=> x.
+  by rewrite in_setU /union /orB HE HE' !in_set getBit_liftBinOp.
+Qed.
+
+(** ** Set symmetric difference *)
+
+Global Instance symdiff_Bitset {n} : symdiff_of (BITS n) := symdiff.
+Global Instance symdiff_Finset {n} : symdiff_of {set 'I_n} := (fun E E' =>  ((E :\: E') :|: (E' :\: E))).
+
+Global Instance symdiff_Rfin {n}:
+  refines (@Rfin n ==> Rfin ==> Rfin) symdiff_op symdiff_op.
+Proof.
+  rewrite refinesE.
+  move=> bs E HE bs' E' HE'.
+  rewrite /Rfin -setP /eq_mem=> x /=.
+  rewrite in_setU !in_setD.
+  rewrite /symdiff /xorB HE HE' !in_set getBit_liftBinOp=> //.
+  case: (getBit bs x)=> //.
+  + (* getBit bs x = true *)
+    by rewrite andbT orbF Bool.xorb_true_l.
+  + (* getBit bs x = false *)
+    by rewrite andbF orbC orbF andbC andbT Bool.xorb_false_l.
+Qed.
+
+(** ** Subset *)
+
+Global Instance subset_Bitset {n}: subset_of (BITS n) := subset.
+Global Instance subset_Finset {n}: subset_of {set 'I_n} := (fun E E' => E \subset E').
+
+Global Instance subset_Rfin {n}:
+  refines (@Rfin n ==> Rfin ==> bool_R) subset_op subset_op.
+Proof.
+  rewrite refinesE=> bs E HE bs' E' HE'.
+  rewrite /subset_op/subset_Bitset/subset_Finset/subset.
+  have ->: E \subset E' = (E :&: E' == E).
+  apply/setIidPl/eqP=> //=.
+  eapply refinesP; tc.
+Qed.
+
 (** ** TODO: cleanup *)
 
+(*
 Lemma repr_rec:
   forall n (bs: BITS n) E b, Rfin [tuple of b :: bs] E ->
     Rfin bs [ set x : 'I_n | inord(x.+1) \in E ].
@@ -157,7 +378,9 @@ Proof.
   have ltn_i: i < n by apply ltn_ord.
   by auto with arith.
 Qed.
+*)
 
+(*
 Global Instance subset_repr {n : nat} : forall k, (k <= n)%N ->
     refines (@Rfin n) (decB (shlBn #1 k)) [set x : 'I_n | x < k].
 Proof.
@@ -176,7 +399,8 @@ Proof.
   + (* i >= k *)
     by rewrite -fromNat0 getBit_zero.
 Qed.
-
+*)
+(*
 Lemma index_repr :
   forall n (bs: BITS n) x E, Rfin bs E -> x \in E ->
     index true bs = [arg min_(k < x in E) k].
@@ -260,270 +484,4 @@ Proof.
           by rewrite (gtz_E i).
       by move/eqP: Heq ->.
 Qed.
-
-(** ** Equality *)
-
-Global Instance eq_Finset {n} : eq_of {set 'I_n} := fun x y => x == y.
-
-Global Instance eq_repr {n} : 
-  refines (@Rfin n ==> Rfin ==> param.bool_R)%rel eqtype.eq_op eqtype.eq_op.
-Proof.
-  rewrite refinesE.
-  move=> bs E H bs' E' H'.
-  rewrite /Rfin in H, H'.
-  case Heq: (E == E').
-  + (* E == E' *)
-    have ->: bs == bs'; last by exact: bool_Rxx.
-    apply/eqP.
-    apply allBitsEq=> i ltn_i.
-    move/eqP: Heq=> Heq.
-    move/setP: Heq=> Heq.
-    move: (Heq (Ordinal ltn_i))=> Heqi.
-    rewrite H H' !in_set in Heqi.
-    by apply Heqi.
-  + (* E <> E' *)
-    case Hbs: (bs == bs')=> //.
-    move/eqP: Hbs=> Hbs.
-    have Habs: E == E'.
-      apply/eqP.
-      rewrite -setP /eq_mem=> i.
-      rewrite H H' !in_set.
-      by rewrite Hbs.
-    by rewrite Habs in Heq.
-Qed.
-
-(** ** Membership test *)
-
-(*
-Definition get {n}(bs: BITS n)(k: 'I_n): bool
-  := (andB (shrBn bs k) #1) == #1.
 *)
-
-
-(*
-Definition getBITS {n}(bs: BITS n)(k: 'I_n): bool.
-  apply get with (Bits := BITS n); tc.
-  exact: bs.
-  exact: (fromNat k).
-Qed.
-*)
-
-(* TODO: use [fun_hrel] *)
-Check fun_hrel.
-Definition Rord {n m}(k: BITS n)(i: 'I_m): Type := toNat k = i.
-
-(*Global Instance get_Bitset {n} : get_of 'I_n (BITS n) := (fun k bs => get bs k).*)
-Global Instance get_Bitset {n} : get_of (BITS n) (BITS n) := get. 
-Global Instance get_Finset {n} : get_of 'I_n {set 'I_n} := (fun k E => k \in E).
-
-Global Instance get_Rfin {n}: 
-  refines (Rord ==> @Rfin n.+1 ==> param.bool_R) (get (Bits := BITS n.+1)) get_op.
-Proof.
-  Local Arguments one_op /.
-  Local Arguments one_Bits /.
-  Local Arguments eq_op /.
-  Local Arguments eq_Bits /.
-  Local Arguments get_op /.
-  Local Arguments get_Finset /.
-  Local Arguments get_Bitset /.
-
-  rewrite refinesE=> bs1 k Hbs1 bs2 E HE /=.
-  rewrite /get/and_op/and_Bits/shr_op/shr_Bits andB_mask1 getBit_shrBn addn0 Hbs1=> //.
-  rewrite HE in_set /one_op/one_Bits/eq_op/eq_Bits.
-  case: (getBit bs2 k).
-  + (* getBit bs k = true *)    
-    by rewrite eq_refl.
-  + (* getBit bs k = false *)
-    by case H: (#0 == #1)=> //.
-Qed.
-
-
-(** ** Singleton *)
-
-Global Instance singleton_Bitset {n} : singleton_of (BITS n) (BITS n) 
-  := (fun k => singleton k).
-Global Instance singleton_Finset {n} : singleton_of 'I_n {set 'I_n}
-  := (fun k => [set k]).
-
-Global Instance singleton_repr {n}:
-    refines (Rord ==> @Rfin n) singleton_op singleton_op.
-Proof.
-  rewrite refinesE=> bs k Hbsk.
-  rewrite /Rfin -setP 
-          /singleton_op/singleton_Finset/singleton_Bitset
-          /singleton/one_op/one_Bits/shl_op/shl_Bits Hbsk /eq_mem=> x.
-  rewrite !in_set.
-  case x_eq_k: (x == k).
-  + (* x == k *)
-    move/eqP: x_eq_k ->.
-    by rewrite getBit_shlBn_true.
-  + (* x <> k *)
-    rewrite getBit_shlBn_false //.
-    apply not_eq_sym=> x_is_k.
-    move/eqP: x_eq_k=>x_eq_k.
-    apply x_eq_k.
-    by apply ord_inj.
-Qed.
-
-(** ** Set complement  *)
-
-Global Instance compl_Bitset {n} : compl_of (BITS n) := invB.
-Global Instance compl_Finset {n} : compl_of {set 'I_n} := (@setC _).
-
-Global Instance compl_Rfin {n}: refines (@Rfin n ==> Rfin) compl_op compl_op.
-Proof.
-  rewrite refinesE /Rfin=> bs E HE.
-  rewrite -setP /eq_mem=> x.
-  by rewrite in_setC HE !in_set getBit_liftUnOp.
-Qed.
-
-(** ** Full and empty set *)
-
-(*
-Definition create {n} (b: bool): BITS n
-  := if b then decB #0 else spec.zero n.
-*)
-
-Global Instance full_Bitset {n} : full_of (BITS n) := create (Bits := BITS n) true.
-Global Instance full_Finset {n} : full_of {set 'I_n} := [set : 'I_n ].
-
-Global Instance empty_Bitset {n} : empty_of (BITS n) := create (Bits := BITS n) false.
-Global Instance empty_Finset {n} : empty_of {set 'I_n} := set0.
-
-Global Instance full_Rfin {n} : refines (@Rfin n) full_op full_op.
-Proof.
-  Local Arguments full_op /.
-  Local Arguments full_Finset /.
-  Local Arguments full_Bitset /.
-
-  rewrite refinesE.
-  rewrite /Rfin /= -setP /eq_mem=> x.
-  rewrite !in_set.
-  rewrite /sub_op/sub_Bits/sub/zero_op/zero_Bits.
-  by rewrite subB1 -fromNat0 -makeOnes getBit_ones=> //.
-Qed.
-
-Global Instance emptyset_Rfin {n} : refines (@Rfin n) empty_op empty_op.
-Proof.
-  Local Arguments empty_op /.
-  Local Arguments empty_Finset /.
-  Local Arguments empty_Bitset /.
-  Local Arguments zero_op /.
-  Local Arguments zero_Bits /.
-  Local Arguments create /.
-
-  rewrite refinesE //= /Rfin -setP /eq_mem=> i.
-  by rewrite in_set in_set0 /empty_op/empty_Bitset/create -fromNat0 getBit_zero.
-Qed.
-
-(** ** Element insertion *)
-
-Global Instance set_Finset {n} : set_of 'I_n {set 'I_n} := (fun k E => k |: E).
-Global Instance set_Bitset {n} : set_of (BITS n) (BITS n) := insert.
-
-Global Instance insert_Rfin {n}:
-  refines (Rord ==> @Rfin n ==> Rfin) insert set_op.
-Proof.
-  rewrite refinesE.
-  move=> bs k Hbsk bs' E HE /=.
-  rewrite /Rfin -setP /eq_mem=> x.
-  rewrite /set_op/set_Finset/set_Bitset
-          /insert/one_op/one_Bits/or_op/or_Bits/shl_op/shl_Bits.
-  rewrite in_set Hbsk getBit_set_true=> //.
-  rewrite fun_if.
-  case H: (x == k).
-    + (* Case: x == k *)
-      move/eqP: H ->.
-      by rewrite eq_refl setU11.
-    + (* Case: x <> k *)
-      rewrite ifF=> //.
-      by rewrite in_setU1 H HE in_set.
-Qed.
-
-(** ** Element removal *)
-
-
-Global Instance remove_Bitset {n} : remove_of (BITS n) (BITS n) := remove.
-Global Instance remove_Finset {n} : remove_of 'I_n {set 'I_n} := (fun A a => A :\ a).
-
-Global Instance remove_Rfin {n}:
-  refines (@Rfin n ==> Rord ==> Rfin) remove_op remove_op.
-Proof.
-  rewrite refinesE.
-  move=> bs E HE bs' k Hbsk.
-  rewrite /Rfin -setP /eq_mem=> x.
-  rewrite /remove_op/remove_Bitset/remove/and_op/and_Bits/shl_op/shl_Bits Hbsk.
-  rewrite in_set getBit_set_false=> //.
-  rewrite fun_if.
-  case H: (x == k).
-    + (* Case: x == k *)
-      move/eqP: H ->.
-      rewrite ifT=> //.
-      by rewrite setD11.
-    + (* Case: x <> k *)
-      rewrite ifF=> //.
-      by rewrite in_setD1 H HE in_set.
-Qed.
-
-(** ** Set intersection *)
-
-Global Instance inter_Bitset {n} : inter_of (BITS n) := inter.
-Global Instance inter_Finset {n} : inter_of {set 'I_n} := @setI _.
-
-Global Instance inter_Rfin {n} :
-  refines (@Rfin n ==> Rfin ==> Rfin) inter_op inter_op.
-Proof.
-  rewrite refinesE.
-  move=> bs E HE bs' E' HE'.
-  rewrite /Rfin -setP /eq_mem=> x.
-  by rewrite in_setI /inter /andB HE HE' !in_set getBit_liftBinOp.
-Qed.
-
-(** ** Set union *)
-
-Global Instance union_Bitset {n} : union_of (BITS n) := union.
-Global Instance union_Finset {n} : union_of {set 'I_n} := @setU _.
-
-Global Instance union_repr {n}:
-  refines (@Rfin n ==> Rfin ==> Rfin)%rel union_op union_op.
-Proof.
-  rewrite refinesE.
-  move=> bs E HE bs' E' HE'.
-  rewrite /Rfin -setP /eq_mem=> x.
-  by rewrite in_setU /union /orB HE HE' !in_set getBit_liftBinOp.
-Qed.
-
-(** ** Set symmetric difference *)
-
-Global Instance symdiff_Bitset {n} : symdiff_of (BITS n) := symdiff.
-Global Instance symdiff_Finset {n} : symdiff_of {set 'I_n} := (fun E E' =>  ((E :\: E') :|: (E' :\: E))).
-
-Global Instance symdiff_Rfin {n}:
-  refines (@Rfin n ==> Rfin ==> Rfin) symdiff_op symdiff_op.
-Proof.
-  rewrite refinesE.
-  move=> bs E HE bs' E' HE'.
-  rewrite /Rfin -setP /eq_mem=> x /=.
-  rewrite in_setU !in_setD.
-  rewrite /symdiff /xorB HE HE' !in_set getBit_liftBinOp=> //.
-  case: (getBit bs x)=> //.
-  + (* getBit bs x = true *)
-    by rewrite andbT orbF Bool.xorb_true_l.
-  + (* getBit bs x = false *)
-    by rewrite andbF orbC orbF andbC andbT Bool.xorb_false_l.
-Qed.
-
-
-
-Global Instance subset_Bitset {n}: subset_of (BITS n) := subset.
-Global Instance subset_Finset {n}: subset_of {set 'I_n} := (fun E E' => E \subset E').
-
-Global Instance subset_Rfin {n}:
-  refines (@Rfin n ==> Rfin ==> bool_R) subset_op subset_op.
-Proof.
-  rewrite refinesE=> bs E HE bs' E' HE'.
-  rewrite /subset_op/subset_Bitset/subset_Finset/subset.
-  have ->: E \subset E' = (E :&: E' == E).
-  apply/setIidPl/eqP=> //=.
-  eapply refinesP; tc.
-Qed.
