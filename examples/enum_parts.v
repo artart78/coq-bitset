@@ -1,5 +1,5 @@
 Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset.
+From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset binomial.
 From Bits
      Require Import bits extraction.axioms32.
 
@@ -931,19 +931,15 @@ Definition disj (bs: BITS wordsize) (bs': BITS wordsize) := forall i, getBit bs 
 Lemma orB_disj (bs: BITS wordsize) bs' : disj bs bs' -> toNat (orB bs bs') = (toNat bs) + (toNat bs').
 Admitted.
 
-Lemma enumNext_isNext (i: Int32) (S: {set 'I_wordsize}) e (H: e \in S) f (Hf: set_isNext S f):
-  set_min S e + 2 <= set_next S f ->
-  lt S (enumNext_set S e f) /\ (forall y, y <> enumNext_set S e f -> #|y| = #|S| -> lt S y -> lt (enumNext_set S e f) y).
+Lemma enumNext_sameCard (S: {set 'I_wordsize}) e (H: e \in S) f (Hf: set_isNext S f):
+  #|enumNext_set S e f| = #|S|.
+Admitted.
+
+Lemma enumNext_inc (S: {set 'I_wordsize}) e (H: e \in S) f (Hf: set_isNext S f):
+  lt S (enumNext_set S e f).
 Proof.
-  move=> Hlimit.
-  split.
-  (****)
-  rewrite /lt.
   rewrite /enumNext_set.
-  rewrite reverse_orB.
-  rewrite reverse_orB.
-  rewrite Hlimit.
-  have {1}->: S = [set x in S | set_next S f < x] :|: [set x in S | set_next S f > x].
+  have Hdec: S = [set x in S | set_next S f < x] :|: [set x in S | set_next S f > x].
     apply/setP=> x; rewrite !inE.
     rewrite -andb_orr.
     case Hx: (x \in S)=> //=.
@@ -960,21 +956,105 @@ Proof.
     case: arg_minP=> //.
     move=> y /andP [Habs1 _] Hmin Habs2.
     by rewrite Habs2 in Habs1.
-  rewrite reverse_orB.
-  rewrite !orB_disj.
+  have Hlt: toNat (setToBs [set x in S | x < set_next S f]) < toNat (setToBs [set set_next S f]).
+    by admit.
+  have Hdisj1: disj (setToBs [set set_next S f]) (setToBs [set x in S | set_next S f < x]).
+    by admit.
+  have Hdisj2: disj (orB (setToBs [set set_next S f]) (setToBs [set x in S | set_next S f < x]))
+                    (setToBs [set x in 'I_wordsize | x <= set_next S f - set_min S e - 2]).
+    by admit.
+  have Hdisj3: disj (setToBs [set x in S | set_next S f < x])
+                    (setToBs [set x in S | x < set_next S f]).
+    by admit.
+  case Hlimit: (set_min S e + 2 <= set_next S f).
+  rewrite /lt.
+  rewrite /enumNext_set.
+  rewrite {1}Hdec.
+  rewrite !reverse_orB.
+  rewrite !orB_disj=> //.
   rewrite [toNat (setToBs [set set_next S f]) + toNat (setToBs [set x in S | set_next S f < x])]addnC.
   rewrite -addnA.
   rewrite ltn_add2l.
-  admit.
-  admit.
-  admit.
-  admit.
+  apply (leq_trans (n := toNat (setToBs [set set_next S f])))=> //.
+  apply leq_addr.
   (****)
+  rewrite setU0.
+  rewrite {1}Hdec.
+  rewrite /lt /enumNext_set.
+  rewrite !reverse_orB.
+  rewrite !orB_disj=> //.
+  rewrite addnC ltn_add2r=> //.
+Admitted.
+
+Lemma enumNext_isSucc (S: {set 'I_wordsize}) e (H: e \in S) f (Hf: set_isNext S f):
+  forall y, y <> enumNext_set S e f -> #|y| = #|S| -> lt S y -> lt (enumNext_set S e f) y.
+Proof.
+  case Hlimit: (set_min S e + 2 <= set_next S f).
   move=> y Hy1 Hy2 Hy3.
   (* If y contains bigger than [set s_next f] :|: [set x in S | x > s_next f], then ok *)
   (* Otherwise, it must be bigger than enumNext_set because it is bigger than the set {0, 1, ...} *)
-  admit.  
+  admit.
+  (****)
+  move=> y Hy1 Hy2 Hy3.
+  (* This case corresponds to set_next S f = set_min S e + 1 *)
+  admit.
 Admitted.
+
+Definition allEnums_set n k e f := mkseq (fun n => iter n (fun x => enumNext_set x e f) [set x : 'I_wordsize | x < k]) 'C(n, k).
+
+Definition allEnums n k := mkseq (fun n => iter n enumNext (dec (lsl one (toInt k)))) 'C(n, k).
+
+Definition allSubsets n k := [set A : {set 'I_wordsize} | (#|A| == k) && [forall x, (x \in A) ==> (x < n)]].
+
+Lemma enumsNext_allEnum_set: forall n k e f x, x \in (allEnums_set n k e f) <-> x \in (allSubsets n k).
+Proof.
+  move=> n k e f x.
+  split.
+  rewrite /allEnums_set /mkseq.
+  move: ('C(n, k)) x; elim=> //.
+  move=> n0 Hn0 x Hx.
+  rewrite /= in Hx.
+  rewrite !inE in Hx.
+  move: Hx=> /orP; elim=> Hx.
+  rewrite /allSubsets !inE.
+  apply/andP; split.
+  admit. (* size_full in queens *)
+  apply/forallP=> y.
+  apply/implyP=> Hy.
+  move: Hx=> /eqP Hx.
+  rewrite Hx !inE in Hy.
+  admit. (* TODO: add k <= n to the list of hypotheses *)
+  move: Hx=> /mapP [x0 Hx0 Hx0'].
+  rewrite mem_iota in Hx0.
+  move: Hx0=> /andP [Hx01 Hx02].
+  have Hx01': x0 = x0.-1.+1 by rewrite prednK.
+  rewrite Hx01' /= in Hx0'.
+  rewrite Hx0'.
+  rewrite /allSubsets !inE.
+  apply/andP; split.
+  rewrite enumNext_sameCard.
+  have Hn0': forall x, x \in [seq iter n (fun x0 : {set 'I_wordsize} => enumNext_set x0 e f)
+                     [set x0 : 'I_wordsize | x0 < k]| n <- iota 0 n0] -> #|x| = k.
+    by admit.
+  move: (Hn0' (iter x0.-1 (fun x1 : {set 'I_wordsize} => enumNext_set x1 e f)
+       [set x1 : 'I_wordsize | x1 < k]))=> Hn0''.
+  apply/eqP/Hn0''.
+  apply/mapP; exists x0.-1=> //.
+  rewrite mem_iota.
+  apply/andP; split=> //.
+  rewrite add0n.
+  rewrite -(ltn_add2l 1).
+  rewrite addnC addn1 prednK=> //.
+  (* e and f... *)
+  admit.
+  admit.
+  admit. (* Hm... *)
+  (********************************)
+  move=> H.
+  admit. (* Now that's the tricky part *)
+Admitted.
+
+Fail Theorem enumsNext_allEnum: forall n k x, x \in (allEnums n k) <-> exists y, y \in (allSubsets n k) /\ machine_repr x y.
 
 Cd "examples/enum_parts".
 
