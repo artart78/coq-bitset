@@ -1054,7 +1054,12 @@ Proof.
   admit. (* Now that's the tricky part *)
 Admitted.
 
-Fail Theorem enumsNext_allEnum: forall n k x, x \in (allEnums n k) <-> exists y, y \in (allSubsets n k) /\ machine_repr x y.
+Canonical int_eqMixin := EqMixin eqInt32P.
+Canonical int_eqType := Eval hnf in EqType Int32 int_eqMixin.
+
+Theorem enumsNext_allEnum: forall n k x, k <= n < wordsize -> x \in (allEnums n k) <-> exists y, y \in (allSubsets n k) /\ machine_repr x y.
+Proof.
+Admitted.
 
 Cd "examples/enum_parts".
 
