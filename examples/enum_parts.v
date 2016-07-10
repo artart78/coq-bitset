@@ -1,5 +1,5 @@
 Require Import mathcomp.ssreflect.ssreflect.
-From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset binomial.
+From mathcomp Require Import ssrbool eqtype ssrnat seq fintype ssrfun tuple finset binomial bigop.
 From Bits
      Require Import bits extraction.axioms32.
 
@@ -19,8 +19,8 @@ Definition set_min (S: {set 'I_wordsize}) e := [arg min_(x < e in S) x].
 
 Definition enumNext_set (S: {set 'I_wordsize}) e f :=
   let s_min := set_min S e in
-  let s_next := set_next S in
-  [set s_next f] :|: [set x in S | x > s_next f] :|: (if s_next f >= s_min + 2 then [set x in 'I_wordsize | x <= (s_next f - s_min - 2)] else set0).
+  let s_next := set_next S f in
+  [set s_next] :|: [set x in S | x > s_next] :|: (if s_next >= s_min + 2 then [set x in 'I_wordsize | x <= (s_next - s_min - 2)] else set0).
 
 (* TODO: move to ops/*.v *)
 Lemma srn_repr_1:
@@ -1053,6 +1053,84 @@ case Hc: (set_min S e + 2 <= set_next S f).
       by rewrite HSmin in Hx.
   by rewrite cardsU1 H3.
 Admitted.
+
+Definition indToSet k e f n := iter n (fun x => enumNext_set x e f) [set x : 'I_wordsize | x < k].
+
+Definition setToInd k (S: {set 'I_wordsize}) := \sum_(i in 'I_k) 'C(nth ord0 (enum S) i, i.+1).
+
+Lemma indToSet_inv k e f n : setToInd k (indToSet k e f n) = n.
+Proof.
+elim: n.
++ (* n = 0 *)
+  rewrite /setToInd /=.
+  apply/eqP.
+  rewrite sum_nat_eq0.
+  apply/forallP=> x.
+  apply/implyP=> Hx.
+  rewrite bin_small //.
+  admit. (* Seems trivial *)
++ (* n ~ n.+1 *)
+  move=> n IHn.
+  rewrite /indToSet /=.
+  admit. (* Induction in Knuth's formula... *)
+Admitted.
+
+Canonical int_eqMixin := EqMixin eqInt32P.
+Canonical int_eqType := Eval hnf in EqType Int32 int_eqMixin.
+
+Definition allEnums_set n k e f := [set (indToSet k e f (nat_of_ord y)) | y in 'I_('C(n, k))].
+
+Definition allEnums n k := mkseq (fun n => iter n enumNext (dec (lsl one (toInt k)))) 'C(n, k).
+
+Definition allSubsets n k := [set A : {set 'I_wordsize} | (#|A| == k) && [forall x, (x \in A) ==> (x < n)]].
+
+Lemma allEnums_eq: forall n k e f, allEnums_set n k e f = allSubsets n k.
+Proof.
+move=> n k e f.
+apply/eqP.
+rewrite eqEsubset.
+apply/andP; split.
++ (* allEnums_set \subset allSubsets *)
+  apply/subsetP=> x Hx.
+  rewrite /allSubsets !inE.
+  apply/andP; split.
+  admit. (* Use enumNext_nextCard *)
+  admit. (* Here, we have to prove that the elements of x are all less than n.
+     Maybe indToSet_inv will come in handy here? *)
++ (* allSubsets \subset allEnums_set *)
+  apply/subsetP=> x Hx.
+  admit. (* Here, we will need to use setToInd and then indToSet_inv should solve everything *)
+Admitted.
+
+Lemma allEnums_repr: forall n k e f x,
+  x \in (allEnums n k) <-> exists y, y \in (allEnums_set n k e f) /\ machine_repr x y.
+Proof.
+move=> n k e f x.
+split.
++ (* -> *)
+  move=> Hx.
+  rewrite /allEnums in Hx.
+  move: Hx=> /mapP [i Hi Hx].
+  exists (indToSet k e f i); split.
+  rewrite /allEnums_set.
+  admit. (* Trivial *)
+  admit. (* Induction on i? *)
++ (* <- *)
+  move=> [y [Hy1 Hy2]].
+  rewrite /allEnums.
+  rewrite /allEnums_set in Hy1.
+  apply/mapP.
+  admit. (* Need to destruct Hy1... *)
+Admitted.
+
+Theorem enumsNext_allEnum: forall n k x, k <= n < wordsize -> x \in (allEnums n k) <-> exists y, y \in (allSubsets n k) /\ machine_repr x y.
+Proof.
+move=> n k x Hn.
+set e := @ord0 wordsize.-1.
+set f := @ord0 wordsize.-1.
+move: (allEnums_repr n k e f x)=> H.
+by rewrite -(allEnums_eq _ _ e f).
+Qed.
 
 Cd "examples/enum_parts".
 
