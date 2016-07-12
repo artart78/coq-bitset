@@ -1080,7 +1080,9 @@ Canonical int_eqType := Eval hnf in EqType Int32 int_eqMixin.
 
 Definition allEnums_set n k e f := [set (indToSet k e f (nat_of_ord y)) | y in 'I_('C(n, k))].
 
-Definition allEnums n k := mkseq (fun n => iter n enumNext (dec (lsl one (toInt k)))) 'C(n, k).
+Definition indToInt k n := iter n enumNext (dec (lsl one (toInt k))).
+
+Definition allEnums n k := mkseq (indToInt k) 'C(n, k).
 
 Definition allSubsets n k := [set A : {set 'I_wordsize} | (#|A| == k) && [forall x, (x \in A) ==> (x < n)]].
 
@@ -1102,10 +1104,34 @@ apply/andP; split.
   admit. (* Here, we will need to use setToInd and then indToSet_inv should solve everything *)
 Admitted.
 
-Lemma allEnums_repr: forall n k e f x,
+Lemma allEnums_repr_i: forall k e f i,
+  machine_repr (indToInt k i) (indToSet k e f i).
+Proof.
+  move=> k e f.
+  elim=> [|n IHn].
+  rewrite /=.
+  admit. (* Similar to 'create' *)
+  rewrite /=.
+  apply enumNext_correct=> //.
+  admit.
+  admit.
+  admit.
+Admitted.
+
+(* TODO: move somewhere else *)
+Lemma machine_repr_inj1: forall x y z, machine_repr x y -> machine_repr z y -> x = z.
+Proof.
+  move=> x y z [bx [/eqP-> Hx]] [bz [/eqP-> Hz]].
+  have ->: bx = bz=> //.
+  apply allBitsEq=> i Hi.
+  have ->: getBit bx i = (inord i \in y) by rewrite Hx inE inordK.
+  by have ->: getBit bz i = (inord i \in y) by rewrite Hz inE inordK.
+Qed.
+
+Lemma allEnums_repr: forall n k e f x, k <= n ->
   x \in (allEnums n k) <-> exists y, y \in (allEnums_set n k e f) /\ machine_repr x y.
 Proof.
-move=> n k e f x.
+move=> n k e f x Hk.
 split.
 + (* -> *)
   move=> Hx.
@@ -1113,15 +1139,30 @@ split.
   move: Hx=> /mapP [i Hi Hx].
   exists (indToSet k e f i); split.
   rewrite /allEnums_set.
-  admit. (* Trivial *)
-  admit. (* Induction on i? *)
+  apply/imsetP.
+  have Hcast: 'C(n, k).-1.+1 = 'C(n, k).
+    rewrite prednK=> //.
+    by rewrite bin_gt0.
+  exists (cast_ord Hcast (@inord 'C(n, k).-1 i))=> //.
+  rewrite /= inordK=> //.
+  rewrite Hcast.
+  move: (mem_iota 0 'C(n, k) i)=> Hi'.
+  rewrite Hi in Hi'.
+  by rewrite /= add0n in Hi'.
+  rewrite Hx.
+  by apply allEnums_repr_i.
 + (* <- *)
   move=> [y [Hy1 Hy2]].
   rewrite /allEnums.
   rewrite /allEnums_set in Hy1.
   apply/mapP.
-  admit. (* Need to destruct Hy1... *)
-Admitted.
+  move: Hy1=> /imsetP [z Hz1 Hz2].
+  exists (nat_of_ord z).
+  rewrite mem_iota /= add0n //.
+  apply (machine_repr_inj1 _ y)=> //.
+  rewrite Hz2.
+  by apply allEnums_repr_i.
+Qed.
 
 Theorem enumsNext_allEnum: forall n k x, k <= n < wordsize -> x \in (allEnums n k) <-> exists y, y \in (allSubsets n k) /\ machine_repr x y.
 Proof.
