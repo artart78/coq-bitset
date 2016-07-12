@@ -1209,9 +1209,10 @@ Qed.
 Theorem enumsNext_allEnum: forall n k x, k <= n < wordsize -> x \in (allEnums n k) <-> exists y, y \in (allSubsets n k) /\ machine_repr x y.
 Proof.
 move=> n k x Hn.
+move: Hn=> /andP [Hk Hn].
 set e := @ord0 wordsize.-1.
 set f := @ord0 wordsize.-1.
-move: (allEnums_repr n k e f x)=> H.
+move: (allEnums_repr n k e f x Hk)=> H.
 by rewrite -(allEnums_eq _ _ e f).
 Qed.
 
