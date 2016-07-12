@@ -1058,9 +1058,14 @@ Definition indToSet k e f n := iter n (fun x => enumNext_set x e f) [set x : 'I_
 
 Definition setToInd k (S: {set 'I_wordsize}) := \sum_(i in 'I_k) 'C(nth ord0 (enum S) i, i.+1).
 
-Lemma indToSet_inv k e f n : setToInd k (indToSet k e f n) = n.
+Lemma setToInd_next k e f S: setToInd k (enumNext_set S e f) = (setToInd k S).+1.
 Proof.
-elim: n.
+(* Induction in Knuth's formula... *)
+Admitted.
+
+Lemma indToSet_inv k e f: cancel (indToSet k e f) (setToInd k).
+Proof.
+elim=> [|n IHn].
 + (* n = 0 *)
   rewrite /setToInd /=.
   apply/eqP.
@@ -1070,15 +1075,35 @@ elim: n.
   rewrite bin_small //.
   admit. (* Seems trivial *)
 + (* n ~ n.+1 *)
-  move=> n IHn.
-  rewrite /indToSet /=.
-  admit. (* Induction in Knuth's formula... *)
+  by rewrite setToInd_next IHn.
 Admitted.
+
+Lemma setToInd_inj k: injective (setToInd k).
+Admitted.
+
+Lemma setToInd_inv k e f: cancel (setToInd k) (indToSet k e f).
+Proof.
+apply inj_can_sym.
+apply indToSet_inv.
+apply setToInd_inj.
+Qed.
 
 Canonical int_eqMixin := EqMixin eqInt32P.
 Canonical int_eqType := Eval hnf in EqType Int32 int_eqMixin.
 
 Definition allEnums_set n k e f := [set (indToSet k e f (nat_of_ord y)) | y in 'I_('C(n, k))].
+
+Lemma allEnums_sameCard: forall n k e f, #|indToSet k e f n| = k.
+Proof.
+move=> n k e f.
+elim: n=> [|n IHn].
+rewrite /=.
+admit. (* Proof already in n-queens *)
+rewrite /=.
+rewrite enumNext_sameCard=> //.
+admit. (* e *)
+admit. (* f *)
+Admitted.
 
 Definition indToInt k n := iter n enumNext (dec (lsl one (toInt k))).
 
@@ -1086,23 +1111,40 @@ Definition allEnums n k := mkseq (indToInt k) 'C(n, k).
 
 Definition allSubsets n k := [set A : {set 'I_wordsize} | (#|A| == k) && [forall x, (x \in A) ==> (x < n)]].
 
-Lemma allEnums_eq: forall n k e f, allEnums_set n k e f = allSubsets n k.
+Lemma setToInd_bounded x n k: x \in allSubsets n k -> setToInd k x < 'C(n, k).
+Admitted.
+
+Lemma indToSet_bounded S n k x: setToInd k S < 'C(n, k) -> x \in S -> x < n.
+Admitted.
+
+Lemma allEnums_eq: forall n k e f, k <= n -> allEnums_set n k e f = allSubsets n k.
 Proof.
-move=> n k e f.
+move=> n k e f Hk.
 apply/eqP.
 rewrite eqEsubset.
 apply/andP; split.
 + (* allEnums_set \subset allSubsets *)
   apply/subsetP=> x Hx.
   rewrite /allSubsets !inE.
+  move: Hx=> /imsetP [y Hy1 Hy2].
   apply/andP; split.
-  admit. (* Use enumNext_nextCard *)
-  admit. (* Here, we have to prove that the elements of x are all less than n.
-     Maybe indToSet_inv will come in handy here? *)
+  rewrite Hy2 allEnums_sameCard=> //.
+  apply/forallP=> x0.
+  apply/implyP=> Hx0.
+  apply (indToSet_bounded x _ k)=> //.
+  rewrite Hy2 indToSet_inv=> //.
 + (* allSubsets \subset allEnums_set *)
   apply/subsetP=> x Hx.
-  admit. (* Here, we will need to use setToInd and then indToSet_inv should solve everything *)
-Admitted.
+  apply/imsetP.
+  have Hcast: 'C(n, k).-1.+1 = 'C(n, k).
+    rewrite prednK=> //.
+    by rewrite bin_gt0.
+  exists (cast_ord Hcast (inord (setToInd k x)))=> //.
+  rewrite /= inordK.
+  by rewrite setToInd_inv.
+  rewrite Hcast.
+  by apply setToInd_bounded.
+Qed.
 
 Lemma allEnums_repr_i: forall k e f i,
   machine_repr (indToInt k i) (indToSet k e f i).
