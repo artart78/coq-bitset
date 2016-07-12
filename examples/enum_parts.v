@@ -946,9 +946,38 @@ have H3: set_min S e \notin [set x in S | set_next S f < x].
   apply Habs.
   by rewrite ltnW.
 have H4: (set_next S f |: [set x in S | set_next S f < x]) :&: [set x : 'I_wordsize | x <= set_next S f - set_min S e - 2] = set0.
-  admit.
+  apply/setP=> x; rewrite !inE.
+  apply/negP=> /andP [/orP Habs1 Habs2].
+  have Habs': x >= set_next S f.
+    case: Habs1=> Habs1.
+    move: Habs1=> /eqP Habs1.
+    rewrite Habs1=> //.
+    move: Habs1=> /andP [_ Habs1].
+    by apply ltnW.
+  have Habs'': false.
+    rewrite -(ltnn (set_next S f)).
+    apply (leq_ltn_trans (n := (set_next S f - set_min S e - 2))).
+    apply (leq_trans (n := x))=> //.
+    rewrite -subnDA.
+    rewrite -{2}[nat_of_ord (set_next S f)]subn0.
+    apply ltn_sub2l.
+    apply (leq_ltn_trans (n := set_min S e))=> //.
+    have ->: 2 = 1 + 1 by trivial.
+    by rewrite addnA addn1.
+  by trivial.
 have H5: (set_min S e |: [set x in S | set_next S f < x]) :&: [set x in S | x < set_next S f & set_min S e < x] = set0.
-  admit.
+  apply/setP=> x; rewrite !inE.
+  apply/negP=> /andP [/orP Habs1 /andP [Habs2 /andP [Habs3 Habs4]]].
+  case: Habs1=> Habs1.
+  move: Habs1=> /eqP Habs1.
+  rewrite Habs1 in Habs4.
+  have Habs': false by rewrite -(ltnn (set_min S e)).
+  rewrite //.
+  move: Habs1=> /andP [_ Habs1].
+  have Habs': false.
+    rewrite -(ltnn (set_next S f)).
+    by apply (ltn_trans (n := x)).
+  rewrite //.
 have HSmin: set_min S e \in S.
   rewrite /set_min.
   by case: arg_minP.
@@ -1155,9 +1184,9 @@ Proof.
   admit. (* Similar to 'create' *)
   rewrite /=.
   apply enumNext_correct=> //.
-  admit.
-  admit.
-  admit.
+  admit. (* e *)
+  admit. (* f *)
+  admit. (* bound *)
 Admitted.
 
 (* TODO: move somewhere else *)
