@@ -1177,53 +1177,6 @@ Variables (k: nat) (n: nat) (k_gt0: k > 0) (k_leqn: k <= n) (n_lt: n < wordsize)
 
 Definition indToSet i := iter i (fun x => enumNext_set x) [set x : 'I_wordsize | x < k].
 
-(*** Knuth's formula ***)
-Definition setToInd (S: {set 'I_wordsize}) := \sum_(i in 'I_k) 'C(nth ord0 (enum S) i, i.+1).
-
-Lemma setToInd_next S: setToInd (enumNext_set S) = (setToInd S).+1.
-Proof.
-(* Induction in Knuth's formula... *)
-Admitted.
-
-Lemma indToSet_inv: cancel indToSet setToInd.
-Proof.
-elim=> [|i IHi].
-+ (* i = 0 *)
-  rewrite /setToInd /=.
-  apply/eqP.
-  rewrite sum_nat_eq0.
-  apply/forallP=> x.
-  apply/implyP=> Hx.
-  rewrite bin_small //.
-  admit. (* Seems trivial *)
-+ (* i ~ i.+1 *)
-  by rewrite setToInd_next IHi.
-Admitted.
-
-Lemma setToInd_inj: injective setToInd.
-Admitted.
-
-Lemma setToInd_inv: cancel setToInd indToSet.
-Proof.
-apply inj_can_sym.
-apply indToSet_inv.
-apply setToInd_inj.
-Qed.
-
-Definition allSubsets := [set A : {set 'I_wordsize} | (#|A| == k) && [forall x, (x \in A) ==> (x < n)]].
-
-Lemma setToInd_bounded x: x \in allSubsets -> setToInd x < 'C(n, k).
-Admitted.
-
-Lemma indToSet_bounded S x: setToInd S < 'C(n, k) -> x \in S -> x < n.
-Admitted.
-(***********************)
-
-Canonical int_eqMixin := EqMixin eqInt32P.
-Canonical int_eqType := Eval hnf in EqType Int32 int_eqMixin.
-
-Definition allEnums_set := [set (indToSet (nat_of_ord y)) | y in 'I_('C(n, k))].
-
 Lemma allEnums_haveE: forall i, exists e, e \in indToSet i.
 elim=> [|i IHi /=].
 + (* i = 0 *)
@@ -1236,20 +1189,106 @@ elim=> [|i IHi /=].
   by rewrite setU11.
 Qed.
 
-Lemma allEnums_haveF: forall i, exists f, set_isNext (indToSet i) f.
-elim=> [|i IHi /=].
-admit. (* Use indToSet_bounded? *)
-admit.
+(*** Knuth's formula ***)
+Definition setToInd (S: {set 'I_wordsize}) := \sum_(i in 'I_k) 'C(nth ord0 (enum S) i, i.+1).
+
+Lemma setToInd_next (S: {set 'I_wordsize}) (HS: #|S| = k): setToInd (enumNext_set S) = (setToInd S).+1.
+Proof.
+(* Induction in Knuth's formula... *)
 Admitted.
 
-Lemma allEnums_sameCard: forall i, #|indToSet i| = k.
-Proof.
-elim=> [|i IHi].
-by rewrite set_card_ltn.
-move: (allEnums_haveE i)=> [e He].
-move: (allEnums_haveF i)=> [f Hf].
-by rewrite (enumNext_sameCard _ e _ f).
+Lemma indToSet_bounded S x: setToInd S < 'C(n, k) -> x \in S -> x < n.
+Admitted.
+
+Lemma allEnums_haveF_ind i (ltn_i: i < 'C(n, k)): setToInd (indToSet i) = i -> exists f, set_isNext (indToSet i) f.
+  move=> Hi.
+  move: (allEnums_haveE i)=> [e He].
+  exists (inord n).
+  rewrite /set_isNext.
+  apply/andP; split.
+  apply/negP=> Habs.
+  have Habs': nat_of_ord (@inord wordsize.-1 n) < n.
+    apply (indToSet_bounded (indToSet i))=> //.
+    rewrite Hi //.
+  rewrite inordK in Habs'=> //.
+  have Habs'': false.
+    by rewrite -(ltnn n).
+  rewrite //.
+  apply/existsP.
+  exists e.
+  rewrite He /=.
+  rewrite inordK=> //.
+  apply (indToSet_bounded (indToSet i))=> //.
+  rewrite Hi //.
 Qed.
+
+Lemma indToSet_ind i (ltn_i: i < 'C(n, k)): #|indToSet i| = k /\ setToInd (indToSet i) = i.
+Proof.
+elim: i ltn_i=> [ltn_i|i IH ltn_i].
++ (* i = 0 *)
+  split.
+  by rewrite set_card_ltn.
+  rewrite /setToInd /=.
+  apply/eqP.
+  rewrite sum_nat_eq0.
+  apply/forallP=> x.
+  apply/implyP=> Hx.
+  rewrite bin_small //.
+  admit. (* Seems trivial *)
++ (* i ~ i.+1 *)
+  have ltn'_i: i < 'C(n, k).
+    apply (ltn_trans (n := i.+1))=> //.
+  move: (IH ltn'_i)=> [IHi1 IHi2].
+  move: (allEnums_haveE i)=> [e He].
+  move: (allEnums_haveF_ind i ltn'_i IHi2)=> [f Hf].
+  split.
+  rewrite /=.
+  rewrite (enumNext_sameCard _ e _ f) //.
+  rewrite /=.
+  rewrite setToInd_next=> //.
+  rewrite IHi2 //.
+Admitted.
+
+Lemma indToSet_inv i (ltn_i: i < 'C(n, k)): setToInd (indToSet i) = i.
+Proof.
+by apply indToSet_ind.
+Qed.
+
+Lemma setToInd_inj (S1 S2: {set 'I_wordsize}) (HS1: #|S1| = k) (HS2: #|S2| = k): setToInd S1 = setToInd S2 -> S1 = S2.
+Admitted.
+
+Definition allSubsets := [set A : {set 'I_wordsize} | (#|A| == k) && [forall x, (x \in A) ==> (x < n)]].
+
+Lemma setToInd_bounded x: x \in allSubsets -> setToInd x < 'C(n, k).
+Admitted.
+(***********************)
+
+Lemma allEnums_sameCard i (ltn_i: i < 'C(n, k)): #|indToSet i| = k.
+Proof.
+by apply indToSet_ind.
+Qed.
+
+Lemma allEnums_haveF i (ltn_i: i < 'C(n, k)): exists f, set_isNext (indToSet i) f.
+Proof.
+apply allEnums_haveF_ind=> //.
+by apply indToSet_inv.
+Qed.
+
+Lemma setToInd_inv (S: {set 'I_wordsize}) (HS: S \in allSubsets): indToSet (setToInd S) = S.
+Proof.
+apply setToInd_inj=> //.
+apply allEnums_sameCard.
+apply setToInd_bounded=> //.
+rewrite /allSubsets inE in HS.
+by move: HS=> /andP [/eqP -> _].
+rewrite indToSet_inv //.
+apply setToInd_bounded=> //.
+Qed.
+
+Canonical int_eqMixin := EqMixin eqInt32P.
+Canonical int_eqType := Eval hnf in EqType Int32 int_eqMixin.
+
+Definition allEnums_set := [set (indToSet (nat_of_ord y)) | y in 'I_('C(n, k))].
 
 Definition indToInt i := iter i enumNext (dec (lsl one (toInt k))).
 
@@ -1278,7 +1317,7 @@ apply/andP; split.
     by rewrite bin_gt0.
   exists (cast_ord Hcast (inord (setToInd x)))=> //.
   rewrite /= inordK.
-  by rewrite setToInd_inv.
+  rewrite setToInd_inv //.
   rewrite Hcast.
   by apply setToInd_bounded.
 Qed.
@@ -1286,16 +1325,18 @@ Qed.
 Lemma allEnums_min_bounded: forall i, 2 + set_min (indToSet i) <= wordsize.
 Admitted.
 
-Lemma allEnums_repr_i: forall i, machine_repr (indToInt i) (indToSet i).
+Lemma allEnums_repr_i i (ltn_i: i < 'C(n, k)): machine_repr (indToInt i) (indToSet i).
 Proof.
-elim=> [|i IHi].
+elim: i ltn_i=> [ltn_i|i IHi ltn_i].
 rewrite /=.
 apply create_repr.
 rewrite /=.
 move: (allEnums_haveE i)=> [e He].
-move: (allEnums_haveF i)=> [f Hf].
+have ltn'_i: i < 'C(n, k) by apply (ltn_trans (n := i.+1)).
+move: (allEnums_haveF i ltn'_i)=> [f Hf].
 apply (enumNext_correct _ _ e He f)=> //.
 apply allEnums_min_bounded.
+by apply IHi.
 Qed.
 
 Lemma allEnums_repr: forall x,
@@ -1320,7 +1361,8 @@ split.
   rewrite Hi in Hi'.
   by rewrite /= add0n in Hi'.
   rewrite Hx.
-  by apply (allEnums_repr_i i).
+  apply (allEnums_repr_i i).
+  by rewrite mem_iota /= add0n in Hi.
 + (* <- *)
   move=> [y [Hy1 Hy2]].
   rewrite /allEnums.
