@@ -5,6 +5,7 @@ From Bits
 
 Require Import repr_op.
 
+(**********************************************************************)
 Section Extrema.
 
 Variables (I : finType) (i0 : I) (i1 : I) (P : pred I) (F : I -> nat).
@@ -36,23 +37,6 @@ Lemma keep_min_repr:
   forall i E x y, machine_repr i E -> x \in E ->
     machine_repr (keep_min i) [set [arg min_(k < y in E) k]].
 Admitted.
-
-Definition enumNext (x: Int32) := (* 111001100 *)
-  let smallest := keep_min x in(* 000000100 *)
-  let ripple := add smallest x in  (* 111010000 *)
-  let ones := lsr (lxor x ripple) (add (toInt 2) (ntz x)) in
-  lor ripple ones.
-
-Definition set_isNext (S: {set 'I_wordsize}) x := (x \notin S) && [exists y, (y \in S) && (y < x)].
-
-Definition set_next (S: {set 'I_wordsize}) := [arg min_(x < ord0 | set_isNext S x) x].
-
-Definition set_min (S: {set 'I_wordsize}) := [arg min_(x < ord0 in S) x].
-
-Definition enumNext_set (S: {set 'I_wordsize}) :=
-  let s_min := set_min S in
-  let s_next := set_next S in
-  [set s_next] :|: [set x in S | x > s_next] :|: (if s_next >= s_min + 2 then [set x in 'I_wordsize | x <= (s_next - s_min - 2)] else set0).
 
 (* TODO: move to ops/*.v *)
 Lemma srn_repr_1:
@@ -719,6 +703,12 @@ Lemma ladd_repr:
   forall x y, add (toInt x) (toInt y) = toInt (x + y).
 Admitted.
 
+Definition set_min (S: {set 'I_wordsize}) := [arg min_(x < ord0 in S) x].
+
+Definition set_isNext (S: {set 'I_wordsize}) x := (x \notin S) && [exists y, (y \in S) && (y < x)].
+
+Definition set_next (S: {set 'I_wordsize}) := [arg min_(x < ord0 | set_isNext S x) x].
+
 Lemma min_ripple_repr i (S: {set 'I_wordsize}) e (He: e \in S) f (Hf: set_isNext S f):
   machine_repr i S ->
   machine_repr (add (keep_min i) i) (set_next S |: [set x in S | set_next S < x]).
@@ -796,6 +786,18 @@ Proof.
   by apply Hy.
   by apply ltnW.
 Qed.
+(**********************************************************************)
+
+Definition enumNext (x: Int32) := (* 111001100 *)
+  let smallest := keep_min x in(* 000000100 *)
+  let ripple := add smallest x in  (* 111010000 *)
+  let ones := lsr (lxor x ripple) (add (toInt 2) (ntz x)) in
+  lor ripple ones.
+
+Definition enumNext_set (S: {set 'I_wordsize}) :=
+  let s_min := set_min S in
+  let s_next := set_next S in
+  [set s_next] :|: [set x in S | x > s_next] :|: (if s_next >= s_min + 2 then [set x in 'I_wordsize | x <= (s_next - s_min - 2)] else set0).
 
 Lemma enumNext_cont (j : 'I_wordsize) (S: {set 'I_wordsize}) e (He: e \in S) f (Hf: set_isNext S f):
   set_min S <= j -> j < set_next S -> j \in S.
@@ -1117,6 +1119,7 @@ Admitted.
 
 Definition indToSet k i := iter i (fun x => enumNext_set x) [set x : 'I_wordsize | x < k].
 
+(*** Knuth's formula ***)
 Definition setToInd k (S: {set 'I_wordsize}) := \sum_(i in 'I_k) 'C(nth ord0 (enum S) i, i.+1).
 
 Lemma setToInd_next k S: setToInd k (enumNext_set S) = (setToInd k S).+1.
@@ -1156,6 +1159,7 @@ Admitted.
 
 Lemma indToSet_bounded S n k x: setToInd k S < 'C(n, k) -> x \in S -> x < n.
 Admitted.
+(***********************)
 
 Canonical int_eqMixin := EqMixin eqInt32P.
 Canonical int_eqType := Eval hnf in EqType Int32 int_eqMixin.
