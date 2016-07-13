@@ -1217,10 +1217,10 @@ case H: (set_min S + 2 <= set_next S).
   by rewrite ltnNge H.
 Admitted.
 
-Lemma indToSet_bounded S x: setToInd S < 'C(n, k) -> x \in S -> x < n.
+Lemma indToSet_bounded (S: {set 'I_wordsize}) (HS: #|S| = k) x: setToInd S < 'C(n, k) -> x \in S -> x < n.
 Admitted.
 
-Lemma allEnums_haveF_ind i (ltn_i: i < 'C(n, k)): setToInd (indToSet i) = i -> exists f, set_isNext (indToSet i) f.
+Lemma allEnums_haveF_ind i (ltn_i: i < 'C(n, k)): setToInd (indToSet i) = i -> #|indToSet i| = k -> exists f, set_isNext (indToSet i) f.
   move=> Hi.
   move: (allEnums_haveE i)=> [e He].
   exists (inord n).
@@ -1260,7 +1260,7 @@ elim: i ltn_i=> [ltn_i|i IH ltn_i].
     apply (ltn_trans (n := i.+1))=> //.
   move: (IH ltn'_i)=> [IHi1 IHi2].
   move: (allEnums_haveE i)=> [e He].
-  move: (allEnums_haveF_ind i ltn'_i IHi2)=> [f Hf].
+  move: (allEnums_haveF_ind i ltn'_i IHi2 IHi1)=> [f Hf].
   split.
   rewrite /=.
   rewrite (enumNext_sameCard _ e _ f) //.
@@ -1291,7 +1291,8 @@ Qed.
 Lemma allEnums_haveF i (ltn_i: i < 'C(n, k)): exists f, set_isNext (indToSet i) f.
 Proof.
 apply allEnums_haveF_ind=> //.
-by apply indToSet_inv.
+apply indToSet_inv=> //.
+by apply allEnums_sameCard.
 Qed.
 
 Lemma setToInd_inv (S: {set 'I_wordsize}) (HS: S \in allSubsets): indToSet (setToInd S) = S.
@@ -1328,6 +1329,7 @@ apply/andP; split.
   apply/forallP=> x0.
   apply/implyP=> Hx0.
   apply (indToSet_bounded x)=> //.
+  rewrite Hy2 allEnums_sameCard //.
   rewrite Hy2 indToSet_inv=> //.
 + (* allSubsets \subset allEnums_set *)
   apply/subsetP=> x Hx.
@@ -1343,10 +1345,10 @@ apply/andP; split.
 Qed.
 
 Lemma allEnums_min_bounded i (ltn_i: i < 'C(n, k)): 2 + set_min (indToSet i) <= wordsize.
-(*Lemma indToSet_bounded S x: setToInd S < 'C(n, k) -> x \in S -> x < n.*)
 move: (allEnums_haveE i)=> [e He].
 have H: set_min (indToSet i) < n.
   apply (indToSet_bounded (indToSet i)).
+  apply allEnums_sameCard=> //.
   rewrite indToSet_inv=> //.
   apply (set_min_S _ e)=> //.
 have {1}->: 2 = 1 + 1 by trivial.
