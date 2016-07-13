@@ -706,6 +706,15 @@ Lemma ladd_repr:
   forall x y, add (toInt x) (toInt y) = toInt (x + y).
 Admitted.
 
+Lemma set_card_int: forall m n, #|[set x : 'I_wordsize | n < x < m]| = m - n - 1.
+Admitted.
+
+Lemma set_card_leq: forall m, #|[set x : 'I_wordsize | x <= m]| = m + 1.
+Admitted.
+
+Lemma set_card_ltn: forall m, #|[set x : 'I_wordsize | x < m]| = m.
+Admitted.
+
 Definition set_min (S: {set 'I_wordsize}) := [arg min_(x < ord0 in S) x].
 
 Definition set_isNext (S: {set 'I_wordsize}) x := (x \notin S) && [exists y, (y \in S) && (y < x)].
@@ -1014,9 +1023,9 @@ have H4: (set_next S |: [set x in S | set_next S < x]) :&: [set x : 'I_wordsize 
     have {2}->: 2 = 1 + 1 by trivial.
     by rewrite addnA addn1.
   by trivial.
-have H5: (set_min S |: [set x in S | set_next S < x]) :&: [set x in S | x < set_next S & set_min S < x] = set0.
+have H5: (set_min S |: [set x in S | set_next S < x]) :&: [set x in S | set_min S < x < set_next S] = set0.
   apply/setP=> x; rewrite !inE.
-  apply/negP=> /andP [/orP Habs1 /andP [Habs2 /andP [Habs3 Habs4]]].
+  apply/negP=> /andP [/orP Habs1 /andP [Habs2 /andP [Habs4 Habs3]]].
   case: Habs1=> Habs1.
   move: Habs1=> /eqP Habs1.
   rewrite Habs1 in Habs4.
@@ -1033,16 +1042,42 @@ have HSmin: set_min S \in S.
 rewrite cardsU cardsU1 H1 /=.
 case Hc: (set_min S + 2 <= set_next S).
 + rewrite H4 cards0 subn0.
-  have {5}->: S = (set_min S) |: [set x in S | set_next S < x] :|: [set x in S | (set_next S > x) && (x > set_min S)].
-    by admit.
+  have {5}->: S = (set_min S) |: [set x in S | set_next S < x] :|: [set x in S | set_min S < x < set_next S].
+    apply/setP=> x; rewrite !inE.
+    have ->: (x == set_min S) = (x \in S) && (x == set_min S).
+      case Hx: (x == set_min S).
+      rewrite -(eqP Hx) in HSmin.
+      by rewrite HSmin.
+      by rewrite andbF.
+    case Hx: (x \in S)=> //.
+    rewrite /=.
+    symmetry.
+    have Hx': (set_min S == x) || (set_min S < x).
+      rewrite -leq_eqVlt.
+      apply HS=> //.
+    move: Hx'=> /orP Hx'.
+    elim Hx'.
+    move/eqP ->; by rewrite eq_refl.
+    move ->.
+    rewrite /=.
+    rewrite -orbA -neq_ltn.
+    apply/orP; right.
+    apply/negP=> /eqP.
+    rewrite /set_next.
+    case: (arg_minP _ f)=> //.
+    move=> i Hi Hmin Hi'.
+    rewrite (ord_inj Hi') in Hi.
+    rewrite /set_isNext in Hi.
+    move: Hi=> /andP[Habs' _].
+    by rewrite Hx in Habs'.
   rewrite cardsU.
   rewrite H5.
   rewrite cards0 subn0.
   rewrite cardsU1 H3 /=.
-  have ->: [set x in S | x < set_next S & set_min S < x] = [set x : 'I_wordsize | x < set_next S & set_min S < x].
+  have ->: [set x in S | set_min S < x < set_next S] = [set x : 'I_wordsize | set_min S < x < set_next S].
     apply/setP=> x; rewrite !inE.
     rewrite andb_idl=> //.
-    move=> /andP [Hx1 Hx2].
+    move=> /andP [Hx2 Hx1].
     move: Hx1.
     rewrite /set_next.
     case: (arg_minP _ f)=> //.
@@ -1056,8 +1091,14 @@ case Hc: (set_min S + 2 <= set_next S).
       exists (set_min S).
       by rewrite HSmin Hx2.
     by rewrite Habs' in Hi'.
-  have ->: #|[set x : 'I_wordsize | x <= set_next S - set_min S - 2]| = set_next S - set_min S - 1 by admit.
-  have ->: #|[set x : 'I_wordsize | x < set_next S & set_min S < x]| = set_next S - set_min S - 1 by admit.
+  have ->: #|[set x : 'I_wordsize | x <= set_next S - set_min S - 2]| = set_next S - set_min S - 1.
+    rewrite set_card_leq.
+    rewrite subnS addn1 prednK //.
+    rewrite subn_gt0.
+    rewrite ltn_subRL.
+    rewrite -addn1 -addnA //.
+  have ->: #|[set x : 'I_wordsize | set_min S < x < set_next S]| = set_next S - set_min S - 1.
+    by rewrite set_card_int.
   by trivial.
 + rewrite setI0 cards0 addn0 subn0.
   have Hc': set_next S < set_min S + 2.
@@ -1130,7 +1171,7 @@ case Hc: (set_min S + 2 <= set_next S).
       rewrite Habs in Hx.
       by rewrite HSmin in Hx.
   by rewrite cardsU1 H3.
-Admitted.
+Qed.
 
 Variables (k: nat) (n: nat) (k_gt0: k > 0) (k_leqn: k <= n) (n_lt: n < wordsize).
 
@@ -1204,13 +1245,11 @@ Admitted.
 Lemma allEnums_sameCard: forall i, #|indToSet i| = k.
 Proof.
 elim=> [|i IHi].
-rewrite /=.
-admit. (* Proof already in n-queens *)
-rewrite /=.
+by rewrite set_card_ltn.
 move: (allEnums_haveE i)=> [e He].
 move: (allEnums_haveF i)=> [f Hf].
 by rewrite (enumNext_sameCard _ e _ f).
-Admitted.
+Qed.
 
 Definition indToInt i := iter i enumNext (dec (lsl one (toInt k))).
 
