@@ -977,6 +977,91 @@ have ->: set0 = [set i : 'I_wordsize | i < wordsize - (2 + set_min S) & @inord w
 by apply srn_repr.
 Qed.
 
+Lemma set_min_leq (S: {set 'I_wordsize}) e (H: e \in S): forall x, x \in S -> set_min S <= x.
+Proof.
+  move=> x Hx.
+  rewrite /set_min.
+  case: (arg_minP _ e)=> //.
+  by move=> i Hi /(_ x Hx) ->.
+Qed.
+
+Lemma set_min_S (S: {set 'I_wordsize}) e (H: e \in S): set_min S \in S.
+Proof.
+  rewrite /set_min.
+  case: (arg_minP _ e)=> //.
+Qed.
+
+Lemma enumNext_case2 (S: {set 'I_wordsize}) e (H: e \in S) f (Hf: set_isNext S f): set_next S < set_min S + 2 -> S = (set_min S) |: [set x in S | set_next S < x].
+Proof.
+move=> Hc'.
+have Hc'': nat_of_ord (set_next S) = set_min S + 1.
+  apply/eqP.
+  rewrite eqn_leq.
+  apply/andP; split.
+  + rewrite -(leq_add2r 1).
+    rewrite -addnA /=.
+    rewrite -addn1 in Hc'.
+    by apply Hc'.
+  + rewrite addn1.
+    rewrite ltn_neqAle.
+    apply/andP; split.
+    - apply/eqP=> Habs.
+      move: (ord_inj Habs)=> Habs'.
+      have Habs'': set_next S \in S.
+        rewrite -Habs'.
+        rewrite /set_min.
+        case: (arg_minP _ e)=> //.
+      move: Habs''.
+      rewrite /set_next.
+      case: (arg_minP _ f)=> //.
+      move=> i /andP[Hi1 _] _ Hi2.
+      by rewrite Hi2 in Hi1.
+    - rewrite /set_next.
+      case: (arg_minP _ f)=> //.
+      move=> i /andP [_ /existsP [x /andP [Hx1 Hx2]]] _.
+      apply (leq_trans (n := x)).
+      apply (set_min_leq _ e)=> //.
+      apply ltnW=> //.
+apply/setP=> x; rewrite !inE.
+case Hx: (x \in S)=> //.
+- rewrite /=.
+  case Hx2: (x <= set_min S).
+  + rewrite leq_eqVlt in Hx2.
+    move: Hx2=> /orP; elim=> Hx2.
+    move: Hx2=> /eqP Hx2.
+    move: (ord_inj Hx2)=> Hx3.
+    by rewrite Hx3 eq_refl.
+    exfalso.
+    move: Hx2; rewrite /set_min.
+    case: (arg_minP _ e)=> //.
+    move=> i Hi /(_ x) Hmin.
+    by rewrite ltnNge Hmin.
+  + have ->: set_next S < x.
+      rewrite ltn_neqAle.
+      apply/andP; split.
+      apply/negP=> /eqP Habs.
+      have Habs': x = inord (set_next S).
+        rewrite Habs.
+        apply ord_inj.
+        by rewrite inordK=> //.
+      rewrite Habs' in Hx.
+      move: Hx.
+      rewrite /set_next.
+      case: (arg_minP _ f)=> //.
+      move=> i /andP [Hi _] Hmin Hi'.
+      rewrite inord_val in Hi'.
+      by rewrite Hi' in Hi.
+      rewrite Hc''.
+      by rewrite addn1 ltnNge Hx2.
+    by rewrite orbT.
+- rewrite orbF.
+  symmetry.
+  apply negbTE.
+  apply/negP=> /eqP Habs.
+  rewrite Habs in Hx.
+  by rewrite (set_min_S _ e) in Hx.
+Qed.
+
 Lemma enumNext_sameCard (S: {set 'I_wordsize}) e (H: e \in S) f (Hf: set_isNext S f):
   #|enumNext_set S| = #|S|.
 Proof.
@@ -984,17 +1069,12 @@ rewrite /enumNext_set.
 have H1: set_next S \notin [set x in S | set_next S < x].
   apply/negP=> Habs.
   by rewrite !inE ltnn andbF in Habs.
-have HS: forall x, x \in S -> set_min S <= x.
-  move=> x Hx.
-  rewrite /set_min.
-  case: (arg_minP _ e)=> //.
-  by move=> i Hi /(_ x Hx) ->.
 have H2: set_min S < set_next S.
   rewrite /set_next.
   case: (arg_minP _ f)=> //.
   move=> i /andP [_ /existsP [x /andP [Hx1 Hx2]]] _.
   apply (leq_ltn_trans (n := x))=> //.
-  by apply (HS x Hx1).
+  by apply (set_min_leq _ e).
 have H3: set_min S \notin [set x in S | set_next S < x].
   apply/negP=> Habs.
   rewrite !inE in Habs.
@@ -1036,9 +1116,6 @@ have H5: (set_min S |: [set x in S | set_next S < x]) :&: [set x in S | set_min 
     rewrite -(ltnn (set_next S)).
     by apply (ltn_trans (n := x)).
   rewrite //.
-have HSmin: set_min S \in S.
-  rewrite /set_min.
-  case: (arg_minP _ e)=> //.
 rewrite cardsU cardsU1 H1 /=.
 case Hc: (set_min S + 2 <= set_next S).
 + rewrite H4 cards0 subn0.
@@ -1046,6 +1123,7 @@ case Hc: (set_min S + 2 <= set_next S).
     apply/setP=> x; rewrite !inE.
     have ->: (x == set_min S) = (x \in S) && (x == set_min S).
       case Hx: (x == set_min S).
+      move: (set_min_S S e H)=> HSmin.
       rewrite -(eqP Hx) in HSmin.
       by rewrite HSmin.
       by rewrite andbF.
@@ -1054,7 +1132,7 @@ case Hc: (set_min S + 2 <= set_next S).
     symmetry.
     have Hx': (set_min S == x) || (set_min S < x).
       rewrite -leq_eqVlt.
-      apply HS=> //.
+      by apply (set_min_leq _ e).
     move: Hx'=> /orP Hx'.
     elim Hx'.
     move/eqP ->; by rewrite eq_refl.
@@ -1089,7 +1167,7 @@ case Hc: (set_min S + 2 <= set_next S).
       apply/andP; split=> //.
       apply/existsP.
       exists (set_min S).
-      by rewrite HSmin Hx2.
+      by rewrite (set_min_S _ e) // Hx2.
     by rewrite Habs' in Hi'.
   have ->: #|[set x : 'I_wordsize | x <= set_next S - set_min S - 2]| = set_next S - set_min S - 1.
     rewrite set_card_leq.
@@ -1103,73 +1181,7 @@ case Hc: (set_min S + 2 <= set_next S).
 + rewrite setI0 cards0 addn0 subn0.
   have Hc': set_next S < set_min S + 2.
     by rewrite ltnNge Hc.
-  have Hc'': nat_of_ord (set_next S) = set_min S + 1.
-    apply/eqP.
-    rewrite eqn_leq.
-    apply/andP; split.
-    + rewrite -(leq_add2r 1).
-      rewrite -addnA /=.
-      rewrite -addn1 in Hc'.
-      by apply Hc'.
-    + rewrite addn1.
-      rewrite ltn_neqAle.
-      apply/andP; split.
-      - apply/eqP=> Habs.
-        move: (ord_inj Habs)=> Habs'.
-        have Habs'': set_next S \in S.
-          rewrite -Habs'.
-          rewrite /set_min.
-          case: (arg_minP _ e)=> //.
-        move: Habs''.
-        rewrite /set_next.
-        case: (arg_minP _ f)=> //.
-        move=> i /andP[Hi1 _] _ Hi2.
-        by rewrite Hi2 in Hi1.
-      - rewrite /set_next.
-        case: (arg_minP _ f)=> //.
-        move=> i /andP [_ /existsP [x /andP [Hx1 Hx2]]] _.
-        apply (leq_trans (n := x)).
-        apply HS=> //.
-        apply ltnW=> //.
-  have {3}->: S = (set_min S) |: [set x in S | set_next S < x].
-    apply/setP=> x; rewrite !inE.
-    case Hx: (x \in S)=> //.
-    - rewrite /=.
-      case Hx2: (x <= set_min S).
-      + rewrite leq_eqVlt in Hx2.
-        move: Hx2=> /orP; elim=> Hx2.
-        move: Hx2=> /eqP Hx2.
-        move: (ord_inj Hx2)=> Hx3.
-        by rewrite Hx3 eq_refl.
-        exfalso.
-        move: Hx2; rewrite /set_min.
-        case: (arg_minP _ e)=> //.
-        move=> i Hi /(_ x) Hmin.
-        by rewrite ltnNge Hmin.
-      + have ->: set_next S < x.
-          rewrite ltn_neqAle.
-          apply/andP; split.
-          apply/negP=> /eqP Habs.
-          have Habs': x = inord (set_next S).
-            rewrite Habs.
-            apply ord_inj.
-            by rewrite inordK=> //.
-          rewrite Habs' in Hx.
-          move: Hx.
-          rewrite /set_next.
-          case: (arg_minP _ f)=> //.
-          move=> i /andP [Hi _] Hmin Hi'.
-          rewrite inord_val in Hi'.
-          by rewrite Hi' in Hi.
-          rewrite Hc''.
-          by rewrite addn1 ltnNge Hx2.
-        by rewrite orbT.
-    - rewrite orbF.
-      symmetry.
-      apply negbTE.
-      apply/negP=> /eqP Habs.
-      rewrite Habs in Hx.
-      by rewrite HSmin in Hx.
+  rewrite {3}(enumNext_case2 S e _ f)=> //.
   by rewrite cardsU1 H3.
 Qed.
 
@@ -1192,9 +1204,17 @@ Qed.
 (*** Knuth's formula ***)
 Definition setToInd (S: {set 'I_wordsize}) := \sum_(i in 'I_k) 'C(nth ord0 (enum S) i, i.+1).
 
-Lemma setToInd_next (S: {set 'I_wordsize}) (HS: #|S| = k): setToInd (enumNext_set S) = (setToInd S).+1.
+Lemma setToInd_next (S: {set 'I_wordsize}) (HS: #|S| = k) e (He: e \in S) f (Hf: set_isNext S f): setToInd (enumNext_set S) = (setToInd S).+1.
 Proof.
-(* Induction in Knuth's formula... *)
+rewrite /enumNext_set.
+case H: (set_min S + 2 <= set_next S).
++ (* H true *)
+  admit.
++ (* H false *)
+  rewrite setU0.
+  rewrite {4}(enumNext_case2 S e _ f)=> //.
+  admit.
+  by rewrite ltnNge H.
 Admitted.
 
 Lemma indToSet_bounded S x: setToInd S < 'C(n, k) -> x \in S -> x < n.
@@ -1245,7 +1265,7 @@ elim: i ltn_i=> [ltn_i|i IH ltn_i].
   rewrite /=.
   rewrite (enumNext_sameCard _ e _ f) //.
   rewrite /=.
-  rewrite setToInd_next=> //.
+  rewrite (setToInd_next _ _ e _ f)=> //.
   rewrite IHi2 //.
 Admitted.
 
@@ -1322,8 +1342,19 @@ apply/andP; split.
   by apply setToInd_bounded.
 Qed.
 
-Lemma allEnums_min_bounded: forall i, 2 + set_min (indToSet i) <= wordsize.
-Admitted.
+Lemma allEnums_min_bounded i (ltn_i: i < 'C(n, k)): 2 + set_min (indToSet i) <= wordsize.
+(*Lemma indToSet_bounded S x: setToInd S < 'C(n, k) -> x \in S -> x < n.*)
+move: (allEnums_haveE i)=> [e He].
+have H: set_min (indToSet i) < n.
+  apply (indToSet_bounded (indToSet i)).
+  rewrite indToSet_inv=> //.
+  apply (set_min_S _ e)=> //.
+have {1}->: 2 = 1 + 1 by trivial.
+rewrite addnC addnA.
+rewrite addn1.
+apply (leq_ltn_trans (n := n))=> //.
+rewrite addn1=> //.
+Qed.
 
 Lemma allEnums_repr_i i (ltn_i: i < 'C(n, k)): machine_repr (indToInt i) (indToSet i).
 Proof.
@@ -1335,7 +1366,7 @@ move: (allEnums_haveE i)=> [e He].
 have ltn'_i: i < 'C(n, k) by apply (ltn_trans (n := i.+1)).
 move: (allEnums_haveF i ltn'_i)=> [f Hf].
 apply (enumNext_correct _ _ e He f)=> //.
-apply allEnums_min_bounded.
+apply allEnums_min_bounded=> //.
 by apply IHi.
 Qed.
 
