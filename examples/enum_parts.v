@@ -6,6 +6,15 @@ From Bits
 Require Import repr_op.
 
 (**********************************************************************)
+Definition ord_iota m n : seq 'I_wordsize := pmap insub (iota m n).
+Definition set_iota m n : {set 'I_wordsize} := [set x in ord_iota m n].
+
+Lemma mem_ord_iota m n : forall x, x \in ord_iota m n = (m <= x < m + n).
+Admitted.
+
+Lemma card_set_iota m n : #|set_iota m n| = n.
+Admitted.
+
 Section Extrema.
 
 Variables (I : finType) (i0 : I) (i1 : I) (P : pred I) (F : I -> nat).
@@ -51,7 +60,7 @@ Lemma keep_min_repr:
     machine_repr (keep_min i) [set [arg min_(k < y in E) k]].
 Admitted.
 
-Lemma create_repr: forall k, machine_repr (dec (lsl one (toInt k))) [set x : 'I_wordsize | x < k].
+Lemma create_repr: forall k, machine_repr (dec (lsl one (toInt k))) (set_iota 0 k).
 Admitted.
 
 (* TODO: move to ops/*.v *)
@@ -719,15 +728,6 @@ Lemma ladd_repr:
   forall x y, add (toInt x) (toInt y) = toInt (x + y).
 Admitted.
 
-Lemma set_card_int: forall m n, #|[set x : 'I_wordsize | n < x < m]| = m - n - 1.
-Admitted.
-
-Lemma set_card_leq: forall m, #|[set x : 'I_wordsize | x <= m]| = m + 1.
-Admitted.
-
-Lemma set_card_ltn: forall m, #|[set x : 'I_wordsize | x < m]| = m.
-Admitted.
-
 Definition set_min (S: {set 'I_wordsize}) := [arg min_(x < ord0 in S) x].
 
 Definition set_isNext (S: {set 'I_wordsize}) x := (x \notin S) && [exists y, (y \in S) && (y < x)].
@@ -1169,9 +1169,11 @@ case Hc: (set_min S + 2 <= set_next S).
   rewrite H5.
   rewrite cards0 subn0.
   rewrite cardsU1 H3 /=.
-  have ->: [set x in S | set_min S < x < set_next S] = [set x : 'I_wordsize | set_min S < x < set_next S].
+  have ->: [set x in S | set_min S < x < set_next S] = set_iota (set_min S).+1 (set_next S - (set_min S).+1).
     apply/setP=> x; rewrite !inE.
     rewrite andb_idl=> //.
+    rewrite mem_ord_iota.
+    rewrite subnKC=> //.
     move=> /andP [Hx2 Hx1].
     move: Hx1.
     rewrite /set_next.
@@ -1187,30 +1189,33 @@ case Hc: (set_min S + 2 <= set_next S).
       by rewrite (set_min_S _ e) // Hx2.
     by rewrite Habs' in Hi'.
   have ->: #|[set x : 'I_wordsize | x <= set_next S - set_min S - 2]| = set_next S - set_min S - 1.
+    admit.
+    (*    
     rewrite set_card_leq.
     rewrite subnS addn1 prednK //.
     rewrite subn_gt0.
     rewrite ltn_subRL.
     rewrite -addn1 -addnA //.
-  have ->: #|[set x : 'I_wordsize | set_min S < x < set_next S]| = set_next S - set_min S - 1.
-    by rewrite set_card_int.
-  by trivial.
+    *)
+  rewrite card_set_iota.
+  rewrite [_ - (set_min S).+1]subnS.
+  by rewrite subn1.
 + rewrite setI0 cards0 addn0 subn0.
   have Hc': set_next S < set_min S + 2.
     by rewrite ltnNge Hc.
   rewrite {3}(enumNext_case2 S e _ f)=> //.
   by rewrite cardsU1 H3.
-Qed.
+Admitted.
 
 Variables (k: nat) (n: nat) (k_gt0: k > 0) (k_leqn: k <= n) (n_lt: n < wordsize).
 
-Definition indToSet i := iter i (fun x => enumNext_set x) [set x : 'I_wordsize | x < k].
+Definition indToSet i := iter i (fun x => enumNext_set x) (set_iota 0 k).
 
 Lemma allEnums_haveE: forall i, exists e, e \in indToSet i.
 elim=> [|i IHi /=].
 + (* i = 0 *)
   exists ord0.
-  by rewrite inE.
+  by rewrite inE mem_ord_iota.
 + (* i ~ i.+1 *)
   exists (set_next (indToSet i)).
   rewrite /enumNext_set.
@@ -1319,17 +1324,17 @@ Lemma allEnums_haveF_ind i (ltn_i: i < 'C(n, k)): setToInd (indToSet i) = i -> #
   rewrite Hi //.
 Qed.
 
-Lemma setToInd_init: setToInd [set x : 'I_wordsize | x < k] = 0.
+Lemma setToInd_init: setToInd (set_iota 0 k) = 0.
 Proof.
 rewrite /setToInd.
-have H: forall i j, i + j = k -> setToInd_rec [set x : 'I_wordsize | j <= x < k] j i = 0.
+have H: forall i j, i + j = k -> setToInd_rec (set_iota j (k - j)) j i = 0.
   elim=> [//| i Hi j Hj].
   rewrite /=.
-  have ->: [arg min_(x < ord0 in [set x0 : 'I_wordsize | j <= x0 < k]) x] = inord j.
+  have ->: [arg min_(x < ord0 in set_iota j (k - j)) x] = inord j.
     admit.
   rewrite bin_small.
   rewrite add0n.
-  have ->: ([set x : 'I_wordsize | j <= x < k] :\ inord j) = [set x : 'I_wordsize | j.+1 <= x < k].
+  have ->: ((set_iota j (k - j)) :\ inord j) = set_iota j.+1 (k - j.+1).
     admit.
   apply Hi.
   by rewrite -addn1 [j + 1]addnC addnA addn1.
@@ -1340,7 +1345,7 @@ have H: forall i j, i + j = k -> setToInd_rec [set x : 'I_wordsize | j <= x < k]
   apply ltn_add2r.
   apply (leq_trans (n := n))=> //.
   rewrite ltnW //.
-have ->: [set x : 'I_wordsize | x < k] = [set x : 'I_wordsize | 0 <= x < k] by admit.
+rewrite -{1}[k]subn0.
 apply H.
 by rewrite addn0.
 Admitted.
@@ -1350,7 +1355,7 @@ Proof.
 elim: i ltn_i=> [ltn_i|i IH ltn_i].
 + (* i = 0 *)
   split.
-  by rewrite set_card_ltn.
+  by rewrite card_set_iota.
   apply setToInd_init.
 + (* i ~ i.+1 *)
   have ltn'_i: i < 'C(n, k).
