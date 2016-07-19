@@ -9,11 +9,31 @@ Require Import repr_op.
 Definition ord_iota m n : seq 'I_wordsize := pmap insub (iota m n).
 Definition set_iota m n : {set 'I_wordsize} := [set x in ord_iota m n].
 
-Lemma mem_ord_iota m n : forall x, x \in ord_iota m n = (m <= x < m + n).
-Admitted.
+Lemma mem_ord_iota m n x : x \in ord_iota m n = (m <= x < m + n).
+Proof.
+by rewrite mem_pmap_sub mem_iota.
+Qed.
 
-Lemma card_set_iota m n : #|set_iota m n| = n.
-Admitted.
+Lemma card_set_iota m n (lt_mn: m + n <= wordsize): #|set_iota m n| = n.
+Proof.
+rewrite cardsE cardE size_filter -enumT.
+have/eq_count -> := mem_pmap_sub (sT := ordinal_subType wordsize) (iota m n).
+rewrite -(count_map val) val_enum_ord.
+have/eq_count -> := mem_iota m n.
+rewrite -size_filter.
+have ->: size [seq i <- iota 0 wordsize | m <= i & i < m + n] = size (iota m n).
+  apply/eqP.
+  rewrite -uniq_size_uniq.
+  rewrite filter_uniq //.
+  apply iota_uniq.
+  move=> x.
+  rewrite mem_iota mem_filter.
+  rewrite [_ && (x \in iota 0 wordsize)]andb_idr //.
+  move=> /andP[_ H].
+  rewrite mem_iota /= add0n.
+  apply (leq_trans (n := m + n))=> //.
+by apply size_iota.
+Qed.
 
 Section Extrema.
 
@@ -1206,6 +1226,14 @@ case Hc: (set_min S + 2 <= set_next S).
   rewrite !card_set_iota.
   rewrite [_ - (set_min S).+1]subnS.
   by rewrite subn1.
+  rewrite subnKC=> //.
+  rewrite ltnW=> //.
+  rewrite add0n.
+  apply (leq_trans (n := set_next S)).
+  rewrite -subnDA.
+  rewrite -{2}[nat_of_ord (set_next S)]subn0.
+  rewrite leq_sub2l=> //.
+  rewrite ltnW //.
 + rewrite setI0 cards0 addn0 subn0.
   have Hc': set_next S < set_min S + 2.
     by rewrite ltnNge Hc.
@@ -1361,7 +1389,10 @@ Proof.
 elim: i ltn_i=> [ltn_i|i IH ltn_i].
 + (* i = 0 *)
   split.
-  by rewrite card_set_iota.
+  rewrite card_set_iota //.
+  rewrite add0n.
+  apply (leq_trans (n := n))=> //.
+  rewrite ltnW //.
   apply setToInd_init.
 + (* i ~ i.+1 *)
   have ltn'_i: i < 'C(n, k).
