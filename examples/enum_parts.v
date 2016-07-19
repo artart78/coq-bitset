@@ -834,7 +834,7 @@ Definition enumNext (x: Int32) := (* 111001100 *)
 Definition enumNext_set (S: {set 'I_wordsize}) :=
   let s_min := set_min S in
   let s_next := set_next S in
-  [set s_next] :|: [set x in S | x > s_next] :|: (if s_next >= s_min + 2 then [set x in 'I_wordsize | x <= (s_next - s_min - 2)] else set0).
+  [set s_next] :|: [set x in S | x > s_next] :|: (if s_next >= s_min + 2 then (set_iota 0 (s_next - s_min - 1)) else set0).
 
 Lemma enumNext_cont (j : 'I_wordsize) (S: {set 'I_wordsize}) e (He: e \in S) f (Hf: set_isNext S f):
   set_min S <= j -> j < set_next S -> j \in S.
@@ -918,6 +918,21 @@ have Hrepr: machine_repr (lxor i (add (keep_min i) i))
   apply symdiff_repr=> //.
   by apply (min_ripple_repr _ _ _ H _ Hf)=> //.
 case: ifP=> Hnext'.
+have ->: set_iota 0 (set_next S - set_min S - 1) = [set x0 in 'I_wordsize | x0 <= set_next S - set_min S - 2].
+  apply/setP=> x; rewrite !inE.
+  rewrite mem_ord_iota /= add0n.
+  rewrite -addn1.
+  have ->: (set_next S - set_min S - 1) = (set_next S - set_min S - 2) + 1.
+    rewrite /=.
+    have ->: set_next S - set_min S - 2 = set_next S - set_min S - 1 - 1.
+      have {3}->: 2 = 1 + 1 by trivial.
+      by rewrite subnDA.
+    rewrite subnK //.
+    rewrite ltn_subRL.
+    rewrite addn0 ltn_subRL.
+    rewrite -addn1 -addnA.
+    by rewrite Hnext'.
+  rewrite leq_add2r //.
 have ->: [set x0 in 'I_wordsize | x0 <= set_next S - set_min S - 2] =
 [set i : 'I_wordsize | i < wordsize - (2 + set_min S) & @inord wordsize.-1 (i + (2 + set_min S)) \in ([set set_next S] :|: [set x in S | x < set_next S])].
   apply/setP=> x; rewrite !inE.
@@ -1100,9 +1115,10 @@ have H3: set_min S \notin [set x in S | set_next S < x].
   move: Habs=> /negP Habs.
   apply Habs.
   by rewrite ltnW.
-have H4: (set_next S |: [set x in S | set_next S < x]) :&: [set x : 'I_wordsize | x <= set_next S - set_min S - 2] = set0.
+have H4: (set_next S |: [set x in S | set_next S < x]) :&: (set_iota 0 (set_next S - set_min S - 1)) = set0.
   apply/setP=> x; rewrite !inE.
   apply/negP=> /andP [/orP Habs1 Habs2].
+  rewrite mem_ord_iota add0n /= in Habs2.
   have Habs': x >= set_next S.
     case: Habs1=> Habs1.
     move: Habs1=> /eqP Habs1.
@@ -1111,14 +1127,13 @@ have H4: (set_next S |: [set x in S | set_next S < x]) :&: [set x : 'I_wordsize 
     by apply ltnW.
   have Habs'': false.
     rewrite -(ltnn (set_next S)).
-    apply (leq_ltn_trans (n := (set_next S - set_min S - 2))).
-    apply (leq_trans (n := x))=> //.
-    rewrite -subnDA.
+    apply (leq_ltn_trans (n := x))=> //.
+    apply (ltn_trans (n := set_next S - set_min S - 1))=> //.
     rewrite -{2}[nat_of_ord (set_next S)]subn0.
+    rewrite -subnDA.
     apply ltn_sub2l.
     apply (leq_ltn_trans (n := set_min S))=> //.
-    have {2}->: 2 = 1 + 1 by trivial.
-    by rewrite addnA addn1.
+    rewrite addn1=> //.
   by trivial.
 have H5: (set_min S |: [set x in S | set_next S < x]) :&: [set x in S | set_min S < x < set_next S] = set0.
   apply/setP=> x; rewrite !inE.
@@ -1188,16 +1203,7 @@ case Hc: (set_min S + 2 <= set_next S).
       exists (set_min S).
       by rewrite (set_min_S _ e) // Hx2.
     by rewrite Habs' in Hi'.
-  have ->: #|[set x : 'I_wordsize | x <= set_next S - set_min S - 2]| = set_next S - set_min S - 1.
-    admit.
-    (*    
-    rewrite set_card_leq.
-    rewrite subnS addn1 prednK //.
-    rewrite subn_gt0.
-    rewrite ltn_subRL.
-    rewrite -addn1 -addnA //.
-    *)
-  rewrite card_set_iota.
+  rewrite !card_set_iota.
   rewrite [_ - (set_min S).+1]subnS.
   by rewrite subn1.
 + rewrite setI0 cards0 addn0 subn0.
@@ -1205,7 +1211,7 @@ case Hc: (set_min S + 2 <= set_next S).
     by rewrite ltnNge Hc.
   rewrite {3}(enumNext_case2 S e _ f)=> //.
   by rewrite cardsU1 H3.
-Admitted.
+Qed.
 
 Variables (k: nat) (n: nat) (k_gt0: k > 0) (k_leqn: k <= n) (n_lt: n < wordsize).
 
@@ -1377,6 +1383,7 @@ by apply indToSet_ind.
 Qed.
 
 Lemma setToInd_inj (S1 S2: {set 'I_wordsize}) (HS1: #|S1| = k) (HS2: #|S2| = k): setToInd S1 = setToInd S2 -> S1 = S2.
+(* Should come from the inverse + finite application between sets of same size (see cards_draws) *)
 Admitted.
 
 Definition allSubsets := [set A : {set 'I_wordsize} | (#|A| == k) && [forall x, (x \in A) ==> (x < n)]].
