@@ -16,23 +16,12 @@ Qed.
 
 Lemma card_set_iota m n (lt_mn: m + n <= wordsize): #|set_iota m n| = n.
 Proof.
-rewrite cardsE cardE size_filter -enumT.
-have/eq_count -> := mem_pmap_sub (sT := ordinal_subType wordsize) (iota m n).
-rewrite -(count_map val) val_enum_ord.
-have/eq_count -> := mem_iota m n.
-rewrite -size_filter.
-have ->: size [seq i <- iota 0 wordsize | m <= i & i < m + n] = size (iota m n).
-  apply/eqP.
-  rewrite -uniq_size_uniq.
-  rewrite filter_uniq //.
-  apply iota_uniq.
-  move=> x.
-  rewrite mem_iota mem_filter.
-  rewrite [_ && (x \in iota 0 wordsize)]andb_idr //.
-  move=> /andP[_ H].
-  rewrite mem_iota /= add0n.
-  apply (leq_trans (n := m + n))=> //.
-by apply size_iota.
+rewrite cardsE cardE.
+have/perm_eq_size -> : perm_eq (enum (ord_iota m n)) (ord_iota m n).
+  rewrite uniq_perm_eq ?enum_uniq ?(pmap_uniq (insubK _)) ?iota_uniq //.
+  exact: mem_enum.
+rewrite size_pmap (eq_in_count (a2 := predT)) ?count_predT ?size_iota //.
+by move=> x; rewrite mem_iota => /andP[h1 /leq_trans h2]; rewrite insubT ?h2.
 Qed.
 
 Section Extrema.
