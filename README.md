@@ -9,7 +9,7 @@ proved extraction to Caml.
 A paper describing this library has been accepted at FLOPS2016. The version used for the
 conference is tagged `flops`.
 
-A documentation of the library can be found [here](https://artart78.github.com/coq-bitset/).
+A documentation of the library can be found [here](https://artart78.github.io/coq-bitset/).
 
 ## Installation
 
